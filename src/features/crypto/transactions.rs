@@ -23,6 +23,9 @@ use crate::models::{CryptoTransaction, CryptoTransactionType};
 use crate::security_log::{SecurityEvent, log_security_event};
 use uuid::Uuid;
 
+use super::commands::{
+    NewCryptoSwap, NewCryptoTransaction, NewCryptoTransfer, UpdateCryptoTransaction,
+};
 use super::service::{CryptoError, CryptoService};
 use super::validation::{
     FeeBalanceContext, MAX_NOTES_LENGTH, normalize_fee_coin, sanitize_string, validate_coin_id_str,
@@ -32,24 +35,23 @@ use super::validation::{
 };
 
 impl CryptoService {
-    #[allow(clippy::too_many_arguments)]
-    pub fn add_crypto_transaction(
-        &self,
-        wallet_id: String,
-        coin_id: String,
-        symbol: String,
-        transaction_type: String,
-        amount: f64,
-        price_per_coin: Option<f64>,
-        fee: Option<f64>,
-        fee_coin_id: Option<String>,
-        fee_amount: Option<f64>,
-        date: String,
-        notes: Option<String>,
-        subtype: Option<String>,
-        override_proceeds: Option<f64>,
-        override_cost_basis: Option<f64>,
-    ) -> Result<String, CryptoError> {
+    pub fn add_crypto_transaction(&self, cmd: NewCryptoTransaction) -> Result<String, CryptoError> {
+        let NewCryptoTransaction {
+            wallet_id,
+            coin_id,
+            symbol,
+            transaction_type,
+            amount,
+            price_per_coin,
+            fee,
+            fee_coin_id,
+            fee_amount,
+            date,
+            notes,
+            subtype,
+            override_proceeds,
+            override_cost_basis,
+        } = cmd;
         self.with_db(|db| {
             let wallet_id = wallet_id.trim().to_string();
             if wallet_id.is_empty() {
@@ -164,21 +166,20 @@ impl CryptoService {
         })
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn add_crypto_transfer(
-        &self,
-        from_wallet_id: String,
-        to_wallet_id: String,
-        coin_id: String,
-        symbol: String,
-        from_amount: f64,
-        to_amount: f64,
-        fee: Option<f64>,
-        fee_coin_id: Option<String>,
-        fee_amount: Option<f64>,
-        date: String,
-        notes: Option<String>,
-    ) -> Result<String, CryptoError> {
+    pub fn add_crypto_transfer(&self, cmd: NewCryptoTransfer) -> Result<String, CryptoError> {
+        let NewCryptoTransfer {
+            from_wallet_id,
+            to_wallet_id,
+            coin_id,
+            symbol,
+            from_amount,
+            to_amount,
+            fee,
+            fee_coin_id,
+            fee_amount,
+            date,
+            notes,
+        } = cmd;
         self.with_db(|db| {
             let from_wallet_id = from_wallet_id.trim().to_string();
             let to_wallet_id = to_wallet_id.trim().to_string();
@@ -327,22 +328,21 @@ impl CryptoService {
         })
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn add_crypto_swap(
-        &self,
-        wallet_id: String,
-        from_coin_id: String,
-        from_symbol: String,
-        from_amount: f64,
-        to_coin_id: String,
-        to_symbol: String,
-        to_amount: f64,
-        fee: Option<f64>,
-        fee_coin_id: Option<String>,
-        fee_amount: Option<f64>,
-        date: String,
-        notes: Option<String>,
-    ) -> Result<String, CryptoError> {
+    pub fn add_crypto_swap(&self, cmd: NewCryptoSwap) -> Result<String, CryptoError> {
+        let NewCryptoSwap {
+            wallet_id,
+            from_coin_id,
+            from_symbol,
+            from_amount,
+            to_coin_id,
+            to_symbol,
+            to_amount,
+            fee,
+            fee_coin_id,
+            fee_amount,
+            date,
+            notes,
+        } = cmd;
         self.with_db(|db| {
             let wallet_id = wallet_id.trim().to_string();
             if wallet_id.is_empty() {
@@ -529,21 +529,23 @@ impl CryptoService {
         })
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn update_crypto_transaction(
         &self,
-        id: String,
-        amount: f64,
-        price_per_coin: Option<f64>,
-        fee: Option<f64>,
-        fee_coin_id: Option<String>,
-        fee_amount: Option<f64>,
-        date: String,
-        notes: Option<String>,
-        subtype: Option<String>,
-        override_proceeds: Option<f64>,
-        override_cost_basis: Option<f64>,
+        cmd: UpdateCryptoTransaction,
     ) -> Result<(), CryptoError> {
+        let UpdateCryptoTransaction {
+            id,
+            amount,
+            price_per_coin,
+            fee,
+            fee_coin_id,
+            fee_amount,
+            date,
+            notes,
+            subtype,
+            override_proceeds,
+            override_cost_basis,
+        } = cmd;
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;
             let existing = db.get_crypto_transaction(&validated_id)?;

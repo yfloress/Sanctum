@@ -400,36 +400,7 @@ pub fn add_crypto_transaction(
     crypto: State<'_, CryptoService>,
     input: CryptoTransactionInput,
 ) -> Result<String, AppError> {
-    let amount: f64 = input.amount.parse().map_err(|_| "Invalid amount")?;
-    let price: Option<f64> = Some(input.price.parse::<f64>().map_err(|_| "Invalid price")?);
-    let fee: Option<f64> = input.fee.parse::<f64>().ok().filter(|v| *v != 0.0);
-    let fee_amount: Option<f64> = input.fee_coin_amount.as_ref().and_then(|s| s.parse().ok());
-    let op: Option<f64> = input
-        .override_proceeds
-        .as_ref()
-        .and_then(|s| s.parse().ok());
-    let ocb: Option<f64> = input
-        .override_cost_basis
-        .as_ref()
-        .and_then(|s| s.parse().ok());
-    crypto
-        .add_crypto_transaction(
-            input.wallet_id,
-            input.coin_id,
-            input.symbol,
-            input.transaction_type,
-            amount,
-            price,
-            fee,
-            input.fee_coin_id,
-            fee_amount,
-            input.date,
-            input.notes,
-            input.subtype,
-            op,
-            ocb,
-        )
-        .map_err(AppError::from)
+    Ok(crypto.add_crypto_transaction(input.into_command()?)?)
 }
 
 #[tauri::command]
@@ -437,28 +408,7 @@ pub fn add_crypto_transfer(
     crypto: State<'_, CryptoService>,
     input: CryptoTransferInput,
 ) -> Result<String, AppError> {
-    let from: f64 = input
-        .from_amount
-        .parse()
-        .map_err(|_| "Invalid from amount")?;
-    let to: f64 = input.to_amount.parse().map_err(|_| "Invalid to amount")?;
-    let fee: Option<f64> = input.fee.parse::<f64>().ok().filter(|v| *v != 0.0);
-    let fa: Option<f64> = input.fee_coin_amount.as_ref().and_then(|s| s.parse().ok());
-    crypto
-        .add_crypto_transfer(
-            input.from_wallet_id,
-            input.to_wallet_id,
-            input.coin_id,
-            input.symbol,
-            from,
-            to,
-            fee,
-            input.fee_coin_id,
-            fa,
-            input.date,
-            input.notes,
-        )
-        .map_err(AppError::from)
+    Ok(crypto.add_crypto_transfer(input.into_command()?)?)
 }
 
 #[tauri::command]
@@ -466,29 +416,7 @@ pub fn add_crypto_swap(
     crypto: State<'_, CryptoService>,
     input: CryptoSwapInput,
 ) -> Result<String, AppError> {
-    let from: f64 = input
-        .from_amount
-        .parse()
-        .map_err(|_| "Invalid from amount")?;
-    let to: f64 = input.to_amount.parse().map_err(|_| "Invalid to amount")?;
-    let fee: Option<f64> = input.fee.parse::<f64>().ok().filter(|v| *v != 0.0);
-    let fa: Option<f64> = input.fee_coin_amount.as_ref().and_then(|s| s.parse().ok());
-    crypto
-        .add_crypto_swap(
-            input.wallet_id,
-            input.from_coin_id,
-            input.from_symbol,
-            from,
-            input.to_coin_id,
-            input.to_symbol,
-            to,
-            fee,
-            input.fee_coin_id,
-            fa,
-            input.date,
-            input.notes,
-        )
-        .map_err(AppError::from)
+    Ok(crypto.add_crypto_swap(input.into_command()?)?)
 }
 
 #[tauri::command]
@@ -496,33 +424,7 @@ pub fn update_crypto_transaction(
     crypto: State<'_, CryptoService>,
     input: CryptoTransactionUpdateInput,
 ) -> Result<(), AppError> {
-    let amount: f64 = input.amount.parse().map_err(|_| "Invalid amount")?;
-    let price: Option<f64> = Some(input.price.parse::<f64>().map_err(|_| "Invalid price")?);
-    let fee: Option<f64> = input.fee.parse::<f64>().ok().filter(|v| *v != 0.0);
-    let fa: Option<f64> = input.fee_coin_amount.as_ref().and_then(|s| s.parse().ok());
-    let op: Option<f64> = input
-        .override_proceeds
-        .as_ref()
-        .and_then(|s| s.parse().ok());
-    let ocb: Option<f64> = input
-        .override_cost_basis
-        .as_ref()
-        .and_then(|s| s.parse().ok());
-    crypto
-        .update_crypto_transaction(
-            input.id,
-            amount,
-            price,
-            fee,
-            input.fee_coin_id,
-            fa,
-            input.date,
-            input.notes,
-            input.subtype,
-            op,
-            ocb,
-        )
-        .map_err(AppError::from)
+    Ok(crypto.update_crypto_transaction(input.into_command()?)?)
 }
 
 #[tauri::command]

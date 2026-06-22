@@ -30,11 +30,16 @@
 
 pub mod api;
 pub mod catalog;
+pub mod commands;
 pub mod service;
 mod service_tax;
 pub mod tax;
 pub mod transactions;
 pub mod validation;
+
+pub use commands::{
+    NewCryptoSwap, NewCryptoTransaction, NewCryptoTransfer, UpdateCryptoTransaction,
+};
 
 // Re-export API functions
 pub use api::{

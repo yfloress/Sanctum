@@ -18,8 +18,34 @@
 //! Crypto domain DTOs.
 //!
 //! Covers: portfolio, wallets, transactions, tickers, catalog, tax.
+//!
+//! The transaction input DTOs expose `into_command` mappings that parse their
+//! stringly amounts into the domain command structs the `CryptoService`
+//! consumes, tagging the offending field on [`AppError`].
 
 use serde::{Deserialize, Serialize};
+
+use crate::error::AppError;
+use crate::features::crypto::{
+    NewCryptoSwap, NewCryptoTransaction, NewCryptoTransfer, UpdateCryptoTransaction,
+};
+
+/// Parse a required `f64` amount, tagging `field` on failure.
+fn parse_required_f64(raw: &str, field: &str) -> Result<f64, AppError> {
+    raw.parse::<f64>()
+        .map_err(|_| AppError::validation(format!("Invalid {field}")).with_field(field))
+}
+
+/// Parse an optional, soft `f64` (ignored when empty/zero/unparseable), matching
+/// the previous lenient command behavior for fees.
+fn parse_optional_nonzero_f64(raw: &str) -> Option<f64> {
+    raw.parse::<f64>().ok().filter(|v| *v != 0.0)
+}
+
+/// Parse an optional `f64` from an optional string, ignoring parse failures.
+fn parse_optional_f64(raw: &Option<String>) -> Option<f64> {
+    raw.as_ref().and_then(|s| s.parse::<f64>().ok())
+}
 
 // ==================== Portfolio ====================
 
@@ -246,6 +272,88 @@ pub struct CryptoTransactionUpdateInput {
     pub subtype: Option<String>,
     pub override_proceeds: Option<String>,
     pub override_cost_basis: Option<String>,
+}
+
+// ==================== DTO -> domain command mapping ====================
+
+impl CryptoTransactionInput {
+    /// Parse amounts and map into the add-transaction command.
+    pub fn into_command(self) -> Result<NewCryptoTransaction, AppError> {
+        Ok(NewCryptoTransaction {
+            wallet_id: self.wallet_id,
+            coin_id: self.coin_id,
+            symbol: self.symbol,
+            transaction_type: self.transaction_type,
+            amount: parse_required_f64(&self.amount, "amount")?,
+            price_per_coin: Some(parse_required_f64(&self.price, "price")?),
+            fee: parse_optional_nonzero_f64(&self.fee),
+            fee_coin_id: self.fee_coin_id,
+            fee_amount: parse_optional_f64(&self.fee_coin_amount),
+            date: self.date,
+            notes: self.notes,
+            subtype: self.subtype,
+            override_proceeds: parse_optional_f64(&self.override_proceeds),
+            override_cost_basis: parse_optional_f64(&self.override_cost_basis),
+        })
+    }
+}
+
+impl CryptoTransferInput {
+    /// Parse amounts and map into the transfer command.
+    pub fn into_command(self) -> Result<NewCryptoTransfer, AppError> {
+        Ok(NewCryptoTransfer {
+            from_wallet_id: self.from_wallet_id,
+            to_wallet_id: self.to_wallet_id,
+            coin_id: self.coin_id,
+            symbol: self.symbol,
+            from_amount: parse_required_f64(&self.from_amount, "from_amount")?,
+            to_amount: parse_required_f64(&self.to_amount, "to_amount")?,
+            fee: parse_optional_nonzero_f64(&self.fee),
+            fee_coin_id: self.fee_coin_id,
+            fee_amount: parse_optional_f64(&self.fee_coin_amount),
+            date: self.date,
+            notes: self.notes,
+        })
+    }
+}
+
+impl CryptoSwapInput {
+    /// Parse amounts and map into the swap command.
+    pub fn into_command(self) -> Result<NewCryptoSwap, AppError> {
+        Ok(NewCryptoSwap {
+            wallet_id: self.wallet_id,
+            from_coin_id: self.from_coin_id,
+            from_symbol: self.from_symbol,
+            from_amount: parse_required_f64(&self.from_amount, "from_amount")?,
+            to_coin_id: self.to_coin_id,
+            to_symbol: self.to_symbol,
+            to_amount: parse_required_f64(&self.to_amount, "to_amount")?,
+            fee: parse_optional_nonzero_f64(&self.fee),
+            fee_coin_id: self.fee_coin_id,
+            fee_amount: parse_optional_f64(&self.fee_coin_amount),
+            date: self.date,
+            notes: self.notes,
+        })
+    }
+}
+
+impl CryptoTransactionUpdateInput {
+    /// Parse amounts and map into the update-transaction command.
+    pub fn into_command(self) -> Result<UpdateCryptoTransaction, AppError> {
+        Ok(UpdateCryptoTransaction {
+            id: self.id,
+            amount: parse_required_f64(&self.amount, "amount")?,
+            price_per_coin: Some(parse_required_f64(&self.price, "price")?),
+            fee: parse_optional_nonzero_f64(&self.fee),
+            fee_coin_id: self.fee_coin_id,
+            fee_amount: parse_optional_f64(&self.fee_coin_amount),
+            date: self.date,
+            notes: self.notes,
+            subtype: self.subtype,
+            override_proceeds: parse_optional_f64(&self.override_proceeds),
+            override_cost_basis: parse_optional_f64(&self.override_cost_basis),
+        })
+    }
 }
 
 /// Data to populate the edit transaction form.

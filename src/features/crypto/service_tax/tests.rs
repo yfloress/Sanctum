@@ -17,6 +17,7 @@
 
 use super::*;
 use crate::db::Database;
+use crate::features::crypto::NewCryptoTransaction;
 use crate::features::crypto::TaxReportSummary;
 use secrecy::SecretString;
 use std::path::PathBuf;
@@ -325,77 +326,77 @@ fn generate_tax_report_excludes_wallet_ids_from_settings() {
         .expect("create included wallet");
 
     service
-        .add_crypto_transaction(
-            wallet_excluded.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(100.0),
-            None,
-            None,
-            None,
-            "2024-01-10".to_string(),
-            None,
-            Some("buy".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_excluded.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(100.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-01-10".to_string(),
+            notes: None,
+            subtype: Some("buy".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("buy in excluded wallet");
     let excluded_sell_id = service
-        .add_crypto_transaction(
-            wallet_excluded.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(150.0),
-            None,
-            None,
-            None,
-            "2024-02-10".to_string(),
-            None,
-            Some("sell".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_excluded.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(150.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-02-10".to_string(),
+            notes: None,
+            subtype: Some("sell".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("sell in excluded wallet");
 
     service
-        .add_crypto_transaction(
-            wallet_included.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(200.0),
-            None,
-            None,
-            None,
-            "2024-03-10".to_string(),
-            None,
-            Some("buy".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_included.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(200.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-03-10".to_string(),
+            notes: None,
+            subtype: Some("buy".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("buy in included wallet");
     let included_sell_id = service
-        .add_crypto_transaction(
-            wallet_included,
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(260.0),
-            None,
-            None,
-            None,
-            "2024-04-10".to_string(),
-            None,
-            Some("sell".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_included,
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(260.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-04-10".to_string(),
+            notes: None,
+            subtype: Some("sell".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("sell in included wallet");
 
     let mut settings = TaxPeriodSettings::defaults_for("2024");
@@ -428,59 +429,59 @@ fn generate_tax_summary_marks_settings_excluded_when_all_period_txs_are_excluded
         .expect("create excluded wallet");
 
     service
-        .add_crypto_transaction(
-            wallet_excluded.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(100.0),
-            None,
-            None,
-            None,
-            "2024-01-10".to_string(),
-            None,
-            Some("buy".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_excluded.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(100.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-01-10".to_string(),
+            notes: None,
+            subtype: Some("buy".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("buy in excluded wallet");
     service
-        .add_crypto_transaction(
-            wallet_excluded.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(150.0),
-            None,
-            None,
-            None,
-            "2024-02-10".to_string(),
-            None,
-            Some("sell".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_excluded.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(150.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-02-10".to_string(),
+            notes: None,
+            subtype: Some("sell".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("sell in excluded wallet");
     // Outside period should not affect excluded count for 2024.
     service
-        .add_crypto_transaction(
-            wallet_excluded.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(90.0),
-            None,
-            None,
-            None,
-            "2023-12-30".to_string(),
-            None,
-            Some("buy".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_excluded.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(90.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2023-12-30".to_string(),
+            notes: None,
+            subtype: Some("buy".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("buy outside period");
 
     let mut settings = TaxPeriodSettings::defaults_for("2024");
@@ -520,77 +521,77 @@ fn generate_tax_summary_keeps_settings_ok_when_included_transactions_exist() {
         .expect("create included wallet");
 
     service
-        .add_crypto_transaction(
-            wallet_excluded.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(100.0),
-            None,
-            None,
-            None,
-            "2024-01-10".to_string(),
-            None,
-            Some("buy".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_excluded.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(100.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-01-10".to_string(),
+            notes: None,
+            subtype: Some("buy".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("buy in excluded wallet");
     service
-        .add_crypto_transaction(
-            wallet_excluded.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(150.0),
-            None,
-            None,
-            None,
-            "2024-02-10".to_string(),
-            None,
-            Some("sell".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_excluded.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(150.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-02-10".to_string(),
+            notes: None,
+            subtype: Some("sell".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("sell in excluded wallet");
 
     service
-        .add_crypto_transaction(
-            wallet_included.clone(),
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(200.0),
-            None,
-            None,
-            None,
-            "2024-03-10".to_string(),
-            None,
-            Some("buy".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_included.clone(),
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(200.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-03-10".to_string(),
+            notes: None,
+            subtype: Some("buy".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("buy in included wallet");
     service
-        .add_crypto_transaction(
-            wallet_included,
-            "bitcoin".to_string(),
-            "BTC".to_string(),
-            "trade".to_string(),
-            1.0,
-            Some(260.0),
-            None,
-            None,
-            None,
-            "2024-04-10".to_string(),
-            None,
-            Some("sell".to_string()),
-            None,
-            None,
-        )
+        .add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: wallet_included,
+            coin_id: "bitcoin".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: "trade".to_string(),
+            amount: 1.0,
+            price_per_coin: Some(260.0),
+            fee: None,
+            fee_coin_id: None,
+            fee_amount: None,
+            date: "2024-04-10".to_string(),
+            notes: None,
+            subtype: Some("sell".to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+        })
         .expect("sell in included wallet");
 
     let mut settings = TaxPeriodSettings::defaults_for("2024");
