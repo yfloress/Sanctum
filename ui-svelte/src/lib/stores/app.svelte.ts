@@ -19,7 +19,7 @@ import type { AppSettings } from '../types'
 
 export type Page = 'dashboard' | 'finances' | 'crypto' | 'settings'
 
-export type BackgroundFx = 'dots' | 'stars' | 'aurora' | 'diamonds'
+export type BackgroundFx = 'dots' | 'stars' | 'aurora' | 'diamonds' | 'dragon'
 
 const HIDE_BALANCES_KEY = 'sanctum:hideBalances'
 const BACKGROUND_FX_KEY = 'sanctum:backgroundFx'
@@ -35,7 +35,8 @@ function readHideBalances(): boolean {
 function readBackgroundFx(): BackgroundFx {
   try {
     const v = localStorage.getItem(BACKGROUND_FX_KEY)
-    if (v === 'dots' || v === 'stars' || v === 'aurora' || v === 'diamonds') return v
+    if (v === 'dots' || v === 'stars' || v === 'aurora' || v === 'diamonds' || v === 'dragon')
+      return v
   } catch {
     // localStorage unavailable — fall through to the default
   }

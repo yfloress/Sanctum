@@ -328,6 +328,7 @@
           <option value="stars">{i18n.t('settings-bg-stars', 'Starfield')}</option>
           <option value="aurora">{i18n.t('settings-bg-aurora', 'Aurora')}</option>
           <option value="diamonds">{i18n.t('settings-bg-diamonds', 'Diamonds')}</option>
+          <option value="dragon">{i18n.t('settings-bg-dragon', 'Dragon')}</option>
         </select>
       </div>
     </section>

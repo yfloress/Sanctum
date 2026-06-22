@@ -22,6 +22,7 @@
   import MobileTopBar from './components/MobileTopBar.svelte'
   import StarField from './components/StarField.svelte'
   import Aurora from './components/Aurora.svelte'
+  import Dragon from './components/Dragon.svelte'
   import Toast from './components/Toast.svelte'
   import LoginPage from './pages/LoginPage.svelte'
   import DashboardPage from './pages/DashboardPage.svelte'
@@ -100,6 +101,8 @@
       <StarField />
     {:else if app.backgroundFx === 'aurora'}
       <Aurora />
+    {:else if app.backgroundFx === 'dragon'}
+      <Dragon />
     {/if}
     <Sidebar />
     <MobileTopBar />
