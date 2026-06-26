@@ -19,66 +19,67 @@ use std::collections::HashMap;
 
 use csv::StringRecord;
 
+use super::super::common::normalize_header;
 use super::spot::parse_mexc_pair;
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
 pub(super) fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
-            "time(utc+00:00)" => {
+            "timeutc0000" => {
                 map.insert("time", i);
             }
-            "futures trading pair" | "futures" => {
+            "futurestradingpair" | "futures" => {
                 map.insert("pair", i);
             }
             "crypto" => {
                 map.insert("symbol", i);
             }
-            "fund type" => {
+            "fundtype" => {
                 map.insert("fund_type", i);
             }
-            "fund flow type" => {
+            "fundflowtype" => {
                 map.insert("flow_type", i);
             }
             "amount" => {
                 map.insert("amount", i);
             }
-            "copy_trader_uid" => {
+            "copytraderuid" => {
                 map.insert("copy_trader_uid", i);
             }
-            "copy_state" => {
+            "copystate" => {
                 map.insert("copy_state", i);
             }
             "fee" => {
                 map.insert("fee", i);
             }
-            "create_time(utc+00:00)" => {
+            "createtimeutc0000" => {
                 map.insert("create_time", i);
             }
-            "close_time(utc+00:00)" => {
+            "closetimeutc0000" => {
                 map.insert("close_time", i);
             }
-            "open time(utc+00:00)" => {
+            "opentimeutc0000" => {
                 map.insert("open_time", i);
             }
-            "close time" => {
+            "closetime" => {
                 map.insert("close_time", i);
             }
-            "position profit/loss(usdt)" => {
+            "positionprofitlossusdt" => {
                 map.insert("pnl", i);
             }
-            "closing pnl" => {
+            "closingpnl" => {
                 map.insert("pnl", i);
             }
-            "realized pnl" => {
+            "realizedpnl" => {
                 map.insert("pnl", i);
             }
-            "trading fee" => {
+            "tradingfee" => {
                 map.insert("trading_fee", i);
             }
-            "fee-payment crypto" => {
+            "feepaymentcrypto" => {
                 map.insert("fee_symbol", i);
             }
             "status" => {

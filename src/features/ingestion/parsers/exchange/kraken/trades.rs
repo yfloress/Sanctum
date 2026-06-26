@@ -31,7 +31,7 @@ pub struct KrakenTradesParser;
 fn resolve_trades_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
             "txid" => {
                 map.insert("txid", i);

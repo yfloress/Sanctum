@@ -21,42 +21,43 @@ use csv::StringRecord;
 
 use super::super::common::{
     append_tax_non_usd_quote_reason, is_fiat, is_quote_currency, is_usd_valued_quote,
+    normalize_header,
 };
 use crate::features::ingestion::types::ImportCryptoTransaction;
 
 pub(super) fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
-            "order id" => {
+            "orderid" => {
                 map.insert("order_id", i);
             }
-            "start time(utc+00:00)" => {
+            "starttimeutc0000" => {
                 map.insert("start_time", i);
             }
-            "trading token" => {
+            "tradingtoken" => {
                 map.insert("trading_token", i);
             }
-            "trading direction" => {
+            "tradingdirection" => {
                 map.insert("direction", i);
             }
             "status" => {
                 map.insert("status", i);
             }
-            "order quantity" => {
+            "orderquantity" => {
                 map.insert("order_quantity", i);
             }
-            "settlement token" => {
+            "settlementtoken" => {
                 map.insert("settlement_token", i);
             }
-            "order amount" => {
+            "orderamount" => {
                 map.insert("order_amount", i);
             }
-            "payment method" => {
+            "paymentmethod" => {
                 map.insert("payment_method", i);
             }
-            "p2p type" => {
+            "p2ptype" => {
                 map.insert("p2p_type", i);
             }
             "fee" => {

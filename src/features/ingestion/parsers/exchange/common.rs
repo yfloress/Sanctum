@@ -338,6 +338,23 @@ pub fn non_empty(value: &str) -> Option<&str> {
     }
 }
 
+// ─── Header normalisation ─────────────────────────────────────────────────────
+
+/// Normalises a CSV header cell for tolerant, order-independent matching.
+///
+/// Lower-cases the text and strips every non-alphanumeric character (spaces,
+/// underscores, dashes, parentheses, punctuation). This lets columns such as
+/// `"Average Filled Price"`, `"average_filled_price"` and `"averagefilledprice"`
+/// all resolve to the same key, so detection and per-column resolution keep
+/// working when an exchange tweaks spacing, casing or punctuation in the header
+/// row of its export.
+pub fn normalize_header(raw: &str) -> String {
+    raw.chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .map(|c| c.to_ascii_lowercase())
+        .collect()
+}
+
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

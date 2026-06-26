@@ -17,6 +17,7 @@
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
+use super::super::common::normalize_header;
 use super::*;
 
 pub struct NotBankTransactionParser;
@@ -24,7 +25,7 @@ pub struct NotBankTransactionParser;
 fn resolve_transaction_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (idx, col) in headers.iter().enumerate() {
-        match col.trim().trim_matches('"').to_lowercase().as_str() {
+        match normalize_header(col).as_str() {
             "postingentryid" => {
                 map.insert("posting_entry_id", idx);
             }

@@ -25,8 +25,8 @@ use std::collections::HashMap;
 use csv::{ReaderBuilder, StringRecord, Trim};
 
 use super::super::common::{
-    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote, parse_decimal,
-    parse_timestamp,
+    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote,
+    normalize_header, parse_decimal, parse_timestamp,
 };
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use super::spot::parse_mexc_pair;
@@ -37,7 +37,7 @@ pub struct MexcTradeParser;
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
             "pairs" => {
                 map.insert("pairs", i);
@@ -48,10 +48,10 @@ fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
             "side" => {
                 map.insert("side", i);
             }
-            "filled price" => {
+            "filledprice" => {
                 map.insert("filled_price", i);
             }
-            "executed amount" => {
+            "executedamount" => {
                 map.insert("executed_amount", i);
             }
             "total" => {

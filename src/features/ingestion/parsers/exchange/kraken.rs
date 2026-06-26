@@ -36,7 +36,7 @@ use csv::StringRecord;
 
 use super::common::{
     append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote,
-    normalize_kraken_currency, parse_decimal, parse_kraken_pair, parse_timestamp,
+    normalize_header, normalize_kraken_currency, parse_decimal, parse_kraken_pair, parse_timestamp,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -497,7 +497,7 @@ fn single_row_to_transaction(
 fn resolve_ledger_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
             "txid" => {
                 map.insert("txid", i);

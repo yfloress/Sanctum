@@ -16,6 +16,7 @@
 //
 
 use super::ExchangeSource;
+use super::common::normalize_header;
 
 // ─── Header-based format detection ──────────────────────────────────────────
 
@@ -508,36 +509,42 @@ pub fn detect_exchange_source(content: &str) -> Option<ExchangeSource> {
 
     // Some files (e.g., NotBank PnL) include one or more non-CSV preamble
     // lines before the actual header. We inspect an initial non-empty window
-    // to find the first matching header signature.
+    // to find the first line that carries a recognised header signature.
     for line in lines {
-        let headers: Vec<&str> = line
-            .split(',')
-            .map(|h| {
-                let t = h.trim();
-                t.trim_matches('"').trim()
-            })
-            .collect();
+        let headers: Vec<String> = line.split(',').map(normalize_header).collect();
 
-        for (expected, source) in EXCHANGE_SIGNATURES {
-            if headers_match(&headers, expected) {
-                return Some(*source);
-            }
+        // Several signatures can be a subset of the same header row (e.g. the
+        // v1/v2 variants of a format, or a short generic layout nested in a
+        // richer one). Pick the most specific match — the signature with the
+        // most required columns — so extra/reordered columns never let a
+        // narrower signature shadow the correct one.
+        let best = EXCHANGE_SIGNATURES
+            .iter()
+            .filter(|(expected, _)| headers_match(&headers, expected))
+            .max_by_key(|(expected, _)| expected.len());
+
+        if let Some((_, source)) = best {
+            return Some(*source);
         }
     }
 
     None
 }
 
-/// Returns `true` if `actual` headers contain all `expected` columns in order,
-/// allowing extra trailing columns.
-fn headers_match(actual: &[&str], expected: &[&str]) -> bool {
+/// Returns `true` if every column in `expected` is present in `actual`,
+/// regardless of order and ignoring any extra columns.
+///
+/// Both sides are compared under [`normalize_header`], so casing, spacing,
+/// underscores and punctuation in the header text do not affect the match.
+/// `actual` must already be normalised by the caller.
+fn headers_match(actual: &[String], expected: &[&str]) -> bool {
     if actual.len() < expected.len() {
         return false;
     }
-    actual
-        .iter()
-        .zip(expected.iter())
-        .all(|(a, e)| a.eq_ignore_ascii_case(e))
+    expected.iter().all(|e| {
+        let want = normalize_header(e);
+        actual.contains(&want)
+    })
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -791,6 +798,37 @@ mod tests {
     }
 
     #[test]
+    fn detect_mexc_spot_with_reordered_and_extra_columns() {
+        // Columns shuffled and an unknown trailing column appended.
+        let csv = "Status,Pairs,UID,Direction,Type,Time,Order Price,Average Filled Price,Filled Quantity,Order Quantity,Order Amount,Notes\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcSpotTradeHistory)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_spot_with_underscore_headers() {
+        // Same layout but with underscores instead of spaces in the headers.
+        let csv = "UID,Pairs,Time,Type,Direction,Average_Filled_Price,Order_Price,Filled_Quantity,Order_Quantity,Order_Amount,Status\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcSpotTradeHistory)
+        );
+    }
+
+    #[test]
+    fn detect_prefers_most_specific_signature() {
+        // Kraken Ledger v2 is a superset of v1; the richer signature must win,
+        // and both still resolve to the same source.
+        let csv = "txid,refid,time,type,subtype,aclass,subclass,asset,wallet,amount,fee,balance\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::KrakenLedger)
+        );
+    }
+
+    #[test]
     fn detect_unknown_returns_none() {
         let csv = "date,account,amount,currency\n";
         assert_eq!(detect_exchange_source(csv), None);
@@ -811,12 +849,18 @@ mod tests {
         );
     }
 
+    /// Normalises a slice of raw header cells the way `detect_exchange_source`
+    /// does before calling `headers_match`.
+    fn norm(cols: &[&str]) -> Vec<String> {
+        cols.iter().map(|c| normalize_header(c)).collect()
+    }
+
     #[test]
     fn headers_match_is_case_insensitive() {
-        let actual = vec![
+        let actual = norm(&[
             "TxId", "RefId", "Time", "Type", "SubType", "AClass", "Asset", "Amount", "Fee",
             "Balance",
-        ];
+        ]);
         let expected = &[
             "txid", "refid", "time", "type", "subtype", "aclass", "asset", "amount", "fee",
             "balance",
@@ -826,10 +870,10 @@ mod tests {
 
     #[test]
     fn headers_match_allows_extra_trailing_columns() {
-        let actual = vec![
+        let actual = norm(&[
             "txid", "refid", "time", "type", "subtype", "aclass", "asset", "amount", "fee",
             "balance", "extra1", "extra2",
-        ];
+        ]);
         let expected = &[
             "txid", "refid", "time", "type", "subtype", "aclass", "asset", "amount", "fee",
             "balance",
@@ -839,8 +883,37 @@ mod tests {
 
     #[test]
     fn headers_match_rejects_too_few_columns() {
-        let actual = vec!["txid", "refid", "time"];
+        let actual = norm(&["txid", "refid", "time"]);
         let expected = &["txid", "refid", "time", "type", "subtype"];
+        assert!(!headers_match(&actual, expected));
+    }
+
+    #[test]
+    fn headers_match_ignores_column_order() {
+        // Required columns present but shuffled, plus an unrelated extra column.
+        let actual = norm(&[
+            "balance", "fee", "amount", "asset", "aclass", "subtype", "type", "time", "refid",
+            "txid", "note",
+        ]);
+        let expected = &[
+            "txid", "refid", "time", "type", "subtype", "aclass", "asset", "amount", "fee",
+            "balance",
+        ];
+        assert!(headers_match(&actual, expected));
+    }
+
+    #[test]
+    fn headers_match_normalises_spacing_and_punctuation() {
+        // Exchange tweaks spacing/casing/underscores; detection must survive it.
+        let actual = norm(&["UID", "Average_Filled_Price", "ORDER PRICE"]);
+        let expected = &["uid", "Average Filled Price", "order price"];
+        assert!(headers_match(&actual, expected));
+    }
+
+    #[test]
+    fn headers_match_rejects_when_a_required_column_is_absent() {
+        let actual = norm(&["txid", "refid", "time", "type", "subtype"]);
+        let expected = &["txid", "refid", "time", "type", "balance"];
         assert!(!headers_match(&actual, expected));
     }
 }

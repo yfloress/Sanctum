@@ -48,8 +48,8 @@ use std::collections::HashMap;
 use csv::{ReaderBuilder, StringRecord, Trim};
 
 use super::super::common::{
-    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote, parse_decimal,
-    parse_timestamp,
+    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote,
+    normalize_header, parse_decimal, parse_timestamp,
 };
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -59,7 +59,7 @@ use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
             "pairs" => {
                 map.insert("pairs", i);
@@ -73,16 +73,16 @@ fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
             "direction" => {
                 map.insert("direction", i);
             }
-            "average filled price" => {
+            "averagefilledprice" => {
                 map.insert("avg_price", i);
             }
-            "order price" => {
+            "orderprice" => {
                 map.insert("order_price", i);
             }
-            "filled quantity" => {
+            "filledquantity" => {
                 map.insert("filled_qty", i);
             }
-            "order amount" => {
+            "orderamount" => {
                 map.insert("order_amount", i);
             }
             "status" => {

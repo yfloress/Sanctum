@@ -329,3 +329,31 @@ fn format_datetime_produces_full() {
     let dt = parse_timestamp("2024-01-15 10:30:45").unwrap();
     assert_eq!(format_datetime(dt), "2024-01-15 10:30:45");
 }
+
+#[test]
+fn normalize_header_collapses_case_space_and_punctuation() {
+    // Spacing, casing and underscore variants all collapse to one key.
+    assert_eq!(
+        normalize_header("Average Filled Price"),
+        "averagefilledprice"
+    );
+    assert_eq!(
+        normalize_header("average_filled_price"),
+        "averagefilledprice"
+    );
+    assert_eq!(
+        normalize_header("  averagefilledprice  "),
+        "averagefilledprice"
+    );
+    // Punctuation and parenthesised suffixes are stripped, digits are kept.
+    assert_eq!(normalize_header("Date(UTC)"), "dateutc");
+    assert_eq!(
+        normalize_header("create_time(UTC+00:00)"),
+        "createtimeutc0000"
+    );
+    assert_eq!(normalize_header("Fee-payment Crypto"), "feepaymentcrypto");
+    assert_eq!(normalize_header("P/L"), "pl");
+    // Quotes and empty input.
+    assert_eq!(normalize_header("\"UID\""), "uid");
+    assert_eq!(normalize_header(""), "");
+}

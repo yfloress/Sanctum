@@ -24,7 +24,9 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
+use super::super::common::{
+    format_datetime, is_fiat, normalize_header, parse_decimal, parse_timestamp,
+};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -33,7 +35,7 @@ pub struct MexcDepositParser;
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
             "status" => {
                 map.insert("status", i);
@@ -47,7 +49,7 @@ fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
             "network" => {
                 map.insert("network", i);
             }
-            "deposit amount" => {
+            "depositamount" => {
                 map.insert("amount", i);
             }
             "txid" => {

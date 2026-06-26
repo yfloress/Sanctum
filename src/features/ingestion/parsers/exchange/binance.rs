@@ -44,8 +44,8 @@ use csv::StringRecord;
 
 use super::common::{
     append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_quote_currency,
-    is_usd_valued_quote, normalize_binance_currency, parse_amount_with_unit, parse_decimal,
-    parse_timestamp, should_rename_luna_to_lunc,
+    is_usd_valued_quote, normalize_binance_currency, normalize_header, parse_amount_with_unit,
+    parse_decimal, parse_timestamp, should_rename_luna_to_lunc,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -194,27 +194,26 @@ fn annotate_non_usd_quote_note(notes: Option<String>, quote_symbol: &str) -> Opt
 fn resolve_all_statements_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "User_ID" => {
+        match normalize_header(col).as_str() {
+            "userid" => {
                 map.insert("user_id", i);
             }
-            "UTC_Time" => {
+            "utctime" => {
                 map.insert("utc_time", i);
             }
-            "Account" => {
+            "account" => {
                 map.insert("account", i);
             }
-            "Operation" => {
+            "operation" => {
                 map.insert("operation", i);
             }
-            "Coin" => {
+            "coin" => {
                 map.insert("coin", i);
             }
-            "Change" => {
+            "change" => {
                 map.insert("change", i);
             }
-            "Remark" => {
+            "remark" => {
                 map.insert("remark", i);
             }
             _ => {}
@@ -226,27 +225,26 @@ fn resolve_all_statements_columns(headers: &StringRecord) -> HashMap<&'static st
 fn resolve_spot_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Date(UTC)" => {
+        match normalize_header(col).as_str() {
+            "dateutc" => {
                 map.insert("date", i);
             }
-            "Pair" => {
+            "pair" => {
                 map.insert("pair", i);
             }
-            "Side" => {
+            "side" => {
                 map.insert("side", i);
             }
-            "Price" => {
+            "price" => {
                 map.insert("price", i);
             }
-            "Executed" => {
+            "executed" => {
                 map.insert("executed", i);
             }
-            "Amount" => {
+            "amount" => {
                 map.insert("amount", i);
             }
-            "Fee" => {
+            "fee" => {
                 map.insert("fee", i);
             }
             _ => {}

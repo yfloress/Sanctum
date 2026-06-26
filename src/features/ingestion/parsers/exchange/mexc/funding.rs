@@ -25,7 +25,9 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
+use super::super::common::{
+    format_datetime, is_fiat, normalize_header, parse_decimal, parse_timestamp,
+};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -35,7 +37,7 @@ pub struct MexcFundingTransferParser;
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"').to_lowercase();
+        let key = normalize_header(col);
         match key.as_str() {
             "time" => {
                 map.insert("time", i);
@@ -55,10 +57,10 @@ fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
             "remark" => {
                 map.insert("remark", i);
             }
-            "from system" => {
+            "fromsystem" => {
                 map.insert("from_system", i);
             }
-            "to system" => {
+            "tosystem" => {
                 map.insert("to_system", i);
             }
             "currency" => {
@@ -67,13 +69,13 @@ fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
             "amount" => {
                 map.insert("amount", i);
             }
-            "update_time(utc+00:00)" => {
+            "updatetimeutc0000" => {
                 map.insert("update_time", i);
             }
-            "create_time(utc+00:00)" => {
+            "createtimeutc0000" => {
                 map.insert("create_time", i);
             }
-            "transfer type" => {
+            "transfertype" => {
                 map.insert("transfer_type", i);
             }
             _ => {}
