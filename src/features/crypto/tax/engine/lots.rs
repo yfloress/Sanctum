@@ -19,7 +19,6 @@
 
 use super::period::{is_in_period, parse_date, prev_month_key};
 use super::types::{AllocationInfo, DisposalRequest, Lot, TaxConfig};
-use crate::features::crypto::tax::rules::JurisdictionRules;
 use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
 use crate::models::CryptoTransaction;

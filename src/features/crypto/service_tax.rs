@@ -22,7 +22,7 @@ use super::service::{
     SETTING_CRYPTO_TAX_SETTINGS, SETTING_PREFERRED_CURRENCY,
 };
 use super::tax::{
-    IpcEntry, IpcImportSummary, IpcSummary, JurisdictionRules, TaxJurisdiction, TaxPeriodSettings,
+    IpcEntry, IpcImportSummary, IpcSummary, TaxJurisdiction, TaxPeriodSettings,
     TaxReadinessItem, TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType,
     build_import_summary, build_tax_report, is_ipc_missing_warning,
     is_non_usd_quote_missing_price_warning, is_resolvable_missing_price_warning, map_to_entries,

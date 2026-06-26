@@ -27,8 +27,7 @@ pub(crate) use types::TaxPeriod;
 
 use crate::features::crypto::tax::IpcEntry;
 use crate::features::crypto::tax::{
-    JurisdictionRules, TaxTxType, is_loss_only_subtype, normalize_subtype, resolve_subtype,
-    resolve_type,
+    TaxTxType, is_loss_only_subtype, normalize_subtype, resolve_subtype, resolve_type,
 };
 use crate::features::crypto::{TaxReport, TaxReportSummary, TaxWarning};
 use crate::models::{CryptoTransaction, CryptoTransactionType};
