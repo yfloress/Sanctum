@@ -27,7 +27,7 @@ pub(crate) use types::TaxPeriod;
 
 use crate::features::crypto::tax::IpcEntry;
 use crate::features::crypto::tax::{
-    TaxJurisdiction, TaxTxType, is_loss_only_subtype, normalize_subtype, resolve_subtype,
+    JurisdictionRules, TaxTxType, is_loss_only_subtype, normalize_subtype, resolve_subtype,
     resolve_type,
 };
 use crate::features::crypto::{TaxReport, TaxReportSummary, TaxWarning};
@@ -59,7 +59,7 @@ pub fn build_tax_report(
     };
 
     let mut warnings: Vec<TaxWarning> = Vec::new();
-    if matches!(cfg.jurisdiction, TaxJurisdiction::Chile) && cfg.ipc_map.is_empty() {
+    if cfg.rules().inflation_indexed() && cfg.ipc_map.is_empty() {
         warnings.push(TaxWarning {
             code: "ipc_missing".to_string(),
             message: "IPC data not loaded. Chilean inflation adjustment cannot be applied."
@@ -94,6 +94,13 @@ pub fn build_tax_report(
     let mut processed: HashSet<String> = HashSet::new();
     let mut lots: HashMap<String, Vec<types::Lot>> = HashMap::new();
 
+    // USA / generic regimes report separate short- and long-term gain buckets;
+    // inflation-indexed regimes (Chile) report a single combined gain.
+    let term_bucket = jurisdiction
+        .rules()
+        .classifies_holding_term()
+        .then_some(0.0);
+
     let mut report = TaxReport {
         period_id: period.id.clone(),
         period_start: period.start.format("%Y-%m-%d").to_string(),
@@ -105,20 +112,8 @@ pub fn build_tax_report(
             total_proceeds: 0.0,
             total_cost: 0.0,
             total_gain: 0.0,
-            short_term_gain: if matches!(
-                jurisdiction,
-                TaxJurisdiction::Usa | TaxJurisdiction::Other
-            ) {
-                Some(0.0)
-            } else {
-                None
-            },
-            long_term_gain: if matches!(jurisdiction, TaxJurisdiction::Usa | TaxJurisdiction::Other)
-            {
-                Some(0.0)
-            } else {
-                None
-            },
+            short_term_gain: term_bucket,
+            long_term_gain: term_bucket,
         },
         disposals: Vec::new(),
         warnings,
@@ -304,7 +299,7 @@ pub fn build_tax_report(
 mod tests {
     use super::*;
     use crate::features::crypto::TaxPeriodSettings;
-    use crate::features::crypto::tax::TaxMethod;
+    use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 0.0001

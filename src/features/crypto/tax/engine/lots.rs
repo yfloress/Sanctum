@@ -19,6 +19,7 @@
 
 use super::period::{is_in_period, parse_date, prev_month_key};
 use super::types::{AllocationInfo, DisposalRequest, Lot, TaxConfig};
+use crate::features::crypto::tax::rules::JurisdictionRules;
 use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
 use crate::models::CryptoTransaction;
@@ -94,9 +95,11 @@ pub(super) fn add_lot(
     jurisdiction: TaxJurisdiction,
     subtype: Option<&str>,
 ) {
-    // Chile: airdrops, staking and forks are recognised at cost $0.
-    let force_zero_cost = matches!(jurisdiction, TaxJurisdiction::Chile)
-        && matches!(subtype, Some("airdrop") | Some("staking") | Some("fork"));
+    let rules = jurisdiction.rules();
+
+    // Some regimes recognise certain income subtypes at cost $0 (e.g. Chile
+    // airdrops, staking and forks).
+    let force_zero_cost = rules.is_zero_cost_income(subtype);
 
     let price = if force_zero_cost {
         0.0
@@ -113,10 +116,11 @@ pub(super) fn add_lot(
         });
     }
 
-    // Chile: fees cannot be part of the cost basis for personas naturales.
-    let fee = match jurisdiction {
-        TaxJurisdiction::Chile => 0.0,
-        _ => tx.fee.unwrap_or(0.0),
+    // Some regimes exclude fees from the cost basis (e.g. Chile personas naturales).
+    let fee = if rules.fee_in_cost_basis() {
+        tx.fee.unwrap_or(0.0)
+    } else {
+        0.0
     };
 
     let total_cost = match tx.override_cost_basis {
@@ -170,10 +174,10 @@ pub(super) fn apply_disposal(
 
     if let Some(override_proceeds) = tx.override_proceeds {
         proceeds = override_proceeds;
-    } else if taxable && !matches!(cfg.jurisdiction, TaxJurisdiction::Chile) {
-        // For business-style regimes, disposal fees reduce proceeds.
-        // Chile persona natural (art. 17 N°8 m) does not deduct these commissions
-        // in mayor valor determination.
+    } else if taxable && cfg.rules().deduct_disposal_fees() {
+        // Business-style regimes deduct disposal commissions from proceeds.
+        // Chile persona natural (art. 17 N°8 m) does not deduct these in the
+        // mayor valor determination.
         let fee = tx.fee.unwrap_or(0.0);
         proceeds = (proceeds - fee).max(0.0);
     }
@@ -310,9 +314,6 @@ pub(super) fn consume_lots(
     cfg: &TaxConfig,
     req: &DisposalRequest,
 ) -> (Vec<AllocationInfo>, f64, f64, f64) {
-    let mut allocations = Vec::new();
-    let mut cost_basis = 0.0;
-
     let entry = lots.entry(req.coin_id.to_string()).or_default();
     let total_available: f64 = entry.iter().map(|lot| lot.quantity).sum();
 
@@ -324,54 +325,156 @@ pub(super) fn consume_lots(
                 tx_id: Some(req.tx_id.to_string()),
             });
         }
-        return (allocations, 0.0, 0.0, 0.0);
+        return (Vec::new(), 0.0, 0.0, 0.0);
     }
 
-    let mut remaining = req.amount;
+    // The method strategy owns *how* lots are consumed; the jurisdiction owns
+    // *whether* the resulting gain is split into holding-term buckets.
+    let (allocations, cost_basis) = cfg.method.selection().consume(report, entry, cfg, req);
 
-    if cfg.method == TaxMethod::Cpp {
-        let (allocs, cost) = consume_lots_cpp(
+    let (short_gain, long_gain) =
+        split_term_gain(&allocations, req.proceeds, req.sale_date, cfg.jurisdiction);
+    (allocations, cost_basis, short_gain, long_gain)
+}
+
+// ---------------------------------------------------------------------------
+// Lot selection strategies (cost-basis method)
+// ---------------------------------------------------------------------------
+
+/// Strategy for consuming acquisition lots on a disposal.
+///
+/// FIFO/LIFO/HIFO drain lots sequentially in a method-specific order; CPP
+/// (average cost) spreads the disposal proportionally across all open lots.
+/// Adding a method means writing one impl and one factory arm
+/// ([`TaxMethod::selection`]).
+pub(super) trait LotSelection {
+    /// Consumes `req.amount` of the coin from `lots`, returning the per-lot
+    /// allocations and the total (IPC-adjusted) cost basis.
+    ///
+    /// The caller ([`consume_lots`]) guarantees `lots` is non-empty with a
+    /// positive total quantity.
+    fn consume(
+        &self,
+        report: &mut TaxReport,
+        lots: &mut Vec<Lot>,
+        cfg: &TaxConfig,
+        req: &DisposalRequest,
+    ) -> (Vec<AllocationInfo>, f64);
+}
+
+struct Fifo;
+struct Lifo;
+struct Hifo;
+struct AverageCost;
+
+impl TaxMethod {
+    /// Returns the [`LotSelection`] strategy for this method.
+    ///
+    /// This is the single point that maps the method enum to a consumption
+    /// algorithm; every disposal dispatches polymorphically through it.
+    pub(super) fn selection(self) -> &'static dyn LotSelection {
+        match self {
+            TaxMethod::Fifo => &Fifo,
+            TaxMethod::Lifo => &Lifo,
+            TaxMethod::Hifo => &Hifo,
+            TaxMethod::Cpp => &AverageCost,
+        }
+    }
+}
+
+impl LotSelection for Fifo {
+    fn consume(
+        &self,
+        report: &mut TaxReport,
+        lots: &mut Vec<Lot>,
+        cfg: &TaxConfig,
+        req: &DisposalRequest,
+    ) -> (Vec<AllocationInfo>, f64) {
+        let order: Vec<usize> = (0..lots.len()).collect();
+        drain_in_order(report, lots, cfg, req, order)
+    }
+}
+
+impl LotSelection for Lifo {
+    fn consume(
+        &self,
+        report: &mut TaxReport,
+        lots: &mut Vec<Lot>,
+        cfg: &TaxConfig,
+        req: &DisposalRequest,
+    ) -> (Vec<AllocationInfo>, f64) {
+        let mut order: Vec<usize> = (0..lots.len()).collect();
+        order.reverse();
+        drain_in_order(report, lots, cfg, req, order)
+    }
+}
+
+impl LotSelection for Hifo {
+    fn consume(
+        &self,
+        report: &mut TaxReport,
+        lots: &mut Vec<Lot>,
+        cfg: &TaxConfig,
+        req: &DisposalRequest,
+    ) -> (Vec<AllocationInfo>, f64) {
+        let sale_prev_month = prev_month_key(req.sale_date);
+        let mut order: Vec<usize> = (0..lots.len()).collect();
+        order.sort_by(|a, b| {
+            let a_cost = hifo_effective_unit_cost(&lots[*a], cfg, &sale_prev_month);
+            let b_cost = hifo_effective_unit_cost(&lots[*b], cfg, &sale_prev_month);
+
+            b_cost
+                .partial_cmp(&a_cost)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| lots[*a].acquired_date.cmp(&lots[*b].acquired_date))
+        });
+        drain_in_order(report, lots, cfg, req, order)
+    }
+}
+
+impl LotSelection for AverageCost {
+    fn consume(
+        &self,
+        report: &mut TaxReport,
+        lots: &mut Vec<Lot>,
+        cfg: &TaxConfig,
+        req: &DisposalRequest,
+    ) -> (Vec<AllocationInfo>, f64) {
+        consume_lots_cpp(
             report,
-            entry,
+            lots,
             cfg,
             req.amount,
             req.sale_date,
             req.tx_id,
             req.taxable,
-        );
-        allocations = allocs;
-        cost_basis = cost;
-        let (short_gain, long_gain) =
-            split_term_gain(&allocations, req.proceeds, req.sale_date, cfg.jurisdiction);
-        return (allocations, cost_basis, short_gain, long_gain);
+        )
     }
+}
 
+/// Sequentially drains `lots` in the given index `order`, accumulating
+/// allocations and IPC-adjusted cost basis. Emits an `insufficient_lots`
+/// warning when the order cannot cover `req.amount`.
+fn drain_in_order(
+    report: &mut TaxReport,
+    lots: &mut Vec<Lot>,
+    cfg: &TaxConfig,
+    req: &DisposalRequest,
+    order: Vec<usize>,
+) -> (Vec<AllocationInfo>, f64) {
     let sale_prev_month = prev_month_key(req.sale_date);
+    let mut allocations = Vec::new();
+    let mut cost_basis = 0.0;
+    let mut remaining = req.amount;
 
-    let mut indices: Vec<usize> = (0..entry.len()).collect();
-    match cfg.method {
-        TaxMethod::Fifo => {}
-        TaxMethod::Lifo => indices.reverse(),
-        TaxMethod::Hifo => indices.sort_by(|a, b| {
-            let a_cost = hifo_effective_unit_cost(&entry[*a], cfg, &sale_prev_month);
-            let b_cost = hifo_effective_unit_cost(&entry[*b], cfg, &sale_prev_month);
-
-            b_cost
-                .partial_cmp(&a_cost)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .then_with(|| entry[*a].acquired_date.cmp(&entry[*b].acquired_date))
-        }),
-        TaxMethod::Cpp => {}
-    }
-
-    for idx in indices {
+    for idx in order {
         if remaining <= 0.0 {
             break;
         }
-        if idx >= entry.len() {
+        if idx >= lots.len() {
             continue;
         }
-        let lot = &mut entry[idx];
+        let lot = &mut lots[idx];
         if lot.quantity <= 0.0 {
             continue;
         }
@@ -406,7 +509,7 @@ pub(super) fn consume_lots(
         });
     }
 
-    entry.retain(|lot| lot.quantity > 0.0);
+    lots.retain(|lot| lot.quantity > 0.0);
 
     if remaining > 0.0 {
         report.warnings.push(TaxWarning {
@@ -416,13 +519,11 @@ pub(super) fn consume_lots(
         });
     }
 
-    let (short_gain, long_gain) =
-        split_term_gain(&allocations, req.proceeds, req.sale_date, cfg.jurisdiction);
-    (allocations, cost_basis, short_gain, long_gain)
+    (allocations, cost_basis)
 }
 
 fn hifo_effective_unit_cost(lot: &Lot, cfg: &TaxConfig, sale_prev_month: &str) -> f64 {
-    if !matches!(cfg.jurisdiction, TaxJurisdiction::Chile) || cfg.ipc_map.is_empty() {
+    if !cfg.rules().inflation_indexed() || cfg.ipc_map.is_empty() {
         return lot.unit_cost;
     }
 
@@ -535,7 +636,7 @@ fn apply_ipc_cost_adjustment(
     tx_id: &str,
     warn: bool,
 ) -> (Option<f64>, f64) {
-    if !matches!(cfg.jurisdiction, TaxJurisdiction::Chile) {
+    if !cfg.rules().inflation_indexed() {
         return (None, base_cost);
     }
 
@@ -576,7 +677,7 @@ pub(super) fn apply_gain_ipc_adjustment(
     raw_gain: f64,
     tx_id: &str,
 ) -> f64 {
-    if !matches!(cfg.jurisdiction, TaxJurisdiction::Chile) {
+    if !cfg.rules().inflation_indexed() {
         return raw_gain;
     }
 
@@ -624,7 +725,7 @@ fn split_term_gain(
     sale_date: chrono::NaiveDate,
     jurisdiction: TaxJurisdiction,
 ) -> (f64, f64) {
-    if !matches!(jurisdiction, TaxJurisdiction::Usa | TaxJurisdiction::Other) {
+    if !jurisdiction.rules().classifies_holding_term() {
         return (0.0, 0.0);
     }
 
@@ -672,7 +773,7 @@ pub(super) fn build_term(
     long_gain: f64,
     jurisdiction: TaxJurisdiction,
 ) -> Option<String> {
-    if !matches!(jurisdiction, TaxJurisdiction::Usa | TaxJurisdiction::Other) {
+    if !jurisdiction.rules().classifies_holding_term() {
         return None;
     }
 

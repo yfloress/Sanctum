@@ -18,6 +18,7 @@
 //! Tax engine internal types.
 
 use super::super::report::LotAllocation;
+use crate::features::crypto::tax::rules::JurisdictionRules;
 use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 use chrono::NaiveDate;
 use std::collections::BTreeMap;
@@ -51,6 +52,13 @@ pub(super) struct TaxConfig<'a> {
     pub method: TaxMethod,
     pub jurisdiction: TaxJurisdiction,
     pub ipc_map: &'a BTreeMap<String, f64>,
+}
+
+impl TaxConfig<'_> {
+    /// The jurisdiction's rule strategy for this report run.
+    pub(super) fn rules(&self) -> &'static dyn JurisdictionRules {
+        self.jurisdiction.rules()
+    }
 }
 
 /// Parameters describing a single lot-consumption (disposal) request.

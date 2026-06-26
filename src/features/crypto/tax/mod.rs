@@ -20,6 +20,7 @@
 pub mod engine;
 pub mod ipc;
 pub mod report;
+pub mod rules;
 pub mod summary;
 pub mod types;
 pub mod warnings;
@@ -31,6 +32,7 @@ pub use ipc::{
 
 pub use engine::build_tax_report;
 pub use report::{LotAllocation, TaxDisposal, TaxReport, TaxReportSummary, TaxWarning};
+pub use rules::JurisdictionRules;
 
 pub use summary::{TaxReadinessItem, TaxSummaryPayload};
 pub use types::{

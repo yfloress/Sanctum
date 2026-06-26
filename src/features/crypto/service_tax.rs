@@ -22,11 +22,11 @@ use super::service::{
     SETTING_CRYPTO_TAX_SETTINGS, SETTING_PREFERRED_CURRENCY,
 };
 use super::tax::{
-    IpcEntry, IpcImportSummary, IpcSummary, TaxJurisdiction, TaxPeriodSettings, TaxReadinessItem,
-    TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType, build_import_summary,
-    build_tax_report, is_ipc_missing_warning, is_non_usd_quote_missing_price_warning,
-    is_resolvable_missing_price_warning, map_to_entries, parse_ipc_csv, resolve_type,
-    summarize_ipc,
+    IpcEntry, IpcImportSummary, IpcSummary, JurisdictionRules, TaxJurisdiction, TaxPeriodSettings,
+    TaxReadinessItem, TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType,
+    build_import_summary, build_tax_report, is_ipc_missing_warning,
+    is_non_usd_quote_missing_price_warning, is_resolvable_missing_price_warning, map_to_entries,
+    parse_ipc_csv, resolve_type, summarize_ipc,
 };
 use crate::core::csv_escape;
 use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
@@ -352,11 +352,7 @@ impl CryptoService {
             preferred
         };
 
-        let currency = if matches!(jurisdiction, TaxJurisdiction::Chile) {
-            "CLP".to_string()
-        } else {
-            preferred
-        };
+        let currency = jurisdiction.rules().export_currency(&preferred);
 
         if currency == "USD" {
             return Ok(("USD".to_string(), 0.0));
@@ -636,34 +632,8 @@ fn build_readiness(
             status: if unpaired_transfers > 0 { "warn" } else { "ok" }.to_string(),
             detail: unpaired_transfers.to_string(),
         },
-        // Chile-specific: F22 casilla guidance
-        if matches!(jurisdiction, TaxJurisdiction::Chile) {
-            let has_gain = report.summary.total_gain > 0.0;
-            let has_loss = report.summary.total_gain < 0.0;
-            TaxReadinessItem {
-                code: "sii_f22".to_string(),
-                status: "info".to_string(),
-                detail: if has_gain {
-                    "gain".to_string()
-                } else if has_loss {
-                    "loss".to_string()
-                } else {
-                    "neutral".to_string()
-                },
-            }
-        } else if matches!(jurisdiction, TaxJurisdiction::Usa) {
-            TaxReadinessItem {
-                code: "filing".to_string(),
-                status: "info".to_string(),
-                detail: "usa".to_string(),
-            }
-        } else {
-            TaxReadinessItem {
-                code: "filing".to_string(),
-                status: "info".to_string(),
-                detail: "other".to_string(),
-            }
-        },
+        // Jurisdiction-specific filing guidance (e.g. Chile F22 casilla).
+        jurisdiction.rules().readiness_item(report),
     ]);
 
     items
