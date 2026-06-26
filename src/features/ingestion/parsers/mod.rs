@@ -20,10 +20,12 @@
 //! Supports JSON, CSV, plain text, and exchange-specific CSV formats.
 
 pub mod csv;
+pub mod custom;
 pub mod exchange;
 pub mod json;
 
 pub use self::csv::CsvParser;
+pub use self::custom::{CsvStructure, CustomColumnMapping, CustomCsvParser, analyze_csv_structure};
 pub use self::exchange::{ExchangeParser, ExchangeSource, detect_exchange_source, parser_for};
 pub use self::json::{JsonParseResult, JsonParser};
 

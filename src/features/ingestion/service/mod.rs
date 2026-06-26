@@ -26,8 +26,8 @@ use chrono::{NaiveDate, NaiveDateTime};
 use std::sync::{Arc, RwLock};
 
 use super::parsers::{
-    CsvParser, ExchangeSource, ImportParser, JsonParser, detect_exchange_source, detect_format,
-    parser_for,
+    CsvParser, CsvStructure, CustomColumnMapping, CustomCsvParser, ExchangeSource, ImportParser,
+    JsonParser, analyze_csv_structure, detect_exchange_source, detect_format, parser_for,
 };
 use super::types::{ImportFormat, ImportSummary};
 use super::validation::validate_file_size;
@@ -625,6 +625,40 @@ impl IngestionService {
             })?;
 
         self.preview_exchange_csv(content, wallet_name, source)
+    }
+
+    // ── Custom (user-mapped) CSV import ──────────────────────────────────────
+
+    /// Inspects an arbitrary CSV, returning its header row and first data row
+    /// so the UI can let the user map each column.
+    ///
+    /// Used for exchanges/wallets whose layout Sanctum does not auto-detect.
+    pub fn analyze_custom_csv(&self, content: &str) -> Result<CsvStructure, IngestionError> {
+        validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
+        analyze_csv_structure(content).map_err(|e| IngestionError::Parse(e.message))
+    }
+
+    /// Imports an arbitrary CSV using a user-provided column mapping.
+    ///
+    /// Builds a generic parser from `mapping`, converts each row into a crypto
+    /// transaction, and feeds them through the shared processing pipeline.
+    /// Balance validation is skipped — like the dedicated exchange imports, the
+    /// imported file is treated as the authoritative record.
+    pub fn import_custom_csv(
+        &self,
+        content: &str,
+        mapping: CustomColumnMapping,
+        wallet_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
+        let parsed = CustomCsvParser::new(mapping)
+            .parse(content, wallet_name)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+        let mut summary = self.process_crypto_transactions_ext(parsed.items, "Custom CSV", true)?;
+        for error in parsed.errors {
+            summary.record_error(error);
+        }
+        Ok(summary)
     }
 }
 

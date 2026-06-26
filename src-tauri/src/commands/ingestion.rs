@@ -18,9 +18,13 @@
 //! Ingestion domain Tauri commands.
 
 use sanctum::error::AppError;
+use sanctum::features::ingestion::parsers::CustomColumnMapping;
 use sanctum::features::ingestion::parsers::detect_exchange_source as parse_exchange_source;
 use sanctum::features::ingestion::{IngestionService, MAX_FILE_SIZE};
-use sanctum::ui::dto::ingestion::{ExchangeDetectionResult, ImportErrorDto, ImportResultsResponse};
+use sanctum::ui::dto::ingestion::{
+    CsvAnalysisResult, CustomCsvMapping, ExchangeDetectionResult, ImportErrorDto,
+    ImportResultsResponse,
+};
 use tauri::State;
 
 #[tauri::command]
@@ -89,6 +93,48 @@ pub fn import_exchange_csv(
         .import_exchange_csv_auto(&content, &wallet_name)
         .map_err(AppError::from)?;
     Ok(map_import_summary(summary))
+}
+
+#[tauri::command]
+pub fn analyze_custom_csv(
+    ingestion: State<'_, IngestionService>,
+    content: String,
+) -> Result<CsvAnalysisResult, AppError> {
+    let structure = ingestion
+        .analyze_custom_csv(&content)
+        .map_err(AppError::from)?;
+    Ok(CsvAnalysisResult {
+        headers: structure.headers,
+        sample_row: structure.sample_row,
+    })
+}
+
+#[tauri::command]
+pub fn import_custom_csv(
+    ingestion: State<'_, IngestionService>,
+    content: String,
+    mapping: CustomCsvMapping,
+    wallet_name: String,
+) -> Result<ImportResultsResponse, AppError> {
+    let summary = ingestion
+        .import_custom_csv(&content, into_domain_mapping(mapping), &wallet_name)
+        .map_err(AppError::from)?;
+    Ok(map_import_summary(summary))
+}
+
+/// Maps the IPC mapping DTO into the ingestion feature's domain mapping,
+/// keeping the service decoupled from the `ui::dto` layer.
+fn into_domain_mapping(mapping: CustomCsvMapping) -> CustomColumnMapping {
+    CustomColumnMapping {
+        date_col: mapping.date_col,
+        asset_col: mapping.asset_col,
+        amount_col: mapping.amount_col,
+        type_col: mapping.type_col,
+        fee_col: mapping.fee_col,
+        fee_currency_col: mapping.fee_currency_col,
+        price_col: mapping.price_col,
+        notes_col: mapping.notes_col,
+    }
 }
 
 fn map_import_summary(

@@ -87,3 +87,37 @@ pub struct ExchangeWalletSelectInput {
 pub struct MissingCoinInput {
     pub symbol: String,
 }
+
+// ==================== Custom CSV Mapping ====================
+
+/// Result of analysing an arbitrary CSV before mapping.
+///
+/// Carries the detected header row and the first data row so the UI can show
+/// the user a concrete example of what each column contains.
+#[derive(Debug, Clone, Serialize)]
+pub struct CsvAnalysisResult {
+    pub headers: Vec<String>,
+    pub sample_row: Vec<String>,
+}
+
+/// User-chosen column mapping for a custom (unknown-exchange) CSV import.
+///
+/// Each field holds the header name the user picked for that logical column.
+/// Only `date_col`, `asset_col` and `amount_col` are mandatory; the rest are
+/// optional and omitted when the source CSV has no such column.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CustomCsvMapping {
+    pub date_col: String,
+    pub asset_col: String,
+    pub amount_col: String,
+    #[serde(default)]
+    pub type_col: Option<String>,
+    #[serde(default)]
+    pub fee_col: Option<String>,
+    #[serde(default)]
+    pub fee_currency_col: Option<String>,
+    #[serde(default)]
+    pub price_col: Option<String>,
+    #[serde(default)]
+    pub notes_col: Option<String>,
+}
