@@ -25,10 +25,11 @@
   import { save } from '@tauri-apps/plugin-dialog'
   import type {
     AppInfo, ImportResultsResponse,
-    ExchangeDetectionResult
+    ExchangeDetectionResult, CsvAnalysisResult, CustomCsvMapping
   } from '../lib/types'
 
   import ConfirmDialog from '../components/ConfirmDialog.svelte'
+  import CustomCsvMapper from '../components/CustomCsvMapper.svelte'
 
   let info = $state<AppInfo | null>(null)
   let maxFileSize = $state(0)
@@ -38,7 +39,7 @@
   // Import state
   type ImportStep = 'idle' | 'preview' | 'results'
   let importStep = $state<ImportStep>('idle')
-  let importMode = $state<'generic' | 'exchange'>('generic')
+  let importMode = $state<'generic' | 'exchange' | 'custom'>('generic')
   let importFilename = $state('')
   let importContent = $state('')
   let importPreview = $state<ImportResultsResponse | null>(null)
@@ -53,6 +54,10 @@
   let showWalletCreate = $state(false)
   let newWalletCategory = $state('exchange')
   let creatingWallet = $state(false)
+
+  // Custom CSV column mapping (unknown-exchange import)
+  let customAnalysis = $state<CsvAnalysisResult | null>(null)
+  let customWallets = $state<string[]>([])
 
   async function load() {
     try {
@@ -79,10 +84,13 @@
     exchangeDetection = null
     exchangeWalletName = ''
     showWalletCreate = false
+    customAnalysis = null
+    customWallets = []
   }
 
   let genericFileInput = $state<HTMLInputElement>(null!)
   let exchangeFileInput = $state<HTMLInputElement>(null!)
+  let customFileInput = $state<HTMLInputElement>(null!)
 
   function readFile(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -149,6 +157,47 @@
     } finally {
       importLoading = false
       exchangeFileInput.value = ''
+    }
+  }
+
+  async function handleCustomFile(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    try {
+      const content = await readFile(file)
+      if (maxFileSize > 0 && content.length > maxFileSize) {
+        app.showToast(`File too large (max ${Math.round(maxFileSize / 1024)}KB)`, true)
+        return
+      }
+      importContent = content
+      importMode = 'custom'
+      importLoading = true
+      const analysis = await ingestionApi.analyzeCustomCsv(content)
+      // Load existing wallet names so the user can pick the import target.
+      try {
+        const w = await cryptoApi.fetchWallets()
+        customWallets = w.wallets.map((x) => x.name)
+      } catch {
+        customWallets = []
+      }
+      customAnalysis = analysis
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    } finally {
+      importLoading = false
+      customFileInput.value = ''
+    }
+  }
+
+  async function importCustomMapped(mapping: CustomCsvMapping, walletName: string) {
+    try {
+      importLoading = true
+      importResults = await ingestionApi.importCustomCsv(importContent, mapping, walletName.trim())
+      importStep = 'results'
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    } finally {
+      importLoading = false
     }
   }
 
@@ -427,9 +476,22 @@
               {/if}
             </div>
           </div>
+        {:else if customAnalysis}
+          <!-- Custom CSV: user maps each column to a Sanctum field -->
+          <div class="import-card">
+            <CustomCsvMapper
+              headers={customAnalysis.headers}
+              sampleRow={customAnalysis.sample_row}
+              wallets={customWallets}
+              loading={importLoading}
+              onimport={importCustomMapped}
+              oncancel={resetImport}
+            />
+          </div>
         {:else}
           <input type="file" accept=".csv" class="hidden-input" bind:this={genericFileInput} onchange={handleGenericFile} />
           <input type="file" accept=".csv" class="hidden-input" bind:this={exchangeFileInput} onchange={handleExchangeFile} />
+          <input type="file" accept=".csv" class="hidden-input" bind:this={customFileInput} onchange={handleCustomFile} />
           <div class="setting-row">
             <div>
               <span class="setting-label">{i18n.t('settings-import-generic', 'Generic CSV')}</span>
@@ -445,6 +507,15 @@
               <span class="setting-desc">{i18n.t('settings-import-exchange-desc', 'Import from Kraken, Binance, MEXC, Feather, Monero…')}</span>
             </div>
             <button class="secondary-btn" onclick={() => exchangeFileInput.click()} disabled={importLoading}>
+              {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
+            </button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <span class="setting-label">{i18n.t('settings-import-custom', 'Custom CSV (manual mapping)')}</span>
+              <span class="setting-desc">{i18n.t('settings-import-custom-desc', 'Import from any other exchange by mapping its columns')}</span>
+            </div>
+            <button class="secondary-btn" onclick={() => customFileInput.click()} disabled={importLoading}>
               {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
             </button>
           </div>

@@ -18,7 +18,9 @@
 import { invoke } from '@tauri-apps/api/core'
 import type {
   ImportResultsResponse,
-  ExchangeDetectionResult
+  ExchangeDetectionResult,
+  CsvAnalysisResult,
+  CustomCsvMapping
 } from '../types'
 
 export async function previewImport(content: string, filename: string): Promise<ImportResultsResponse> {
@@ -47,4 +49,18 @@ export async function importExchangeCsv(
   content: string, wallet_name: string
 ): Promise<ImportResultsResponse> {
   return invoke<ImportResultsResponse>('import_exchange_csv', { content, walletName: wallet_name })
+}
+
+export async function analyzeCustomCsv(content: string): Promise<CsvAnalysisResult> {
+  return invoke<CsvAnalysisResult>('analyze_custom_csv', { content })
+}
+
+export async function importCustomCsv(
+  content: string, mapping: CustomCsvMapping, wallet_name: string
+): Promise<ImportResultsResponse> {
+  return invoke<ImportResultsResponse>('import_custom_csv', {
+    content,
+    mapping,
+    walletName: wallet_name
+  })
 }

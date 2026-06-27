@@ -34,3 +34,19 @@ export interface ExchangeDetectionResult {
   file_count: number
   total_records: number
 }
+
+export interface CsvAnalysisResult {
+  headers: string[]
+  sample_row: string[]
+}
+
+export interface CustomCsvMapping {
+  date_col: string
+  asset_col: string
+  amount_col: string
+  type_col: string | null
+  fee_col: string | null
+  fee_currency_col: string | null
+  price_col: string | null
+  notes_col: string | null
+}
