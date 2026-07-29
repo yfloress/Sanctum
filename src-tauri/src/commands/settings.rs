@@ -25,8 +25,9 @@ use sanctum::features::crypto::{
     CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
 };
 use sanctum::features::settings::{
-    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED, SettingsService,
+    SETTING_DARK_MODE, SETTING_LAST_BACKUP_AT, SETTING_PREFERRED_CURRENCY,
+    SETTING_PREFERRED_LANGUAGE, SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
+    SettingsService,
 };
 use sanctum::ui::dto::settings::{AppInfo, AppSettings};
 use sanctum::vault_manager::VaultManager;
@@ -86,6 +87,11 @@ pub fn load_settings(
         .get_login_wallpaper_path()
         .map(|p| p.to_string_lossy().to_string());
 
+    let last_backup_at = settings
+        .get_app_setting(SETTING_LAST_BACKUP_AT)
+        .ok()
+        .filter(|v| !v.trim().is_empty());
+
     Ok(AppSettings {
         dark_mode,
         auto_fetch,
@@ -96,6 +102,7 @@ pub fn load_settings(
         preferred_language,
         sidebar_collapsed,
         login_wallpaper_path,
+        last_backup_at,
     })
 }
 

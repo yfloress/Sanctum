@@ -25,6 +25,8 @@ export interface AppSettings {
   preferred_language: string
   sidebar_collapsed: boolean
   login_wallpaper_path: string | null
+  /** RFC 3339 timestamp of the last vault export, null if never exported. */
+  last_backup_at: string | null
 }
 
 export interface AppInfo {

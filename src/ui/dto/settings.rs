@@ -33,6 +33,8 @@ pub struct AppSettings {
     pub preferred_language: String,
     pub sidebar_collapsed: bool,
     pub login_wallpaper_path: Option<String>,
+    /// RFC 3339 timestamp of the last vault export, `None` if never exported.
+    pub last_backup_at: Option<String>,
 }
 
 /// Input for updating a single boolean setting.

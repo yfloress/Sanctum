@@ -23,6 +23,7 @@
 //! Error messages are sanitized to avoid leaking internal details to the frontend.
 
 use sanctum::error::AppError;
+use sanctum::features::settings::SettingsService;
 use sanctum::ui::dto::vault::{PasswordStrengthResult, VaultStatus};
 use sanctum::vault_manager::VaultManager;
 use tauri::State;
@@ -79,11 +80,23 @@ pub fn check_password_strength(
 
 /// Export the current vault to a backup file at the given path.
 #[tauri::command]
-pub fn export_vault(vault: State<'_, VaultManager>, path: String) -> Result<(), AppError> {
-    vault.export_vault(path).map(|_| ()).map_err(|e| {
+pub fn export_vault(
+    vault: State<'_, VaultManager>,
+    settings: State<'_, SettingsService>,
+    path: String,
+) -> Result<(), AppError> {
+    vault.export_vault(path).map_err(|e| {
         log::error!("Vault export failed: {e}");
         AppError::new(AppError::from(e).kind, "Vault export failed")
-    })
+    })?;
+
+    // Best effort: the backup is already on disk, so a failed stamp must not
+    // report the export itself as failed.
+    if let Err(e) = settings.record_backup_now() {
+        log::warn!("Could not record the backup timestamp: {e}");
+    }
+
+    Ok(())
 }
 
 /// Restore a vault from a backup file.

@@ -28,8 +28,8 @@ pub mod validation;
 pub use database::Database;
 pub use error::DbError;
 pub use settings::{
-    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
+    SETTING_DARK_MODE, SETTING_LAST_BACKUP_AT, SETTING_PREFERRED_CURRENCY,
+    SETTING_PREFERRED_LANGUAGE, SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
 };
 pub use validation::{
     csv_escape, format_money_display, sanitize_string, validate_color, validate_date,

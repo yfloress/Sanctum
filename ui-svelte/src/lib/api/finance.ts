@@ -124,3 +124,8 @@ export async function updateCategory(id: string, new_name: string): Promise<void
 export async function deleteCategory(id: string): Promise<void> {
   return invoke('delete_category', { id })
 }
+
+/** Writes the whole ledger to `path` as CSV and returns the row count. */
+export async function exportTransactionsCsv(path: string): Promise<number> {
+  return invoke<number>('export_transactions_csv', { path })
+}

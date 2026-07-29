@@ -23,6 +23,9 @@
 /// Whether dark mode is enabled (`"true"` / `"false"`).
 pub const SETTING_DARK_MODE: &str = "dark_mode";
 
+/// RFC 3339 timestamp of the last successful vault export.
+pub const SETTING_LAST_BACKUP_AT: &str = "last_backup_at";
+
 /// Session inactivity timeout in seconds (e.g. `"900"`).
 pub const SETTING_SESSION_TIMEOUT: &str = "session_timeout";
 

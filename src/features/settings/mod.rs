@@ -30,6 +30,6 @@ pub use service::{SettingsError, SettingsService};
 // Re-export the application-level setting keys from their canonical home so
 // callers can reach them through the settings feature.
 pub use crate::core::settings::{
-    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
+    SETTING_DARK_MODE, SETTING_LAST_BACKUP_AT, SETTING_PREFERRED_CURRENCY,
+    SETTING_PREFERRED_LANGUAGE, SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
 };

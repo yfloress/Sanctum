@@ -21,7 +21,9 @@
 //! keys. Shares the same `Arc<RwLock<Option<Database>>>` handle as every other
 //! service, so it observes vault open/close transparently.
 
+use crate::core::settings::SETTING_LAST_BACKUP_AT;
 use crate::db::{Database, DbError};
+use chrono::Utc;
 use std::sync::{Arc, RwLock};
 
 #[derive(thiserror::Error, Debug)]
@@ -76,5 +78,10 @@ impl SettingsService {
     /// Writes an application setting.
     pub fn set_app_setting(&self, key: &str, value: &str) -> Result<(), SettingsError> {
         self.with_db(|db| db.set_setting(key, value).map_err(SettingsError::Database))
+    }
+
+    /// Stamps now as the last successful vault backup.
+    pub fn record_backup_now(&self) -> Result<(), SettingsError> {
+        self.set_app_setting(SETTING_LAST_BACKUP_AT, &Utc::now().to_rfc3339())
     }
 }

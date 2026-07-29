@@ -505,6 +505,12 @@ settings-timeout-never = Never
 # Vault Backup
 settings-vault-note = Your vault is encrypted with SQLCipher (AES-256).
 settings-export-vault = Export Vault
+settings-last-backup = Last backup
+settings-last-backup-never = never
+settings-last-backup-days = {$count} days ago
+settings-export-transactions = Export Transactions
+settings-export-transactions-desc = Plain CSV of your whole ledger, unencrypted
+settings-export-csv-done = {$count} transactions exported
 settings-export-btn = Export
 settings-export-success = Backup saved successfully
 

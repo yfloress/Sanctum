@@ -505,6 +505,12 @@ settings-timeout-never = Nunca
 # Vault Backup
 settings-vault-note = Tu boveda esta cifrada con SQLCipher (AES-256).
 settings-export-vault = Exportar Boveda
+settings-last-backup = Último respaldo
+settings-last-backup-never = nunca
+settings-last-backup-days = hace {$count} días
+settings-export-transactions = Exportar Transacciones
+settings-export-transactions-desc = CSV plano de todo tu ledger, sin cifrar
+settings-export-csv-done = {$count} transacciones exportadas
 settings-export-btn = Exportar
 settings-export-success = Respaldo guardado exitosamente
 

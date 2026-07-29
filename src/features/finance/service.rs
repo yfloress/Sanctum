@@ -31,6 +31,7 @@ use uuid::Uuid;
 use super::commands::{
     NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
 };
+use super::export;
 use super::repository::FinanceRepository;
 use super::transactions::{CategoryOps, TransactionOps};
 use super::validation::{
@@ -336,6 +337,18 @@ impl FinanceService {
             date,
             is_expense,
         )
+    }
+
+    /// Writes the whole ledger to `path` as CSV and returns the row count.
+    pub fn export_transactions_csv(&self, path: &str) -> Result<usize, FinanceError> {
+        let transactions = self.get_transactions()?;
+        let accounts = self.get_accounts()?;
+        let csv = export::transactions_to_csv(&transactions, &accounts);
+
+        std::fs::write(path, csv)
+            .map_err(|e| FinanceError::Validation(format!("Failed to write export: {e}")))?;
+
+        Ok(transactions.len())
     }
 
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, FinanceError> {

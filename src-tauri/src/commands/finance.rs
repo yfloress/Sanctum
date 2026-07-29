@@ -470,3 +470,18 @@ fn build_transaction_dto(
         transfer_account_name: transfer_label,
     }
 }
+
+// ==================== Export ====================
+
+/// Write the whole transaction ledger to `path` as CSV.
+///
+/// Returns the number of rows written so the frontend can report it.
+#[tauri::command]
+pub fn export_transactions_csv(
+    finance: State<'_, FinanceService>,
+    path: String,
+) -> Result<usize, AppError> {
+    finance
+        .export_transactions_csv(&path)
+        .map_err(AppError::from)
+}

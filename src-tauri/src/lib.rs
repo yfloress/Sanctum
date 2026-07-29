@@ -127,6 +127,7 @@ pub fn run() {
             commands::finance::add_category,
             commands::finance::update_category,
             commands::finance::delete_category,
+            commands::finance::export_transactions_csv,
             // Ingestion domain
             commands::ingestion::preview_import,
             commands::ingestion::import_data,

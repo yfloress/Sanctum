@@ -22,6 +22,7 @@
   import * as vaultApi from '../lib/api/vault'
   import * as ingestionApi from '../lib/api/ingestion'
   import * as cryptoApi from '../lib/api/crypto'
+  import * as financeApi from '../lib/api/finance'
   import { save } from '@tauri-apps/plugin-dialog'
   import type {
     AppInfo, ImportResultsResponse,
@@ -332,11 +333,37 @@
       })
       if (!path) return
       await vaultApi.exportVault(path)
+      app.settings = await settingsApi.loadSettings()
       app.showToast(i18n.t('settings-export-success', 'Backup saved successfully'))
     } catch (e) {
       app.showToast(errorMessage(e), true)
     }
   }
+
+  async function exportTransactionsCsv() {
+    try {
+      const path = await save({
+        title: i18n.t('settings-export-transactions', 'Export Transactions'),
+        filters: [{ name: 'CSV', extensions: ['csv'] }],
+      })
+      if (!path) return
+      const rows = await financeApi.exportTransactionsCsv(path)
+      app.showToast(
+        i18n.tArgs('settings-export-csv-done', { count: rows }, '{$count} transactions exported')
+      )
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
+  /** Days since the last vault export, or null when never exported. */
+  let daysSinceBackup = $derived.by(() => {
+    const stamp = app.settings?.last_backup_at
+    if (!stamp) return null
+    const then = new Date(stamp).getTime()
+    if (Number.isNaN(then)) return null
+    return Math.max(0, Math.floor((Date.now() - then) / 86_400_000))
+  })
 
   async function resetAllSettings() {
     try {
@@ -424,8 +451,27 @@
       <h3>{i18n.t('settings-vault-backup', 'Vault Backup')}</h3>
       <p class="section-note">{i18n.t('settings-vault-note', 'Your vault is encrypted with SQLCipher (AES-256).')}</p>
       <div class="setting-row">
-        <span class="setting-label">{i18n.t('settings-export-vault', 'Export Vault')}</span>
+        <div>
+          <span class="setting-label">{i18n.t('settings-export-vault', 'Export Vault')}</span>
+          <span class="setting-desc">
+            {i18n.t('settings-last-backup', 'Last backup')}:
+            {#if daysSinceBackup === null}
+              {i18n.t('settings-last-backup-never', 'never')}
+            {:else if daysSinceBackup === 0}
+              {i18n.t('time-today', 'Today')}
+            {:else}
+              {i18n.tArgs('settings-last-backup-days', { count: daysSinceBackup }, '{$count} days ago')}
+            {/if}
+          </span>
+        </div>
         <button class="glass-btn" onclick={exportVault}>{i18n.t('settings-export-btn', 'Export')}</button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <span class="setting-label">{i18n.t('settings-export-transactions', 'Export Transactions')}</span>
+          <span class="setting-desc">{i18n.t('settings-export-transactions-desc', 'Plain CSV of your whole ledger, unencrypted')}</span>
+        </div>
+        <button class="glass-btn" onclick={exportTransactionsCsv}>{i18n.t('settings-export-btn', 'Export')}</button>
       </div>
     </section>
 

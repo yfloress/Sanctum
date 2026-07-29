@@ -28,6 +28,7 @@
 //! Note: Charts moved to `features/dashboard/` as it serves the dashboard view.
 
 pub mod commands;
+pub mod export;
 pub mod repository;
 pub mod service;
 pub mod transactions;
