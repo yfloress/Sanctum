@@ -18,6 +18,7 @@
   import { app, type Page } from './lib/stores/app.svelte'
   import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
+  import { startShortcuts } from './lib/shortcuts'
   import Sidebar from './components/Sidebar.svelte'
   import MobileTopBar from './components/MobileTopBar.svelte'
   import StarField from './components/StarField.svelte'
@@ -34,7 +35,12 @@
   $effect(() => {
     if (app.isLoggedIn) {
       i18n.load()
-      return startSessionMonitor()
+      const stopSession = startSessionMonitor()
+      const stopShortcuts = startShortcuts()
+      return () => {
+        stopSession()
+        stopShortcuts()
+      }
     }
   })
 

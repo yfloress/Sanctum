@@ -38,6 +38,11 @@ const FIELDS =
 
 const stack: Entry[] = []
 
+/** True while any dialog is mounted, so global shortcuts can stay inert. */
+export function isDialogOpen(): boolean {
+  return stack.length > 0
+}
+
 /** Rendered, focusable descendants in DOM order. */
 function focusables(node: HTMLElement): HTMLElement[] {
   return Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(

@@ -20,6 +20,7 @@
   import { i18n } from '../lib/stores/i18n.svelte'
   import { formatCurrency, mask } from '../lib/currency'
   import { dialog } from '../lib/actions/dialog'
+  import { setPageActions } from '../lib/shortcuts'
   import * as cryptoApi from '../lib/api/crypto'
   import { save } from '@tauri-apps/plugin-dialog'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
@@ -83,6 +84,7 @@
   let txList = $state<CryptoTransactionDto[]>([])
   let txListHasMore = $state(false)
   let txListFilter = $state('')
+  let txSearchInput = $state<HTMLInputElement | undefined>()
   let pendingDeleteTxId = $state<string | null>(null)
 
   async function changeTrendDays(days: number) {
@@ -683,6 +685,16 @@
   })
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
   $effect(() => { if (activeTab === 'activity') loadTransactionsList() })
+
+  $effect(() =>
+    setPageActions({
+      newEntry: openAddTransaction,
+      focusSearch: () => {
+        activeTab = 'activity'
+        requestAnimationFrame(() => txSearchInput?.focus())
+      },
+    })
+  )
 </script>
 
 <div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
@@ -921,6 +933,7 @@
           <input
             type="text"
             placeholder={i18n.t('crypto-search-transactions', 'Search transactions...')}
+            bind:this={txSearchInput}
             bind:value={txListFilter}
           />
         </div>
