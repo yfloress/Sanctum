@@ -42,7 +42,7 @@
 <div align="center">
 
 [![Licencia](https://img.shields.io/badge/Licencia-GPLv3-8b5cf6?style=flat-square)](LICENSE) &nbsp;
-![Plataforma](https://img.shields.io/badge/Plataforma-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Android-informational?style=flat-square) &nbsp;
+![Plataforma](https://img.shields.io/badge/Plataforma-Linux%20%7C%20macOS%20%7C%20Windows-informational?style=flat-square) &nbsp;
 ![Estado](https://img.shields.io/badge/Estado-Alpha-orange?style=flat-square) &nbsp;
 ![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen?style=flat-square)
 
@@ -55,14 +55,16 @@
 > [!CAUTION]
 > **NO ESTÁ LISTO PARA USAR — EN DESARROLLO ACTIVO.**
 
-**Sanctum** es una bóveda orientada a la privacidad para tus finanzas y crypto
-— en **escritorio y Android**. Todo funciona sobre hardware que controlas
-tú: almacenamiento cifrado, cero telemetría, sin cuentas, sin nube corporativa. Tú
-controlas las llaves, la base de datos y los respaldos — nadie más.
+**Sanctum** es una bóveda orientada a la privacidad para tus finanzas y crypto,
+totalmente offline sobre una base de datos local cifrada. Todo funciona sobre
+hardware que controlas tú: almacenamiento cifrado, cero telemetría, sin cuentas,
+sin nube corporativa. Tú controlas las llaves, la base de datos y los respaldos
+— nadie más.
 
-Úsalo totalmente offline con una base de datos local cifrada, o levanta **tu propio
-servidor Sanctum** y comparte una sola bóveda privada entre todos tus dispositivos
-— escritorio, Android y cualquier navegador (incluido iOS) — por tu propia red.
+Hoy apunta a **escritorio**; el port a **Android** está en curso. Después, la hoja
+de ruta agrega **tu propio servidor Sanctum**, para compartir una sola bóveda
+privada entre todos tus dispositivos — escritorio, Android y cualquier navegador
+(incluido iOS) — por tu propia red.
 
 Está pensado para quienes quieren un único lugar auditable donde llevar sus
 finanzas sin entregar su vida financiera a un tercero.
@@ -149,22 +151,24 @@ Los respaldos están cifrados en reposo e incluyen seguridad de restauración y 
 
 ## Plataformas y Autohospedaje
 
-Sanctum funciona como app nativa en **escritorio (Linux, macOS, Windows)** y
-**Android**, y como **app web** para cualquier otro dispositivo — incluido
-**iOS** — servida desde un servidor que hospedas tú mismo.
+**Disponible hoy** — Sanctum funciona como app nativa en **escritorio (Linux,
+macOS, Windows)**, con una base de datos cifrada totalmente offline que vive solo
+en ese dispositivo. Sin servidor, sin red.
 
-Dos formas de usarlo, elegibles por dispositivo:
+**Planeado** — en orden de la hoja de ruta:
 
-- **Local** *(por defecto)* — una base de datos cifrada totalmente offline que
-  vive solo en ese dispositivo. Sin servidor, sin red.
-- **Autohospedado** — levanta tu propio **servidor Sanctum** como única fuente de
-  verdad y comparte una sola bóveda entre todos tus dispositivos. Accedé a él de
-  forma privada por tu LAN o una VPN mesh como **Tailscale** — nunca tiene que
-  estar expuesto a internet.
+1. **Android** — el port nativo a móvil. En curso; el toolchain de Tauri mobile y
+   los comandos de build ya están listos (ver [Android](#android) más abajo).
+2. **Servidor autohospedado** — levanta tu propio **servidor Sanctum** como única
+   fuente de verdad y comparte una sola bóveda entre todos tus dispositivos,
+   accesible de forma privada por tu LAN o una VPN mesh como **Tailscale**, sin
+   quedar nunca expuesto a internet.
+3. **App web** — acceso por navegador a ese servidor autohospedado, que es lo que
+   trae a **iOS** y a cualquier otro dispositivo.
 
 > [!IMPORTANT]
-> Sigue sin existir una nube de Sanctum. El único servidor que existe es uno que
-> **tú** levantas, sobre hardware que **tú** controlas.
+> Nunca va a existir una nube de Sanctum. El único servidor que existirá es uno
+> que **tú** levantas, sobre hardware que **tú** controlas.
 
 ## Tecnologías
 
@@ -178,8 +182,9 @@ Sanctum prioriza el rendimiento, la seguridad de tipos y la auditabilidad.
 | **Base de Datos** | **SQLite + SQLCipher** | Almacenamiento relacional cifrado localmente. |
 | **Entorno**     | **Nix + Direnv**     | Entorno de desarrollo reproducible y hermético. |
 
-El mismo núcleo Rust impulsa todos los destinos — escritorio, Android y el
-servidor autohospedado opcional — así que la lógica de negocio vive en un solo lugar.
+El mismo núcleo Rust está pensado para impulsar todos los destinos — escritorio
+hoy, Android y el servidor autohospedado opcional después — así que la lógica de
+negocio vive en un solo lugar.
 
 ## Instalación
 
@@ -211,6 +216,10 @@ cargo tauri build                     # compilar binario de producción
 ```
 
 ### Android
+
+> [!NOTE]
+> El port a Android sigue en curso. El toolchain y los comandos de abajo
+> funcionan, pero el build móvil todavía no se considera usable.
 
 Con el toolchain móvil de Tauri configurado, compila y ejecuta en un dispositivo conectado:
 

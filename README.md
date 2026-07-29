@@ -42,7 +42,7 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/License-GPLv3-8b5cf6?style=flat-square)](LICENSE) &nbsp;
-![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Android-informational?style=flat-square) &nbsp;
+![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-informational?style=flat-square) &nbsp;
 ![Status](https://img.shields.io/badge/Status-Alpha-orange?style=flat-square) &nbsp;
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
 
@@ -55,14 +55,15 @@
 > [!CAUTION]
 > **NOT READY FOR USE — UNDER ACTIVE DEVELOPMENT.**
 
-**Sanctum** is a privacy-first vault for your money and crypto — on
-**desktop and Android**. Everything runs on hardware you control: encrypted
-storage, no telemetry, no accounts, no corporate cloud. You hold the keys, the
-database, and the backups — nobody else.
+**Sanctum** is a privacy-first vault for your money and crypto, running fully
+offline on a local encrypted database. Everything runs on hardware you control:
+encrypted storage, no telemetry, no accounts, no corporate cloud. You hold the
+keys, the database, and the backups — nobody else.
 
-Use it fully offline with a local encrypted database, or run **your own Sanctum
-server** and share one private vault across all your devices — desktop, Android,
-and any browser (including iOS) — over your own network.
+Today it targets **desktop**; the **Android** port is in progress. The roadmap
+then adds **your own Sanctum server**, so one private vault can be shared across
+all your devices — desktop, Android, and any browser (including iOS) — over your
+own network.
 
 It is built for people who want a single, auditable place to track their finances
 without handing their financial life to a third party.
@@ -149,21 +150,23 @@ Backups are encrypted at rest and ship with restore + rollback safety.
 
 ## Platforms & Self-Hosting
 
-Sanctum runs as a native app on **desktop (Linux, macOS, Windows)** and
-**Android**, and as a **web app** for any other device — including **iOS** —
-served from a server you host yourself.
+**Available today** — Sanctum runs as a native app on **desktop (Linux, macOS,
+Windows)**, with a fully offline, encrypted database that lives only on that
+device. No server, no network required.
 
-Two ways to use it, chosen per device:
+**Planned** — in roadmap order:
 
-- **Local** *(default)* — a fully offline, encrypted database that lives only on
-  that device. No server, no network required.
-- **Self-hosted** — run your own **Sanctum server** as the single source of truth
-  and share one vault across all your devices. Reach it privately over your LAN or
-  a mesh VPN like **Tailscale** — it never has to be exposed to the internet.
+1. **Android** — the native mobile port. In progress; the Tauri mobile toolchain
+   and build commands are already wired up (see [Android](#android) below).
+2. **Self-hosted server** — run your own **Sanctum server** as the single source
+   of truth and share one vault across all your devices, reachable privately over
+   your LAN or a mesh VPN like **Tailscale**, never exposed to the internet.
+3. **Web app** — browser access to that self-hosted server, which is what brings
+   **iOS** and any other device along.
 
 > [!IMPORTANT]
-> There is still no Sanctum cloud. The only server that ever exists is one **you**
-> run, on hardware **you** control.
+> There will never be a Sanctum cloud. The only server that will ever exist is
+> one **you** run, on hardware **you** control.
 
 ## Tech Stack
 
@@ -177,8 +180,9 @@ Sanctum prioritizes performance, type safety, and auditability.
 | **Database**    | **SQLite + SQLCipher** | Locally encrypted relational storage.       |
 | **Environment** | **Nix + Direnv**     | Reproducible, hermetic dev environment.       |
 
-The same Rust core powers every target — desktop, Android, and the optional
-self-hosted server — so the business logic lives in exactly one place.
+The same Rust core is meant to power every target — desktop today, Android and
+the optional self-hosted server next — so the business logic lives in exactly one
+place.
 
 ## Installation
 
@@ -210,6 +214,10 @@ cargo tauri build                     # build a production binary
 ```
 
 ### Android
+
+> [!NOTE]
+> The Android port is still in progress. The toolchain and commands below work,
+> but the mobile build is not yet considered usable.
 
 With the Tauri mobile toolchain set up, build and run on a connected device:
 
