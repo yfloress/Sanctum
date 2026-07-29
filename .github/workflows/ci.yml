@@ -66,10 +66,22 @@ jobs:
       - name: Unused dependencies
         run: cargo machete
 
-      # Reads Cargo.lock against the RustSec database and the policy in
-      # deny.toml; compiles nothing, so it stays fast even when the cache misses.
+  # Runs outside the dev shell and as its own job: it reads Cargo.lock against
+  # the RustSec database and the policy in deny.toml without compiling anything,
+  # so there is no reason to make it wait behind the build. The upstream action
+  # is used rather than the dev shell's cargo-deny because the latter fails to
+  # create its advisory database directory on a cold runner.
+  deny:
+    name: Dependency policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
       - name: Advisories, licences and sources
-        run: cargo deny check
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
 
   frontend:
     name: Frontend
