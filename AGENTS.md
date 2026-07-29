@@ -8,6 +8,9 @@
 - Test your code before declaring done.
 - No sycophantic openers or closing fluff.
 - Keep solutions simple and direct.
+- This repository is public. Code comments, docs, config and commit messages must never
+  leak the private chat: no session context or back-and-forth reasoning, and no inferred
+  personal data (location, timezone, routine). Write them for a stranger reading the repo.
 - User instructions always override this file.
 
 ## Search Tooling
