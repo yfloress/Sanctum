@@ -136,7 +136,9 @@ locales/
 - Use `nix develop -c ...` for Rust commands (build/test).
 - Never run cargo run or cargo build.
 - Tax rule: for Chile jurisdiction, tax reports, tax history exports, and displayed tax totals must always use CLP.
-- Do NOT use npm, only pnpm (with `ignore-scripts=true` in `.npmrc`).
+- Do NOT use npm, only pnpm. Its settings live in `pnpm-workspace.yaml` (`ignoreScripts`,
+  `minimumReleaseAge`); since pnpm 11 `.npmrc` is read for auth and registry only, so anything
+  else placed there is silently ignored.
 - Never use emojis — use SVG icons from `ui/assets/icons/` instead.
 ### IPC rules
 - IPC types go in `src/ui/dto/` — one file per domain, `#[derive(Serialize, Deserialize)]`.
@@ -187,7 +189,9 @@ without explicitly justifying it.
 - **Database at rest**: SQLCipher encrypts the SQLite database. The vault password derives the encryption key — never log it, never store it.
 - **Secrets in memory**: use `secrecy::SecretString` / `Zeroize` for sensitive values (passwords, keys). Zero memory after use.
 - **No sensitive data in logs**: financial details, passwords, keys, and PII must never reach log output. Review `security_log.rs` usage.
-- **Supply chain**: `cargo audit` for Rust vulnerabilities, pnpm with `ignore-scripts=true` for JS deps.
+- **Supply chain**: `cargo deny check` for Rust advisories and licences, `ignoreScripts` plus a
+  `minimumReleaseAge` quarantine for JS deps. The quarantine also covers transitive packages,
+  which Dependabot's own cooldown does not.
 - **Tauri CSP**: keep `tauri.conf.json` CSP restrictive. No inline scripts, no external CDNs.
 - **Local-first**: all data stays on device. No network calls unless user-initiated (e.g., price fetch).
 - **Input validation**: use `core/validation.rs` for shared rules, domain validators in `features/*/validation.rs`. Never trust raw input.
