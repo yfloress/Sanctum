@@ -1,5 +1,5 @@
 {
-  description = "Sanctum Web - Static site for Codeberg Pages";
+  description = "Sanctum Web - Static site for GitHub Pages";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

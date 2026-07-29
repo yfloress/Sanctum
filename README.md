@@ -1,6 +1,6 @@
 # Sanctum Web
 
-Offline companion for [Sanctum](https://codeberg.org/Kyronix/Sanctum). Generates and edits `sanctum_export.json` locally.
+Offline companion for [Sanctum](https://github.com/yfloress/Sanctum). Generates and edits `sanctum_export.json` locally.
 
 ## Development
 
