@@ -1,0 +1,134 @@
+# Dependency updates.
+#
+# Two deliberately separate tracks:
+#
+#   - Routine (this file): weekly, grouped, and quarantined. `cooldown` skips
+#     any release published less than a week ago, which is the window in which
+#     a compromised package is normally spotted and yanked. It mirrors the
+#     `min-release-age` already enforced for pnpm in `.npmrc`.
+#
+#   - Security (Dependabot security updates, enabled in repository settings):
+#     immediate and NOT quarantined, so an advisory that affects us opens a
+#     pull request the same day even if nobody is touching the repository.
+#
+# Major bumps are never grouped: each one gets its own pull request so that a
+# breaking change cannot hold back the rest. Nothing is merged automatically.
+#
+# Schedules run in UTC.
+version: 2
+
+updates:
+  # --- main: the application ------------------------------------------------
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    groups:
+      cargo:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    labels:
+      - maintenance
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # `npm` is Dependabot's identifier for the whole Node ecosystem; it picks up
+  # pnpm-lock.yaml and updates it with pnpm.
+  - package-ecosystem: npm
+    directory: /ui-svelte
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    groups:
+      ui-svelte:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    labels:
+      - maintenance
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+    labels:
+      - maintenance
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # --- web: the Astro site --------------------------------------------------
+  # This file is only read from the default branch; `target-branch` is what
+  # lets it cover `web` without duplicating the config over there.
+  #
+  # Caveat: security updates only ever target the default branch, so an entry
+  # that sets `target-branch` gets routine version updates and nothing else.
+  # Advisories affecting the site's dependencies will not raise a pull request
+  # here; a scheduled audit on the `web` branch is what covers that gap.
+  - package-ecosystem: npm
+    directory: /
+    target-branch: web
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    groups:
+      web:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    labels:
+      - maintenance
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: web
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+    labels:
+      - maintenance
+    commit-message:
+      prefix: chore
+      include: scope
