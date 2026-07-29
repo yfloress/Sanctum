@@ -1,4 +1,4 @@
-package org.kyronix.sanctum
+package io.github.yfloress.sanctum
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

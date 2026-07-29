@@ -1,4 +1,4 @@
-/src/main/java/org/kyronix/sanctum/generated
+/src/main/java/io/github/yfloress/sanctum/generated
 /src/main/jniLibs/**/*.so
 /src/main/assets/tauri.conf.json
 /tauri.build.gradle.kts
