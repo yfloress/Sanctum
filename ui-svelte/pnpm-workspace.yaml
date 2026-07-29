@@ -1,11 +1,14 @@
 # pnpm settings. As of pnpm 11 only auth and registry options are read from
 # .npmrc; every other setting has to live here or it is silently ignored.
 
-# Quarantine: refuse any release younger than this, in minutes. 10080 is seven
-# days, matching the Dependabot cooldown in .github/dependabot.yml, so the same
-# policy applies whether a version arrives through a pull request or through a
-# transitive resolution. pnpm's own default is 1440 (one day).
-minimumReleaseAge: 10080
+# Quarantine: refuse any release younger than this, in minutes. 4320 is three
+# days, which covers a package published on a Friday night until it has had a
+# full working day of scrutiny. pnpm's own default is 1440.
+#
+# Kept well below the seven-day Dependabot cooldown on purpose: that cooldown is
+# skipped for security updates, whereas this one has no such exemption and
+# delays every patch, including the urgent ones.
+minimumReleaseAge: 4320
 
 # No dependency lifecycle script runs on install.
 ignoreScripts: true
