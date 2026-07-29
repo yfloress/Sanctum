@@ -1,0 +1,103 @@
+name: CI
+
+# Runs the project's definition of done on every push to main and on every pull
+# request, so Dependabot's updates arrive already verified instead of needing a
+# local build each time.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: this workflow only reads the code and reports.
+permissions:
+  contents: read
+
+# Superseded runs on the same ref are pointless; cancel them.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+
+    # Every `run` step below executes inside the flake's default devShell, so CI
+    # and a local checkout use the exact same compiler and tooling. Declaring it
+    # once here keeps the steps identical to the commands in AGENTS.md.
+    defaults:
+      run:
+        shell: nix develop --command bash -e {0}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+        with:
+          # No diagnostics leave this runner.
+          diagnostic-endpoint: ""
+
+      # Realised in a plain shell so that a broken flake is reported here rather
+      # than as a confusing failure inside the first cargo step.
+      - name: Build the dev shell
+        shell: bash
+        run: nix develop --command true
+
+      # The heavy part of this build is rusqlite's bundled-sqlcipher feature,
+      # which compiles SQLCipher and a vendored OpenSSL from source. Without a
+      # warm target directory every run pays for both.
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace -j 2
+
+      - name: Unused dependencies
+        run: cargo machete
+
+      # Reads Cargo.lock against the RustSec database and the policy in
+      # deny.toml; compiles nothing, so it stays fast even when the cache misses.
+      - name: Advisories, licences and sources
+        run: cargo deny check
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ui-svelte
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ui-svelte/pnpm-lock.yaml
+
+      # .npmrc pins ignore-scripts, so no dependency lifecycle script runs here.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type and template check
+        run: pnpm run check
