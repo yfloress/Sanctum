@@ -25,13 +25,17 @@
   interface Props {
     show: boolean
     editing: TransactionDto | null
+    /** Copies a transaction's fields into a new entry, dated today. */
+    prefill?: TransactionDto | null
     accounts: { id: string; name: string }[]
     categories: { expense: CategoryDto[]; income: CategoryDto[] }
     onsubmit: () => Promise<void>
     onclose: () => void
   }
 
-  let { show = $bindable(false), editing, accounts, categories, onsubmit, onclose }: Props = $props()
+  let { show = $bindable(false), editing, prefill = null, accounts, categories, onsubmit, onclose }: Props = $props()
+
+  const today = () => new Date().toISOString().slice(0, 10)
 
   let txAccountId = $state('')
   let txAmount = $state('')
@@ -47,20 +51,22 @@
   $effect(() => {
     show
     editing
+    prefill
     if (show) {
-      if (editing) {
-        txAccountId = editing.account_id
-        txAmount = editing.amount_raw
-        txCategory = editing.category_raw
-        txDescription = editing.description
-        txDate = editing.date
-        txIsExpense = editing.is_expense
+      const source = editing ?? prefill
+      if (source) {
+        txAccountId = source.account_id
+        txAmount = source.amount_raw
+        txCategory = source.category_raw
+        txDescription = source.description
+        txDate = editing ? source.date : today()
+        txIsExpense = source.is_expense
       } else {
         txAccountId = accounts[0]?.id ?? ''
         txAmount = ''
         txCategory = ''
         txDescription = ''
-        txDate = new Date().toISOString().slice(0, 10)
+        txDate = today()
         txIsExpense = true
       }
     }

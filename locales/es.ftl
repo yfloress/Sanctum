@@ -227,6 +227,7 @@ finances-acc-deleted = Cuenta eliminada
 finances-acc-restored = Cuenta restaurada
 finances-archived-accounts = Cuentas Archivadas
 finances-restore = Restaurar
+finances-duplicate = Duplicar
 finances-tf-completed = Transferencia completada
 finances-tf-updated = Transferencia actualizada
 finances-cat-added = Categoría agregada

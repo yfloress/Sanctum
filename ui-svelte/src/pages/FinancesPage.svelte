@@ -25,6 +25,7 @@
   } from '../lib/types'
   import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
   import { mask } from '../lib/currency'
+  import { setPageActions } from '../lib/shortcuts'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
@@ -103,6 +104,8 @@
   let showAddAccount = $state(false)
   let showTransfer = $state(false)
   let editingTransaction = $state<TransactionDto | null>(null)
+  let duplicatingTransaction = $state<TransactionDto | null>(null)
+  let searchInput = $state<HTMLInputElement | undefined>()
   let editingAccount = $state<AccountDetailResponse | null>(null)
   let editingTransfer = $state<TransactionDto | null>(null)
   let pendingDeleteTx = $state<TransactionDto | null>(null)
@@ -187,6 +190,7 @@
 
   function openAddTransaction() {
     editingTransaction = null
+    duplicatingTransaction = null
     showAddTransaction = true
   }
 
@@ -196,6 +200,13 @@
       return
     }
     editingTransaction = tx
+    duplicatingTransaction = null
+    showAddTransaction = true
+  }
+
+  function openDuplicateTransaction(tx: TransactionDto) {
+    editingTransaction = null
+    duplicatingTransaction = tx
     showAddTransaction = true
   }
 
@@ -427,6 +438,16 @@
   $effect(() => {
     if (activeTab === 'settings') loadArchivedAccounts()
   })
+
+  $effect(() =>
+    setPageActions({
+      newEntry: openAddTransaction,
+      focusSearch: () => {
+        activeTab = 'activity'
+        requestAnimationFrame(() => searchInput?.focus())
+      },
+    })
+  )
 </script>
 
 <div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || !!selectedAccount}>
@@ -594,6 +615,7 @@
             <input
               type="text"
               placeholder={i18n.t('finances-search-placeholder', 'Search transactions...')}
+              bind:this={searchInput}
               bind:value={filterQuery}
               oninput={onSearchInput}
             />
@@ -673,6 +695,11 @@
                 </div>
               </div>
               <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{mask(tx.amount)}</span>
+              {#if !tx.is_transfer}
+                <button class="row-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); openDuplicateTransaction(tx) }} aria-label={i18n.t('finances-duplicate', 'Duplicate')} title={i18n.t('finances-duplicate', 'Duplicate')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h8"/></svg>
+                </button>
+              {/if}
               <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); pendingDeleteTx = tx }} aria-label={i18n.t('confirm-delete-button', 'Delete')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
@@ -762,10 +789,11 @@
 <FinanceTransactionModal
   bind:show={showAddTransaction}
   editing={editingTransaction}
+  prefill={duplicatingTransaction}
   accounts={accountsData?.accounts ?? []}
   categories={categories ?? { expense: [], income: [] }}
   onsubmit={async () => { await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
-  onclose={() => showAddTransaction = false}
+  onclose={() => { showAddTransaction = false; duplicatingTransaction = null }}
 />
 
 <!-- Add/Edit Account Modal -->
@@ -996,6 +1024,13 @@
   }
   .delete-btn:hover { color: var(--danger); }
   .delete-btn svg { width: 16px; height: 16px; }
+
+  .row-btn {
+    background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 4px;
+    display: flex; align-items: center; transition: color 0.15s;
+  }
+  .row-btn:hover { color: var(--accent); }
+  .row-btn svg { width: 16px; height: 16px; }
 
   .load-more-btn {
     display: block; margin: 16px auto; padding: 8px 24px;
