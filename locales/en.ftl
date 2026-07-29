@@ -88,6 +88,8 @@ nav-group-vault = Vault
 nav-group-system = System
 nav-hide-balances = Hide Balances
 nav-show-balances = Show Balances
+nav-menu = Menu
+nav-close = Close
 
 # ==================== Dashboard ====================
 dashboard-title = Dashboard
@@ -106,6 +108,8 @@ dashboard-last-6-months = Last 6 months
 dashboard-no-data-range = No data for this range
 dashboard-spending-breakdown = Spending Breakdown
 dashboard-recent-activity = Recent Activity
+dashboard-welcome = Welcome to Sanctum
+dashboard-welcome-desc = Add accounts and transactions in the Finances page to see your overview here.
 
 # ==================== Finances ====================
 # Tabs & hero
@@ -238,6 +242,8 @@ crypto-tab-activity = Activity
 crypto-portfolio-value = Portfolio Value
 crypto-last-updated-label = Last updated: {$value}
 crypto-loading = Loading...
+crypto-welcome = Welcome to Crypto
+crypto-welcome-desc = Add wallets and transactions in the Wallets tab to start tracking your portfolio.
 
 # -- Ticker bar --
 crypto-no-tickers = No tickers configured
@@ -479,6 +485,7 @@ settings-background-desc = Choose the app background style
 settings-bg-aurora = Aurora
 settings-bg-diamonds = Diamonds
 settings-bg-dots = Dots
+settings-bg-dragon = Dragon
 settings-bg-stars = Stars
 
 # Regional
@@ -548,6 +555,7 @@ settings-auto-fetch-desc = Automatically fetch crypto prices on sync
 settings-use-proxy = Use Proxy
 settings-use-proxy-desc = Route API calls through a proxy
 settings-proxy-url = Proxy URL
+settings-proxy-placeholder = socks5://127.0.0.1:9050
 
 # About
 settings-about-version = Version
@@ -581,6 +589,7 @@ confirm-delete-account-tx-count = This will also remove {$count} transaction(s).
 confirm-delete-category = Are you sure you want to delete this category?
 confirm-delete-transaction = Are you sure you want to delete this transaction?
 confirm-delete-wallet = Are you sure you want to delete this wallet?
+confirm-reset-settings = Reset all settings to their default values? This will not affect your data.
 
 # ==================== Notifications ====================
 notify-success = Success
@@ -1160,3 +1169,9 @@ exchange-wallet-continue = CONTINUE
 exchange-wallet-category-software = Software Wallet
 exchange-wallet-category-hardware = Hardware Wallet
 exchange-wallet-category-exchange = Exchange
+
+# ==================== Session Lock Warning ====================
+session-warning-title = Vault about to lock
+session-warning-body = Locking in {$seconds}s due to inactivity.
+session-warning-stay = Stay unlocked
+session-warning-lock-now = Lock now

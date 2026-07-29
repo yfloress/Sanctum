@@ -88,6 +88,8 @@ nav-group-vault = Bóveda
 nav-group-system = Sistema
 nav-hide-balances = Ocultar Saldos
 nav-show-balances = Mostrar Saldos
+nav-menu = Menú
+nav-close = Cerrar
 
 # ==================== Dashboard ====================
 dashboard-title = Panel
@@ -106,6 +108,8 @@ dashboard-last-6-months = Ultimos 6 meses
 dashboard-no-data-range = Sin datos para este rango
 dashboard-spending-breakdown = Desglose de Gastos
 dashboard-recent-activity = Actividad Reciente
+dashboard-welcome = Bienvenido a Sanctum
+dashboard-welcome-desc = Agrega cuentas y transacciones en la página de Finanzas para ver tu resumen aquí.
 
 # ==================== Finances ====================
 # Tabs & hero
@@ -238,6 +242,8 @@ crypto-tab-activity = Actividad
 crypto-portfolio-value = Valor del Portafolio
 crypto-last-updated-label = Última actualización: {$value}
 crypto-loading = Cargando...
+crypto-welcome = Bienvenido a Crypto
+crypto-welcome-desc = Agrega billeteras y transacciones en la pestaña Billeteras para empezar a seguir tu portafolio.
 
 # -- Ticker bar --
 crypto-no-tickers = Sin tickers configurados
@@ -479,6 +485,7 @@ settings-background-desc = Elige el estilo del fondo de la aplicación
 settings-bg-aurora = Aurora
 settings-bg-diamonds = Diamantes
 settings-bg-dots = Puntos
+settings-bg-dragon = Dragón
 settings-bg-stars = Estrellas
 
 # Regional
@@ -548,6 +555,7 @@ settings-auto-fetch-desc = Obtener precios de crypto automaticamente al sincroni
 settings-use-proxy = Usar Proxy
 settings-use-proxy-desc = Enrutar llamadas API a traves de un proxy
 settings-proxy-url = URL del Proxy
+settings-proxy-placeholder = socks5://127.0.0.1:9050
 
 # About
 settings-about-version = Versión
@@ -581,6 +589,7 @@ confirm-delete-account-tx-count = Esto también eliminará {$count} transacción
 confirm-delete-category = ¿Estás seguro de que quieres eliminar esta categoría?
 confirm-delete-transaction = ¿Estás seguro de que quieres eliminar esta transacción?
 confirm-delete-wallet = ¿Estás seguro de que quieres eliminar esta billetera?
+confirm-reset-settings = ¿Restablecer todos los ajustes a sus valores predeterminados? Esto no afectará tus datos.
 
 # ==================== Notifications ====================
 notify-success = Éxito
@@ -1160,3 +1169,9 @@ exchange-wallet-continue = CONTINUAR
 exchange-wallet-category-software = Software Wallet
 exchange-wallet-category-hardware = Hardware Wallet
 exchange-wallet-category-exchange = Exchange
+
+# ==================== Session Lock Warning ====================
+session-warning-title = La bóveda está por bloquearse
+session-warning-body = Se bloqueará en {$seconds} s por inactividad.
+session-warning-stay = Seguir abierta
+session-warning-lock-now = Bloquear ahora
