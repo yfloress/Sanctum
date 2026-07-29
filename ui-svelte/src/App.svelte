@@ -24,6 +24,7 @@
   import Aurora from './components/Aurora.svelte'
   import Dragon from './components/Dragon.svelte'
   import Toast from './components/Toast.svelte'
+  import SessionLockWarning from './components/SessionLockWarning.svelte'
   import LoginPage from './pages/LoginPage.svelte'
   import DashboardPage from './pages/DashboardPage.svelte'
   import FinancesPage from './pages/FinancesPage.svelte'
@@ -119,6 +120,8 @@
     </main>
   </div>
 {/if}
+
+<SessionLockWarning />
 
 <Toast />
 
