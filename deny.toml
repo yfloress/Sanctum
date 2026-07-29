@@ -75,11 +75,12 @@ ignore = [
     #"a-crate-that-is-yanked@0.1.1", # you can also ignore yanked crate versions if you wish
     #{ crate = "a-crate-that-is-yanked@0.1.1", reason = "you can specify why you are ignoring the yanked crate" },
 ]
-# If this is true, then cargo deny will use the git executable to fetch advisory database.
-# If this is false, then it uses a built-in git library.
-# Setting this to true can be helpful if you have special authentication requirements that cargo-deny does not support.
-# See Git Authentication for more information about setting up git authentication.
-#git-fetch-with-cli = true
+# Fetch the advisory database with the git executable rather than the built-in
+# library. On a cold CI runner the built-in fetch leaves the database directory
+# missing, and the metadata read that follows then fails with a misleading
+# ISO-8601 parse error. Git is present in the dev shell, so use it for the whole
+# path instead of mixing the two.
+git-fetch-with-cli = true
 
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
