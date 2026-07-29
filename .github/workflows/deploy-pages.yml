@@ -1,0 +1,56 @@
+name: Deploy Pages
+
+# Builds the Astro site from this branch and deploys it to GitHub Pages as an
+# artifact: no deploy token to manage, no build output committed to a branch,
+# and Jekyll never runs, so nothing under _astro/ needs a .nojekyll workaround.
+#
+# Pages must be configured with "GitHub Actions" as its source, not
+# "Deploy from a branch".
+
+on:
+  push:
+    branches: [web]
+  workflow_dispatch:
+
+# Least privilege: the workflow publishes a site, it does not write to the
+# repository. pages/id-token are what actions/deploy-pages needs to claim the
+# deployment through OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one already running: a cancelled
+# run would leave the published site half-updated.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      # Installs, builds and uploads the Pages artifact. The package manager is
+      # detected from pnpm-lock.yaml, but it is pinned here to match the
+      # versions the flake provides, so CI and local builds agree.
+      - name: Build and upload site
+        uses: withastro/action@v6
+        with:
+          node-version: 22
+          package-manager: pnpm@11
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -13,17 +13,19 @@ pnpm build              # Build static site
 pnpm preview            # Preview static build
 ```
 
-## Deployment (Codeberg Pages)
+## Deployment (GitHub Pages)
 
-```bash
-pnpm build
-git checkout pages
-cp -r dist/* .
-git add .
-git commit -m "Deploy update"
-git push
-git checkout dev-pages
-```
+Deployment is automatic: every push to `web` triggers
+[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml),
+which builds the site and deploys it as a Pages artifact. It is served at
+<https://yfloress.github.io/Sanctum/>. To publish without pushing, run the
+workflow from the Actions tab.
+
+The site URL and its `/Sanctum/` base path come from `astro.config.mjs`; the
+base has to match the repository name or every asset path breaks.
+
+Repository setting required once: **Settings → Pages → Source: GitHub
+Actions**. The older `pages` branch is no longer used.
 
 ## Stack
 Astro 6 (beta), React 19, Tailwind CSS 4, Motion, Vite PWA.
