@@ -1,0 +1,22 @@
+name: General Task / Other
+description: Maintenance, refactoring, documentation, or general questions
+title: "[TASK] "
+labels: ["maintenance"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief explanation of the task, question, or context.
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details / To-Do List
+      value: |
+        - [ ] Detail 1
+        - [ ] Detail 2
+    validations:
+      required: false
