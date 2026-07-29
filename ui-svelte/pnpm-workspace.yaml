@@ -12,3 +12,7 @@ minimumReleaseAge: 4320
 
 # No dependency lifecycle script runs on install.
 ignoreScripts: true
+
+# Tauri runs `pnpm dev` as a non-interactive subprocess, where the purge prompt
+# cannot be answered and the dev run aborts.
+confirmModulesPurge: false
