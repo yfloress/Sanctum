@@ -19,6 +19,7 @@
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import { formatCurrency, mask } from '../lib/currency'
+  import { dialog } from '../lib/actions/dialog'
   import * as cryptoApi from '../lib/api/crypto'
   import { save } from '@tauri-apps/plugin-dialog'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
@@ -1318,9 +1319,9 @@
 
 <!-- Add Wallet Modal -->
 {#if showAddWallet}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddWallet = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddWallet = false }}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddWallet = false}></div>
   <div class="modal-wrapper">
-    <div class="modal">
+    <div class="modal" use:dialog={{ onclose: () => showAddWallet = false }}>
       <h3>{i18n.t('crypto-new-wallet', 'New Wallet')}</h3>
     <div class="form-grid">
       <label>
@@ -1364,9 +1365,9 @@
 
 <!-- Ticker Config / Coins Modal -->
 {#if showTickerConfig}
-  <div class="modal-backdrop" role="presentation" onclick={() => showTickerConfig = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTickerConfig = false }}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => showTickerConfig = false}></div>
   <div class="modal-wrapper">
-    <div class="modal wide">
+    <div class="modal wide" use:dialog={{ onclose: () => showTickerConfig = false }}>
       <!-- Tab bar -->
       <div class="cfg-tabs">
         <button class="cfg-tab" class:active={tickerConfigTab === 'ticker'} onclick={() => tickerConfigTab = 'ticker'}>{i18n.t('crypto-ticker-tab', 'Ticker')}</button>

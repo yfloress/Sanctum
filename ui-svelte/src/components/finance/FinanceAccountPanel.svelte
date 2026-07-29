@@ -18,6 +18,7 @@
   import { i18n } from '../../lib/stores/i18n.svelte'
   import { ACCOUNT_ICONS, accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../../lib/accountDisplay'
   import { mask } from '../../lib/currency'
+  import { dialog } from '../../lib/actions/dialog'
   import type { AccountDetailResponse } from '../../lib/types'
   import ConfirmDialog from '../ConfirmDialog.svelte'
 
@@ -50,8 +51,8 @@
 </script>
 
 {#if show && account}
-  <div class="overlay-backdrop" role="presentation" onclick={close} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') close() }}></div>
-  <aside class="detail-panel">
+  <div class="overlay-backdrop" role="presentation" onclick={close}></div>
+  <aside class="detail-panel" use:dialog={{ onclose: close, autofocus: false }}>
     <div class="panel-header">
       <h3>{account.name}</h3>
       <button class="close-panel" aria-label="Close panel" onclick={close}>

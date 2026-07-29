@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { i18n } from '../../lib/stores/i18n.svelte'
+  import { dialog } from '../../lib/actions/dialog'
 
   // Jurisdiction / method / toggles are edited inline on the tax tab; this modal
   // is dedicated to the bulkier wallet-exclusion list.
@@ -56,9 +57,9 @@
 </script>
 
 {#if show}
-  <div class="modal-backdrop" role="presentation" onclick={close} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') close() }}></div>
+  <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal">
+    <div class="modal" use:dialog={{ onclose: close }}>
       <h3>{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</h3>
       <p class="modal-desc">{i18n.t('crypto-tax-exclude-wallets-desc', 'Wallets you exclude are left out of tax calculations (e.g. DeFi play wallets or donation-only wallets).')}</p>
       <div class="form-grid">

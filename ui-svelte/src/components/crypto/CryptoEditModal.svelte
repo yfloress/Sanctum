@@ -18,6 +18,7 @@
   import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
+  import { dialog } from '../../lib/actions/dialog'
   import * as cryptoApi from '../../lib/api/crypto'
   import type { CryptoTransactionEditData } from '../../lib/types'
 
@@ -110,9 +111,9 @@
 </script>
 
 {#if show && editTxData}
-  <div class="modal-backdrop" role="presentation" onclick={close} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') close() }}></div>
+  <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal wide">
+    <div class="modal wide" use:dialog={{ onclose: close }}>
       <h3>{i18n.t('crypto-tx-edit-title', 'Edit Transaction')}</h3>
       <div class="edit-tx-meta">
         <span class="etm-wallet">{editTxData.wallet_name}</span>

@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { i18n } from '../lib/stores/i18n.svelte'
+  import { dialog } from '../lib/actions/dialog'
 
   interface Props {
     show: boolean
@@ -52,9 +53,9 @@
 </script>
 
 {#if show}
-  <div class="modal-backdrop" role="presentation" onclick={close} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') close() }}></div>
+  <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal confirm-modal">
+    <div class="modal confirm-modal" use:dialog={{ onclose: close }}>
       <h3>{title ?? i18n.t('confirm-delete-title', 'Confirm')}</h3>
       <p class="confirm-message">{message}</p>
       {#if detail}

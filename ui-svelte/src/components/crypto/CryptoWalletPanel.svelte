@@ -20,6 +20,7 @@
   import { i18n } from '../../lib/stores/i18n.svelte'
   import * as cryptoApi from '../../lib/api/crypto'
   import { mask } from '../../lib/currency'
+  import { dialog } from '../../lib/actions/dialog'
   import type { WalletDetailResponse } from '../../lib/types'
 
   const WALLET_ICONS: { value: string; src: string; generic: boolean }[] = [
@@ -100,8 +101,8 @@
 </script>
 
 {#if show && wallet}
-  <div class="overlay-backdrop" role="presentation" onclick={close} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') close() }}></div>
-  <aside class="detail-panel">
+  <div class="overlay-backdrop" role="presentation" onclick={close}></div>
+  <aside class="detail-panel" use:dialog={{ onclose: close, autofocus: false }}>
     <div class="panel-header">
       {#if showEditWalletName}
         <div class="inline-edit">

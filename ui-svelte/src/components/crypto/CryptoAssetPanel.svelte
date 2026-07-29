@@ -17,6 +17,7 @@
 <script lang="ts">
   import { i18n } from '../../lib/stores/i18n.svelte'
   import { mask } from '../../lib/currency'
+  import { dialog } from '../../lib/actions/dialog'
   import type { CryptoTransactionDto } from '../../lib/types'
 
   interface HoldingView {
@@ -48,8 +49,8 @@
 </script>
 
 {#if show && asset}
-  <div class="overlay-backdrop" role="presentation" onclick={close} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') close() }}></div>
-  <aside class="detail-panel">
+  <div class="overlay-backdrop" role="presentation" onclick={close}></div>
+  <aside class="detail-panel" use:dialog={{ onclose: close, autofocus: false }}>
     <div class="panel-header">
       <h3>{asset.symbol} - {asset.name}</h3>
       <button class="close-panel" aria-label="Close panel" onclick={close}>
