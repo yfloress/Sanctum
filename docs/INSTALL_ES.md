@@ -22,7 +22,7 @@ frontend en Svelte). El repositorio incluye un [`install.sh`](../install.sh) que
 ## Instalación Rápida
 
 ```bash
-git clone https://codeberg.org/Kyronix/Sanctum.git
+git clone https://github.com/yfloress/Sanctum.git
 cd Sanctum
 ./install.sh --user      # compila + instala en ~/.local, sin sudo
 ```

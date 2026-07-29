@@ -22,7 +22,7 @@ and installs Sanctum on your system.
 ## Quick Install
 
 ```bash
-git clone https://codeberg.org/Kyronix/Sanctum.git
+git clone https://github.com/yfloress/Sanctum.git
 cd Sanctum
 ./install.sh --user      # builds + installs to ~/.local, no sudo
 ```

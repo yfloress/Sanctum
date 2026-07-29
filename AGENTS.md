@@ -147,7 +147,7 @@ locales/
 Every source file (including tests) must start with this exact header:
 ```rust
 // Sanctum — a privacy-first personal finance and crypto vault.
-// Copyright (C) 2026  Kyronix
+// Copyright (C) 2026  yfloress
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as

@@ -10,7 +10,7 @@
 
 <div align="center">
 
-[![English](https://img.shields.io/badge/In-English-8b5cf6?style=for-the-badge)](README.md) [![Website](https://img.shields.io/badge/🌐_Website-Sanctum-blueviolet?style=for-the-badge)](https://kyronix.codeberg.page/Sanctum/)
+[![English](https://img.shields.io/badge/In-English-8b5cf6?style=for-the-badge)](README.md) [![Website](https://img.shields.io/badge/🌐_Website-Sanctum-blueviolet?style=for-the-badge)](https://yfloress.github.io/Sanctum/)
 
 </div>
 
@@ -192,7 +192,7 @@ fuente e instala Sanctum. En Linux instala el binario, la entrada de escritorio 
 el icono; en macOS instala solo el binario.
 
 ```bash
-git clone https://codeberg.org/Kyronix/Sanctum.git
+git clone https://github.com/yfloress/Sanctum.git
 cd Sanctum
 ./install.sh --user      # compila + instala en ~/.local, sin sudo
 ```
@@ -233,7 +233,7 @@ Este proyecto abraza la colaboración abierta sin comprometer la auditabilidad.
 ## Comunidad y Contribución
 
 ¿Encontraste un bug o tienes una idea? Usa el
-[Issue Tracker](https://codeberg.org/Kyronix/Sanctum/issues) para errores y
+[Issue Tracker](https://github.com/yfloress/Sanctum/issues) para errores y
 sugerencias.
 
 ## Aviso Legal
