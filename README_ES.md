@@ -227,7 +227,7 @@ notas específicas por plataforma.
 Este proyecto abraza la colaboración abierta sin comprometer la auditabilidad.
 
 - **Arquitectura dirigida por humanos.** La privacidad y la integridad de los datos son la prioridad, diseñadas y dirigidas por humanos.
-- **Desarrollo asistido por IA.** La mayor parte del código se genera o refactoriza con LLMs de frontera bajo estricta auditoría humana. Los modelos principales, en orden, son **Claude Opus 4.7**, **Claude Sonnet 4.6** y **DeepSeek V4 Pro**, entre otros modelos de frontera.
+- **Desarrollo asistido por IA.** La mayor parte del código se escribe o refactoriza con LLMs de frontera. Una persona define los patrones, la estructura y el alcance de cada cambio, revisa el resultado, y nada se integra hasta pasar el control del proyecto: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings` y la suite completa de tests.
 - **Auditable por diseño.** El código completo está abierto para inspección — verifica tú mismo que no hay telemetría oculta.
 
 ## Comunidad y Contribución

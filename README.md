@@ -226,7 +226,7 @@ platform-specific notes.
 This project embraces open collaboration without compromising auditability.
 
 - **Human-led architecture.** Privacy and data integrity are the priority, designed and directed by humans.
-- **AI-assisted development.** Most of the code is generated or refactored with frontier LLMs under strict human auditing. The primary models, in order, are **Claude Opus 4.7**, **Claude Sonnet 4.6**, and **DeepSeek V4 Pro**, among other frontier models.
+- **AI-assisted development.** Most of the code is written or refactored with frontier LLMs. A human specifies the patterns, the structure and the scope of every change, reviews the result, and nothing lands until it passes the project's gate: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, and the full test suite.
 - **Auditable by design.** The full source is open for inspection — verify for yourself that there is no hidden telemetry.
 
 ## Contributing
