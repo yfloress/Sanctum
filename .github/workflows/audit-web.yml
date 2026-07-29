@@ -1,0 +1,48 @@
+name: Audit web dependencies
+
+# Dependabot security updates only ever target the default branch, so the entry
+# in dependabot.yml that uses `target-branch: web` gets routine version updates
+# and no advisory coverage at all. This job closes that gap: it audits the
+# site's lockfile on a schedule and fails if anything moderate or worse turns
+# up, which is what turns a silent advisory into a notification.
+#
+# It has to live on the default branch: scheduled workflows only ever run from
+# there, so the same file committed to `web` would never fire.
+
+on:
+  schedule:
+    # Mondays, to line up with the Dependabot schedule.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+# Least privilege: this job reads a branch and reports, it writes nothing.
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the web branch
+        uses: actions/checkout@v7
+        with:
+          ref: web
+
+      # Pinned to match the version the deploy workflow uses; the branch has no
+      # packageManager field to infer it from.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # `pnpm audit` resolves the lockfile against the registry, so there is no
+      # install step and no dependency code ever executes here. The threshold is
+      # spelled out because, unlike ui-svelte, this branch has no .npmrc.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=moderate
