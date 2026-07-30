@@ -25,33 +25,60 @@ const HEADER: &str = "date,type,account,currency,category,description,amount\n";
 
 /// Renders the ledger as CSV, resolving each row's account by id.
 ///
-/// Amounts are written in major units with two decimals so a spreadsheet reads
-/// them as numbers. Rows whose account no longer exists keep their data with
-/// the account and currency columns left empty.
+/// Amounts are signed so that the column sums to the real change in balance:
+/// expenses and the outgoing leg of a transfer are negative, everything else is
+/// positive. Rows whose account no longer exists keep their data with the
+/// account and currency columns left empty.
 pub fn transactions_to_csv(transactions: &[Transaction], accounts: &[Account]) -> String {
     let by_id: HashMap<&str, &Account> = accounts.iter().map(|a| (a.id.as_str(), a)).collect();
 
     let mut out = String::from(HEADER);
     for tx in transactions {
-        let account = by_id.get(tx.account_id.as_str());
-        out.push_str(&format!(
-            "{},{},{},{},{},{},{}\n",
-            csv_escape(&tx.date),
-            csv_escape(&tx.transaction_type),
-            csv_escape(account.map(|a| a.name.as_str()).unwrap_or_default()),
-            csv_escape(account.map(|a| a.currency.as_str()).unwrap_or_default()),
-            csv_escape(&tx.category),
-            csv_escape(&tx.description),
-            format_cents(tx.amount),
-        ));
+        match tx.transaction_type.as_str() {
+            // A transfer is stored as one row moving money out of `account_id`
+            // into `transfer_account_id`. Writing both legs keeps the column
+            // summable — the pair nets to zero — and keeps per-account
+            // subtotals correct.
+            "transfer" => {
+                push_row(&mut out, &by_id, tx, &tx.account_id, true);
+                if let Some(destination) = &tx.transfer_account_id {
+                    push_row(&mut out, &by_id, tx, destination, false);
+                }
+            }
+            "expense" => push_row(&mut out, &by_id, tx, &tx.account_id, true),
+            _ => push_row(&mut out, &by_id, tx, &tx.account_id, false),
+        }
     }
     out
 }
 
-/// Formats a cent amount as a plain signed decimal.
-fn format_cents(cents: i64) -> String {
-    let sign = if cents < 0 { "-" } else { "" };
+fn push_row(
+    out: &mut String,
+    accounts: &HashMap<&str, &Account>,
+    tx: &Transaction,
+    account_id: &str,
+    outflow: bool,
+) {
+    let account = accounts.get(account_id);
+    out.push_str(&format!(
+        "{},{},{},{},{},{},{}\n",
+        csv_escape(&tx.date),
+        csv_escape(&tx.transaction_type),
+        csv_escape(account.map(|a| a.name.as_str()).unwrap_or_default()),
+        csv_escape(account.map(|a| a.currency.as_str()).unwrap_or_default()),
+        csv_escape(&tx.category),
+        csv_escape(&tx.description),
+        format_cents(tx.amount, outflow),
+    ));
+}
+
+/// Formats a cent amount as a signed decimal.
+///
+/// Uses `unsigned_abs` rather than negating, so `i64::MIN` cannot overflow.
+fn format_cents(cents: i64, outflow: bool) -> String {
     let abs = cents.unsigned_abs();
+    let negative = outflow != (cents < 0);
+    let sign = if negative && abs != 0 { "-" } else { "" };
     format!("{sign}{}.{:02}", abs / 100, abs % 100)
 }
 
@@ -97,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn resolves_the_account_name_and_currency() {
+    fn writes_expenses_as_negative_amounts() {
         let accounts = vec![account("a1", "Checking", "CLP")];
         let rows = vec![transaction("a1", 123_456, "Food", "Lunch")];
 
@@ -105,8 +132,54 @@ mod tests {
 
         assert_eq!(
             csv,
-            format!("{HEADER}2026-07-29,expense,Checking,CLP,Food,Lunch,1234.56\n")
+            format!("{HEADER}2026-07-29,expense,Checking,CLP,Food,Lunch,-1234.56\n")
         );
+    }
+
+    #[test]
+    fn writes_income_as_a_positive_amount() {
+        let accounts = vec![account("a1", "Savings", "USD")];
+        let mut tx = transaction("a1", 100_000, "Salary", "");
+        tx.transaction_type = "income".to_string();
+
+        let csv = transactions_to_csv(&[tx], &accounts);
+
+        assert!(csv.ends_with("2026-07-29,income,Savings,USD,Salary,,1000.00\n"));
+    }
+
+    #[test]
+    fn splits_a_transfer_into_two_legs_that_net_to_zero() {
+        let accounts = vec![
+            account("a1", "Checking", "USD"),
+            account("a2", "Savings", "USD"),
+        ];
+        let mut tx = transaction("a1", 50_000, "Transfer", "Move savings");
+        tx.transaction_type = "transfer".to_string();
+        tx.transfer_account_id = Some("a2".to_string());
+
+        let csv = transactions_to_csv(&[tx], &accounts);
+
+        let rows: Vec<&str> = csv.lines().skip(1).collect();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(
+            rows[0],
+            "2026-07-29,transfer,Checking,USD,Transfer,Move savings,-500.00"
+        );
+        assert_eq!(
+            rows[1],
+            "2026-07-29,transfer,Savings,USD,Transfer,Move savings,500.00"
+        );
+    }
+
+    #[test]
+    fn writes_only_the_outgoing_leg_when_the_transfer_has_no_destination() {
+        let mut tx = transaction("a1", 100, "Transfer", "");
+        tx.transaction_type = "transfer".to_string();
+
+        let csv = transactions_to_csv(&[tx], &[]);
+
+        assert_eq!(csv.lines().skip(1).count(), 1);
+        assert!(csv.ends_with("-1.00\n"));
     }
 
     #[test]
@@ -115,13 +188,13 @@ mod tests {
 
         let csv = transactions_to_csv(&rows, &[]);
 
-        assert!(csv.ends_with("2026-07-29,expense,,,Food,Lunch,1.00\n"));
+        assert!(csv.ends_with("2026-07-29,expense,,,Food,Lunch,-1.00\n"));
     }
 
     #[test]
     fn quotes_fields_containing_separators() {
         let accounts = vec![account("a1", "Bank, N.A.", "USD")];
-        let rows = vec![transaction("a1", -50, "Misc", "He said \"hi\"")];
+        let rows = vec![transaction("a1", 50, "Misc", "He said \"hi\"")];
 
         let csv = transactions_to_csv(&rows, &accounts);
 
@@ -132,10 +205,16 @@ mod tests {
 
     #[test]
     fn formats_cents_with_two_decimals() {
-        assert_eq!(format_cents(0), "0.00");
-        assert_eq!(format_cents(5), "0.05");
-        assert_eq!(format_cents(-5), "-0.05");
-        assert_eq!(format_cents(100), "1.00");
-        assert_eq!(format_cents(i64::MIN), "-92233720368547758.08");
+        assert_eq!(format_cents(0, false), "0.00");
+        assert_eq!(format_cents(0, true), "0.00", "zero never carries a sign");
+        assert_eq!(format_cents(5, false), "0.05");
+        assert_eq!(format_cents(5, true), "-0.05");
+        assert_eq!(format_cents(100, false), "1.00");
+        assert_eq!(format_cents(i64::MIN, false), "-92233720368547758.08");
+        assert_eq!(
+            format_cents(i64::MIN, true),
+            "92233720368547758.08",
+            "an outflow of a negative amount is an inflow"
+        );
     }
 }
