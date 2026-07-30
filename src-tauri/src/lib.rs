@@ -152,6 +152,7 @@ pub fn run() {
             commands::crypto::add_crypto_swap,
             commands::crypto::update_crypto_transaction,
             commands::crypto::delete_crypto_transaction,
+            commands::crypto::duplicate_crypto_transaction,
             commands::crypto::get_crypto_transaction,
             commands::crypto::get_crypto_transactions_by_coin,
             commands::crypto::fetch_all_crypto_transactions,

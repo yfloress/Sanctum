@@ -31,10 +31,10 @@ use sanctum::models::{CryptoTransaction, CryptoWallet};
 use sanctum::ui::dto::crypto::{
     CoinCatalogDto, CryptoAssetPriceDto, CryptoSwapInput, CryptoTransactionDto,
     CryptoTransactionEditData, CryptoTransactionInput, CryptoTransactionListResponse,
-    CryptoTransactionUpdateInput, CryptoTransferInput, DistributionItem, FxRateDto, IpcSummaryDto,
-    PortfolioAssetDto, PortfolioResponse, PortfolioTrendData, TaxReportDto, TaxSettingsDto,
-    TaxSummaryDto, WalletDetailResponse, WalletDto, WalletHoldingDto, WalletSimpleDto,
-    WalletsResponse,
+    CryptoTransactionUpdateInput, CryptoTransferInput, CryptoTxFilterInput, DistributionItem,
+    FxRateDto, IpcSummaryDto, PortfolioAssetDto, PortfolioResponse, PortfolioTrendData,
+    TaxReportDto, TaxSettingsDto, TaxSummaryDto, WalletDetailResponse, WalletDto, WalletHoldingDto,
+    WalletSimpleDto, WalletsResponse,
 };
 use std::collections::HashMap;
 use tauri::State;
@@ -435,6 +435,17 @@ pub fn delete_crypto_transaction(
     crypto.delete_crypto_transaction(id).map_err(AppError::from)
 }
 
+/// Copy a transaction into a new one dated today. Returns the new id.
+#[tauri::command]
+pub fn duplicate_crypto_transaction(
+    crypto: State<'_, CryptoService>,
+    id: String,
+) -> Result<String, AppError> {
+    crypto
+        .duplicate_crypto_transaction(id)
+        .map_err(AppError::from)
+}
+
 #[tauri::command]
 pub fn get_crypto_transaction(
     crypto: State<'_, CryptoService>,
@@ -491,9 +502,10 @@ pub fn fetch_all_crypto_transactions(
     settings: State<'_, SettingsService>,
     offset: i64,
     limit: i64,
+    filter: Option<CryptoTxFilterInput>,
 ) -> Result<CryptoTransactionListResponse, AppError> {
     let txs = crypto
-        .get_all_crypto_transactions(offset, limit)
+        .get_filtered_crypto_transactions(filter.unwrap_or_default().into(), offset, limit)
         .map_err(AppError::from)?;
     let wallets = crypto.get_wallets().map_err(AppError::from)?;
     let total = txs.len();

@@ -29,6 +29,7 @@ use crate::error::AppError;
 use crate::features::crypto::{
     NewCryptoSwap, NewCryptoTransaction, NewCryptoTransfer, UpdateCryptoTransaction,
 };
+use crate::models::CryptoTxFilter;
 
 /// Parse a required `f64` amount, tagging `field` on failure.
 fn parse_required_f64(raw: &str, field: &str) -> Result<f64, AppError> {
@@ -145,6 +146,28 @@ pub struct WalletHoldingDto {
     pub amount: String,
     pub value: String,
     pub price: String,
+}
+
+/// Input for filtering the transaction list. Absent fields mean "everything".
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct CryptoTxFilterInput {
+    pub wallet_id: Option<String>,
+    pub transaction_type: Option<String>,
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
+    pub query: Option<String>,
+}
+
+impl From<CryptoTxFilterInput> for CryptoTxFilter {
+    fn from(input: CryptoTxFilterInput) -> Self {
+        Self {
+            wallet_id: input.wallet_id,
+            transaction_type: input.transaction_type,
+            date_from: input.date_from,
+            date_to: input.date_to,
+            query: input.query,
+        }
+    }
 }
 
 /// Input for creating a wallet.

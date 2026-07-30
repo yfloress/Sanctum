@@ -20,8 +20,16 @@
 //! CRUD operations for crypto transactions.
 
 use crate::db::{Database, DbError};
-use crate::models::CryptoTransaction;
+use crate::models::{CryptoTransaction, CryptoTxFilter};
 use rusqlite::{Error as RusqliteError, Row, params};
+
+/// Escapes LIKE wildcards so searching for `50%` does not match every row.
+fn escape_like(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
 
 /// Column list used in all SELECT queries for crypto transactions.
 /// Kept in a single place so that any schema change only requires one update.
@@ -152,19 +160,67 @@ impl Database {
         offset: i64,
         limit: i64,
     ) -> Result<Vec<CryptoTransaction>, DbError> {
-        let effective_limit = limit.saturating_add(1);
+        self.get_filtered_crypto_transactions(&CryptoTxFilter::default(), offset, limit)
+    }
+
+    /// Lists transactions matching `filter`, newest first.
+    ///
+    /// Filtering happens in SQL rather than over an already-paginated page, so
+    /// a match on row 5000 is found even when only the first page is on screen.
+    /// Returns one row more than `limit` so the caller can detect further pages.
+    pub fn get_filtered_crypto_transactions(
+        &self,
+        filter: &CryptoTxFilter,
+        offset: i64,
+        limit: i64,
+    ) -> Result<Vec<CryptoTransaction>, DbError> {
+        let mut conditions: Vec<&str> = Vec::new();
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        if let Some(wallet_id) = &filter.wallet_id {
+            conditions.push("wallet_id = ?");
+            params.push(Box::new(wallet_id.clone()));
+        }
+        if let Some(tx_type) = &filter.transaction_type {
+            conditions.push("type = ?");
+            params.push(Box::new(tx_type.clone()));
+        }
+        // ISO dates compare correctly as text.
+        if let Some(date_from) = &filter.date_from {
+            conditions.push("date >= ?");
+            params.push(Box::new(date_from.clone()));
+        }
+        if let Some(date_to) = &filter.date_to {
+            conditions.push("date <= ?");
+            params.push(Box::new(date_to.clone()));
+        }
+        if let Some(query) = &filter.query {
+            conditions.push("(symbol LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\')");
+            let pattern = format!("%{}%", escape_like(query));
+            params.push(Box::new(pattern.clone()));
+            params.push(Box::new(pattern));
+        }
+
+        let where_clause = if conditions.is_empty() {
+            String::new()
+        } else {
+            format!(" WHERE {}", conditions.join(" AND "))
+        };
+
+        // One extra row signals that another page exists.
+        params.push(Box::new(limit.saturating_add(1)));
+        params.push(Box::new(offset));
+
         let sql = format!(
-            "SELECT {} FROM crypto_transactions ORDER BY date DESC, rowid DESC LIMIT ?1 OFFSET ?2",
-            CRYPTO_TX_COLUMNS
+            "SELECT {CRYPTO_TX_COLUMNS} FROM crypto_transactions{where_clause} \
+             ORDER BY date DESC, rowid DESC LIMIT ? OFFSET ?"
         );
+
         self.read(|conn| {
             let mut stmt = conn.prepare(&sql)?;
-
+            let refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
             let transactions = stmt
-                .query_map(
-                    rusqlite::params![effective_limit, offset],
-                    row_to_crypto_transaction,
-                )?
+                .query_map(refs.as_slice(), row_to_crypto_transaction)?
                 .collect::<Result<Vec<_>, _>>()?;
 
             Ok(transactions)

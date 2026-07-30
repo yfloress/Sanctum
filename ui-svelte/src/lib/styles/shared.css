@@ -255,6 +255,14 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 .delete-btn:hover { color: var(--danger); }
 .delete-btn svg { width: 14px; height: 14px; }
 
+/* Neutral sibling of .delete-btn for non-destructive row actions. */
+.row-btn {
+  background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 2px;
+  display: flex; align-items: center; transition: color 0.15s; flex-shrink: 0;
+}
+.row-btn:hover { color: var(--accent); }
+.row-btn svg { width: 14px; height: 14px; }
+
 /* ── Icon picker ─────────────────────────────────────────────────── */
 
 .icon-picker {

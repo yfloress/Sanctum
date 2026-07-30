@@ -1024,12 +1024,7 @@
   }
   .delete-btn:hover { color: var(--danger); }
   .delete-btn svg { width: 16px; height: 16px; }
-
-  .row-btn {
-    background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 4px;
-    display: flex; align-items: center; transition: color 0.15s;
-  }
-  .row-btn:hover { color: var(--accent); }
+  /* Match this page's larger row icons; the shared rule is 14px. */
   .row-btn svg { width: 16px; height: 16px; }
 
   .load-more-btn {

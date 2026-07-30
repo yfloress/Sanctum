@@ -85,6 +85,74 @@
   let txListHasMore = $state(false)
   let txListFilter = $state('')
   let txSearchInput = $state<HTMLInputElement | undefined>()
+  let txFilterWallet = $state('')
+  let txFilterType = $state('')
+  type TxDateRange = 'all' | 'this-month' | 'last-30' | 'last-90' | 'this-year' | 'custom'
+  let txFilterDateRange = $state<TxDateRange>('all')
+  let txFilterFrom = $state('')
+  let txFilterTo = $state('')
+
+  const TX_PAGE_SIZE = 50
+
+  function txDateBounds(): { from: string | undefined; to: string | undefined } {
+    const today = new Date()
+    const iso = (d: Date) => d.toISOString().slice(0, 10)
+    switch (txFilterDateRange) {
+      case 'this-month': {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'last-30': {
+        const start = new Date(today)
+        start.setDate(today.getDate() - 30)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'last-90': {
+        const start = new Date(today)
+        start.setDate(today.getDate() - 90)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'this-year': {
+        const start = new Date(today.getFullYear(), 0, 1)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'custom':
+        return { from: txFilterFrom || undefined, to: txFilterTo || undefined }
+      default:
+        return { from: undefined, to: undefined }
+    }
+  }
+
+  function txFilters() {
+    const { from, to } = txDateBounds()
+    return {
+      wallet_id: txFilterWallet || undefined,
+      transaction_type: txFilterType || undefined,
+      date_from: from,
+      date_to: to,
+      query: txListFilter || undefined,
+    }
+  }
+
+  let hasActiveTxFilters = $derived(
+    !!txListFilter || !!txFilterWallet || !!txFilterType || txFilterDateRange !== 'all'
+  )
+
+  let txSearchDebounce: ReturnType<typeof setTimeout> | undefined
+  function onTxSearchInput() {
+    if (txSearchDebounce) clearTimeout(txSearchDebounce)
+    txSearchDebounce = setTimeout(() => loadTransactionsList(), 200)
+  }
+
+  function clearTxFilters() {
+    txListFilter = ''
+    txFilterWallet = ''
+    txFilterType = ''
+    txFilterDateRange = 'all'
+    txFilterFrom = ''
+    txFilterTo = ''
+    loadTransactionsList()
+  }
   let pendingDeleteTxId = $state<string | null>(null)
 
   async function changeTrendDays(days: number) {
@@ -346,6 +414,22 @@
     }
   }
 
+  /** A leg of a swap or a wallet transfer means nothing copied on its own. */
+  function canDuplicate(tx: CryptoTransactionDto): boolean {
+    return !tx.has_related_tx && tx.transaction_type !== 'transfer'
+  }
+
+  async function duplicateTransaction(tx: CryptoTransactionDto) {
+    try {
+      await cryptoApi.duplicateCryptoTransaction(tx.id)
+      await load()
+      if (activeTab === 'activity') await loadTransactionsList()
+      app.showToast(i18n.t('crypto-toast-tx-duplicated', 'Transaction duplicated'))
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
   async function load() {
     loading = true
     try {
@@ -363,7 +447,7 @@
 
   async function loadTransactionsList() {
     try {
-      const res = await cryptoApi.fetchAllCryptoTransactions(0, 50)
+      const res = await cryptoApi.fetchAllCryptoTransactions(0, TX_PAGE_SIZE, txFilters())
       txList = res.transactions
       txListHasMore = res.has_more
     } catch (e) {
@@ -373,8 +457,12 @@
 
   async function loadMoreTransactionsList() {
     try {
-      const res = await cryptoApi.fetchAllCryptoTransactions(txList.length, 50)
-      txList = res.transactions
+      const res = await cryptoApi.fetchAllCryptoTransactions(
+        txList.length,
+        TX_PAGE_SIZE,
+        txFilters()
+      )
+      txList = [...txList, ...res.transactions]
       txListHasMore = res.has_more
     } catch (e) {
       app.showToast(errorMessage(e), true)
@@ -926,25 +1014,72 @@
   {:else if activeTab === 'activity'}
     <section class="tab-content">
       <div class="activity-toolbar">
-        <div class="filter-search">
-          <svg class="filter-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input
-            type="text"
-            placeholder={i18n.t('crypto-search-transactions', 'Search transactions...')}
-            bind:this={txSearchInput}
-            bind:value={txListFilter}
-          />
+        <div class="activity-filters">
+          <div class="filter-search">
+            <svg class="filter-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              placeholder={i18n.t('crypto-search-transactions', 'Search transactions...')}
+              bind:this={txSearchInput}
+              bind:value={txListFilter}
+              oninput={onTxSearchInput}
+            />
+          </div>
+          <select bind:value={txFilterWallet} onchange={() => loadTransactionsList()}>
+            <option value="">{i18n.t('crypto-all-wallets', 'All Wallets')}</option>
+            {#each walletsData?.wallets ?? [] as w}
+              <option value={w.id}>{w.name}</option>
+            {/each}
+          </select>
+          <select bind:value={txFilterType} onchange={() => loadTransactionsList()}>
+            <option value="">{i18n.t('crypto-all-types', 'All Types')}</option>
+            <option value="trade">{i18n.t('crypto-type-trade', 'Trade')}</option>
+            <option value="income">{i18n.t('crypto-type-income', 'Income')}</option>
+            <option value="expense">{i18n.t('crypto-type-expense', 'Expense')}</option>
+            <option value="transfer">{i18n.t('crypto-type-transfer', 'Transfer')}</option>
+          </select>
+          <select
+            bind:value={txFilterDateRange}
+            aria-label={i18n.t('finances-date-range', 'Date range')}
+            onchange={() => loadTransactionsList()}
+          >
+            <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
+            <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
+            <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
+            <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
+            <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
+            <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
+          </select>
+          {#if txFilterDateRange === 'custom'}
+            <input
+              type="date"
+              class="date-input"
+              aria-label={i18n.t('finances-date-from', 'From')}
+              bind:value={txFilterFrom}
+              onchange={() => loadTransactionsList()}
+            />
+            <input
+              type="date"
+              class="date-input"
+              aria-label={i18n.t('finances-date-to', 'To')}
+              bind:value={txFilterTo}
+              onchange={() => loadTransactionsList()}
+            />
+          {/if}
+          {#if hasActiveTxFilters}
+            <button class="glass-btn" onclick={clearTxFilters}>{i18n.t('finances-clear', 'Clear')}</button>
+          {/if}
         </div>
         <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
       </div>
 
       {#if txList.length === 0}
-        <p class="empty">{txListFilter ? i18n.t('crypto-no-matching', 'No matching transactions') : i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+        <p class="empty">{hasActiveTxFilters ? i18n.t('crypto-no-matching', 'No matching transactions') : i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
       {:else}
         <div class="tx-list">
-          {#each txList.filter(tx => !txListFilter || tx.symbol.toLowerCase().includes(txListFilter.toLowerCase()) || tx.wallet_name?.toLowerCase().includes(txListFilter.toLowerCase()) || tx.transaction_type.toLowerCase().includes(txListFilter.toLowerCase())) as tx (tx.id)}
+          {#each txList as tx (tx.id)}
             <div class="tx-row" role="button" tabindex="0"
               onclick={() => openEditTransaction(tx.id)}
               onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx.id) }}>
@@ -958,6 +1093,11 @@
                 </div>
               </div>
               <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{mask(tx.value)}</span>
+              {#if canDuplicate(tx)}
+                <button class="row-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); duplicateTransaction(tx) }} aria-label={i18n.t('crypto-duplicate', 'Duplicate')} title={i18n.t('crypto-duplicate', 'Duplicate')}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h8"/></svg>
+                </button>
+              {/if}
               <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); pendingDeleteTxId = tx.id }} aria-label={i18n.t('crypto-delete', 'Delete')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
@@ -2187,6 +2327,20 @@
     transition: border-color 0.2s;
   }
   .filter-search input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
+  .activity-filters {
+    display: flex; gap: 8px; flex: 1; flex-wrap: wrap; align-items: center;
+  }
+  .activity-filters select,
+  .activity-filters .date-input {
+    padding: 8px 12px;
+    border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--glass); color: var(--text-primary); font-size: 0.82rem;
+    transition: border-color 0.2s;
+  }
+  .activity-filters select:focus,
+  .activity-filters .date-input:focus {
+    border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow);
+  }
   .load-more-btn {
     display: block; margin: 16px auto; padding: 8px 24px;
     border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: none;

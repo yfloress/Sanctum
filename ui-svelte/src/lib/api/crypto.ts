@@ -92,8 +92,25 @@ export async function getCryptoTransactionsByCoin(coin_id: string): Promise<Cryp
 
 type CryptoTransactionListResponse = { transactions: CryptoTransactionDto[], has_more: boolean }
 
-export async function fetchAllCryptoTransactions(offset: number, limit: number): Promise<CryptoTransactionListResponse> {
-  return invoke<CryptoTransactionListResponse>('fetch_all_crypto_transactions', { offset, limit })
+export interface CryptoTxFilters {
+  wallet_id?: string
+  transaction_type?: string
+  date_from?: string
+  date_to?: string
+  /** Matched against the coin symbol and the notes. */
+  query?: string
+}
+
+export async function fetchAllCryptoTransactions(
+  offset: number,
+  limit: number,
+  filters: CryptoTxFilters = {}
+): Promise<CryptoTransactionListResponse> {
+  return invoke<CryptoTransactionListResponse>('fetch_all_crypto_transactions', {
+    offset,
+    limit,
+    filter: filters,
+  })
 }
 
 export async function getCoinCatalog(): Promise<CoinCatalogDto[]> {
@@ -189,4 +206,9 @@ export async function loadExchangeRate(pair: string): Promise<[number, string] |
 
 export async function syncCryptoData(): Promise<string> {
   return invoke<string>('sync_crypto_data')
+}
+
+/** Copies a transaction into a new one dated today. Returns the new id. */
+export async function duplicateCryptoTransaction(id: string): Promise<string> {
+  return invoke<string>('duplicate_crypto_transaction', { id })
 }

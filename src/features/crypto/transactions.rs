@@ -19,8 +19,9 @@
 //!
 //! Handles adding, updating, and deleting crypto transactions including transfers and swaps.
 
-use crate::models::{CryptoTransaction, CryptoTransactionType};
+use crate::models::{CryptoTransaction, CryptoTransactionType, CryptoTxFilter};
 use crate::security_log::{SecurityEvent, log_security_event};
+use chrono::Utc;
 use uuid::Uuid;
 
 use super::commands::{
@@ -496,6 +497,41 @@ impl CryptoService {
         })
     }
 
+    /// Copies a transaction into a new one dated today.
+    ///
+    /// Goes through the normal add path on purpose, so the copy is validated
+    /// like any new entry: duplicating a sell the wallet can no longer cover
+    /// fails, as it should. Type, subtype, price, fee and the tax overrides are
+    /// carried over untouched.
+    pub fn duplicate_crypto_transaction(&self, id: String) -> Result<String, CryptoError> {
+        let existing = self
+            .get_crypto_transaction(id)?
+            .ok_or_else(|| CryptoError::Validation("Transaction not found".to_string()))?;
+
+        if existing.mechanical_type() == "swap" || existing.related_tx_id.is_some() {
+            return Err(CryptoError::Validation(
+                "Duplicating paired transactions is not supported".to_string(),
+            ));
+        }
+
+        self.add_crypto_transaction(NewCryptoTransaction {
+            wallet_id: existing.wallet_id,
+            coin_id: existing.coin_id,
+            symbol: existing.symbol,
+            transaction_type: existing.transaction_type,
+            amount: existing.amount,
+            price_per_coin: existing.price_per_coin,
+            fee: existing.fee,
+            fee_coin_id: existing.fee_coin_id,
+            fee_amount: existing.fee_amount,
+            date: Utc::now().format("%Y-%m-%d").to_string(),
+            notes: existing.notes,
+            subtype: existing.subtype,
+            override_proceeds: existing.override_proceeds,
+            override_cost_basis: existing.override_cost_basis,
+        })
+    }
+
     pub fn get_crypto_transaction(
         &self,
         id: String,
@@ -523,8 +559,40 @@ impl CryptoService {
         offset: i64,
         limit: i64,
     ) -> Result<Vec<CryptoTransaction>, CryptoError> {
+        self.get_filtered_crypto_transactions(CryptoTxFilter::default(), offset, limit)
+    }
+
+    /// Lists transactions matching `filter`. Validates the filter's vocabulary
+    /// so a malformed value fails loudly instead of silently matching nothing.
+    pub fn get_filtered_crypto_transactions(
+        &self,
+        filter: CryptoTxFilter,
+        offset: i64,
+        limit: i64,
+    ) -> Result<Vec<CryptoTransaction>, CryptoError> {
+        let mut filter = filter.normalized();
+
+        if let Some(wallet_id) = filter.wallet_id.as_deref() {
+            filter.wallet_id = Some(validate_uuid(wallet_id)?);
+        }
+        if let Some(tx_type) = filter.transaction_type.as_deref() {
+            let valid = ["trade", "income", "expense", "transfer"];
+            if !valid.contains(&tx_type) {
+                return Err(CryptoError::Validation(format!(
+                    "Invalid transaction type. Must be one of: {}",
+                    valid.join(", ")
+                )));
+            }
+        }
+        if let Some(date_from) = filter.date_from.as_deref() {
+            filter.date_from = Some(validate_date(date_from)?);
+        }
+        if let Some(date_to) = filter.date_to.as_deref() {
+            filter.date_to = Some(validate_date(date_to)?);
+        }
+
         self.with_db(|db| {
-            db.get_all_crypto_transactions(offset, limit)
+            db.get_filtered_crypto_transactions(&filter, offset, limit)
                 .map_err(CryptoError::Database)
         })
     }

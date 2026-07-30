@@ -310,3 +310,34 @@ pub struct WalletSummary {
     pub total_value: f64,
     pub assets_count: usize,
 }
+
+/// Filters for the crypto transaction list.
+///
+/// Empty or absent fields are ignored, so `Default` means "everything".
+#[derive(Debug, Clone, Default)]
+pub struct CryptoTxFilter {
+    pub wallet_id: Option<String>,
+    pub transaction_type: Option<String>,
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
+    /// Matched case-insensitively against the coin symbol and the notes.
+    pub query: Option<String>,
+}
+
+impl CryptoTxFilter {
+    /// Trims every field and drops the ones left empty.
+    pub fn normalized(self) -> Self {
+        fn clean(value: Option<String>) -> Option<String> {
+            value
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty())
+        }
+        Self {
+            wallet_id: clean(self.wallet_id),
+            transaction_type: clean(self.transaction_type),
+            date_from: clean(self.date_from),
+            date_to: clean(self.date_to),
+            query: clean(self.query),
+        }
+    }
+}
