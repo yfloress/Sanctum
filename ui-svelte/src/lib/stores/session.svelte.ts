@@ -26,9 +26,18 @@ import * as settingsApi from '../api/settings'
 
 /** Remaining seconds at which the lock warning appears. */
 const WARNING_THRESHOLD_SECS = 60
-/** Countdown refresh interval. */
-const TICK_MS = 1_000
-/** How often the backend clock is re-sampled. */
+/** Tick while the countdown is on screen and has to move every second. */
+const TICK_ACTIVE_MS = 1_000
+/** Tick the rest of the time. The local clock needs no better resolution. */
+const TICK_IDLE_MS = 15_000
+/**
+ * How close to the warning the backend clock starts being sampled.
+ *
+ * Each sample is an IPC round trip, and away from expiry the local clock is
+ * enough — so nothing is asked of the backend until the lock is near.
+ */
+const POLL_WINDOW_SECS = 150
+/** Minimum gap between backend clock samples inside that window. */
 const POLL_MS = 5_000
 /** Minimum gap between backend session refreshes driven by DOM activity. */
 const TOUCH_THROTTLE_MS = 60_000
@@ -43,7 +52,7 @@ export const session = new SessionState()
 let lastActivity = Date.now()
 let lastTouch = 0
 let lastPoll = 0
-let timer: ReturnType<typeof setInterval> | null = null
+let timer: ReturnType<typeof setTimeout> | null = null
 
 /** Last reading of the backend clock, extrapolated between polls. */
 let backendSample: { secs: number; at: number } | null = null
@@ -93,7 +102,11 @@ async function tick() {
     return
   }
 
-  if (Date.now() - lastPoll >= POLL_MS) {
+  const localRemaining = timeoutSecs - Math.floor((Date.now() - lastActivity) / 1000)
+
+  // Only bother the backend near the lock. Far from it the local clock decides,
+  // so the steady state costs nothing but a subtraction.
+  if (localRemaining <= POLL_WINDOW_SECS && Date.now() - lastPoll >= POLL_MS) {
     lastPoll = Date.now()
     try {
       backendSample = { secs: await settingsApi.getSessionRemaining(), at: Date.now() }
@@ -110,7 +123,6 @@ async function tick() {
     }
   }
 
-  const localRemaining = timeoutSecs - Math.floor((Date.now() - lastActivity) / 1000)
   const backend = backendRemaining()
   const remaining = backend === null ? localRemaining : Math.min(localRemaining, backend)
 
@@ -142,12 +154,25 @@ export function startSessionMonitor() {
   lastTouch = Date.now()
   lastPoll = 0
   backendSample = null
-  timer = setInterval(() => void tick(), TICK_MS)
+
+  // Self-scheduling instead of a fixed interval: one tick per second is only
+  // needed while the countdown is on screen.
+  let stopped = false
+  const schedule = () => {
+    if (stopped) return
+    const delay = session.warningSecs === null ? TICK_IDLE_MS : TICK_ACTIVE_MS
+    timer = setTimeout(async () => {
+      await tick()
+      schedule()
+    }, delay)
+  }
+  schedule()
 
   return () => {
+    stopped = true
     events.forEach(e => document.removeEventListener(e, resetActivity))
     if (timer) {
-      clearInterval(timer)
+      clearTimeout(timer)
       timer = null
     }
     session.warningSecs = null
