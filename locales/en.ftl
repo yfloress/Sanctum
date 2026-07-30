@@ -1190,3 +1190,16 @@ session-warning-title = Vault about to lock
 session-warning-body = Locking in {$seconds}s due to inactivity.
 session-warning-stay = Stay unlocked
 session-warning-lock-now = Lock now
+
+# ==================== Master Password ====================
+settings-change-password = Master Password
+settings-change-password-desc = Re-encrypts the whole vault with a new password
+settings-change-password-btn = Change
+settings-password-current = Current password
+settings-password-new = New password
+settings-password-confirm = Confirm new password
+settings-password-mismatch = The new passwords do not match
+settings-password-changing = Re-encrypting…
+settings-password-changed = Master password changed
+settings-password-backup-title = Save the pre-change backup
+settings-password-backup-warning = A backup is saved first and is required. That backup keeps the OLD password: restoring it later needs the password you are replacing now.

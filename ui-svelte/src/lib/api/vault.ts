@@ -50,3 +50,16 @@ export async function restoreVault(backup_path: string): Promise<void> {
 export async function rollbackRestore(): Promise<void> {
   return invoke('rollback_restore')
 }
+
+/**
+ * Changes the master password, re-encrypting the vault.
+ *
+ * Returns the path of the rollback copy written first, which stays encrypted
+ * with the OLD password.
+ */
+export async function changeVaultPassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<string> {
+  return invoke<string>('change_vault_password', { currentPassword, newPassword })
+}

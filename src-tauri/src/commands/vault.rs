@@ -99,6 +99,24 @@ pub fn export_vault(
     Ok(())
 }
 
+/// Change the master password, re-encrypting the vault.
+///
+/// Returns the path of the rollback copy written first, which keeps the OLD
+/// password.
+#[tauri::command]
+pub fn change_vault_password(
+    vault: State<'_, VaultManager>,
+    current_password: String,
+    new_password: String,
+) -> Result<String, AppError> {
+    vault
+        .change_password(current_password, new_password)
+        .map_err(|e| {
+            log::error!("Password change failed: {e}");
+            AppError::from(e)
+        })
+}
+
 /// Restore a vault from a backup file.
 #[tauri::command]
 pub fn restore_vault(vault: State<'_, VaultManager>, backup_path: String) -> Result<(), AppError> {

@@ -86,6 +86,7 @@ pub fn run() {
             commands::vault::lock_vault,
             commands::vault::check_password_strength,
             commands::vault::export_vault,
+            commands::vault::change_vault_password,
             commands::vault::restore_vault,
             commands::vault::rollback_restore,
             // Settings domain

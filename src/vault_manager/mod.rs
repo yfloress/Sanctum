@@ -34,8 +34,9 @@ use crate::features::crypto::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
+use crate::services::vault;
 use rusqlite::Connection;
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, Permissions};
 #[cfg(unix)]
@@ -647,6 +648,74 @@ impl VaultManager {
         Ok("Vault closed successfully".to_string())
     }
 
+    /// Changes the vault's master password, re-encrypting the database.
+    ///
+    /// The order of the steps is the safety design, not a preference:
+    ///
+    /// 1. Confirm `current_password` against the file. The open connection
+    ///    cannot vouch for what the user typed — it holds the key it was opened
+    ///    with either way.
+    /// 2. Write the rollback copy next to the vault. It stays encrypted with the
+    ///    **old** password, so the UI has to say so.
+    /// 3. Rekey, then rebuild the `Database`: only the writer connection is
+    ///    rekeyed, and the reader pool still holds the old key. Rebuilding keeps
+    ///    the vault open with the new key instead of logging the user out.
+    ///
+    /// Returns the path of the rollback copy.
+    pub fn change_password(
+        &self,
+        current_password: String,
+        new_password: String,
+    ) -> Result<String, ControllerError> {
+        let db_path = {
+            let db_lock = self.db.read().map_err(|_| ControllerError::Internal)?;
+            let db = db_lock.as_ref().ok_or(ControllerError::NoVaultOpen)?;
+            db.path().to_path_buf()
+        };
+
+        let current = validate_password_basic(current_password)?;
+        let new = validate_password_basic(new_password)?;
+
+        if current.expose_secret() == new.expose_secret() {
+            return Err(ControllerError::Validation(
+                "The new password must be different from the current one".to_string(),
+            ));
+        }
+
+        Database::verify_password(&db_path, &current).map_err(ControllerError::Database)?;
+
+        // Merge the WAL into the main file so the rollback copy is complete.
+        self.with_db_no_touch(|db| db.checkpoint().map_err(ControllerError::Database))?;
+        let backup_path = vault::create_pre_rekey_backup(&db_path)?;
+
+        let mut db_lock = self.db.write().map_err(|_| ControllerError::Internal)?;
+        let db = db_lock.as_ref().ok_or(ControllerError::NoVaultOpen)?;
+
+        let timeout = db
+            .get_setting(SETTING_SESSION_TIMEOUT)
+            .ok()
+            .flatten()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(900);
+
+        // Close the writer *and* the reader pool before re-encrypting. SQLCipher
+        // rewrites the file in place, so no other connection may be holding it —
+        // least of all the pool, whose connections carry the old key.
+        *db_lock = None;
+
+        Database::rekey_file(&db_path, &current, &new).map_err(ControllerError::Database)?;
+
+        // On failure here the vault is left closed but intact and still opens
+        // with the new password, so the user only has to unlock again.
+        let mut reopened = Database::init(db_path, &new).map_err(ControllerError::Database)?;
+        reopened.set_session_timeout(timeout);
+        *db_lock = Some(reopened);
+
+        log_security_event(SecurityEvent::VaultPasswordChanged, None);
+
+        Ok(backup_path.to_string_lossy().to_string())
+    }
+
     /// Gets the remaining session time in seconds
     pub fn get_session_remaining(&self) -> Result<i64, ControllerError> {
         self.with_db_no_touch(|db| {
@@ -699,7 +768,6 @@ impl VaultManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use secrecy::ExposeSecret;
 
     #[test]
     fn test_validate_password_basic_empty() {

@@ -1190,3 +1190,16 @@ session-warning-title = La bóveda está por bloquearse
 session-warning-body = Se bloqueará en {$seconds} s por inactividad.
 session-warning-stay = Seguir abierta
 session-warning-lock-now = Bloquear ahora
+
+# ==================== Master Password ====================
+settings-change-password = Contraseña Maestra
+settings-change-password-desc = Recifra toda la bóveda con una contraseña nueva
+settings-change-password-btn = Cambiar
+settings-password-current = Contraseña actual
+settings-password-new = Contraseña nueva
+settings-password-confirm = Confirmar contraseña nueva
+settings-password-mismatch = Las contraseñas nuevas no coinciden
+settings-password-changing = Recifrando…
+settings-password-changed = Contraseña maestra cambiada
+settings-password-backup-title = Guardar el respaldo previo al cambio
+settings-password-backup-warning = Primero se guarda un respaldo, y es obligatorio. Ese respaldo conserva la contraseña ANTIGUA: restaurarlo más adelante requiere la contraseña que estás reemplazando ahora.

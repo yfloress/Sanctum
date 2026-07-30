@@ -955,3 +955,74 @@ fn test_duplicate_account_name_is_allowed_or_rejected_consistently() {
         }
     }
 }
+
+// ==================== Master password change ====================
+
+#[test]
+fn changing_the_master_password_reencrypts_the_vault() {
+    let ctx = setup();
+    create_account(&ctx, "Before rekey");
+
+    let rollback = ctx
+        .vault
+        .change_password(
+            "test-password-123".to_string(),
+            "a-brand-new-secret".to_string(),
+        )
+        .expect("change password");
+
+    // The rollback copy exists and is a separate file from the vault.
+    let rollback_path = PathBuf::from(&rollback);
+    assert!(rollback_path.exists(), "rollback copy must be written");
+    assert_ne!(rollback_path, ctx.test_dir.join("sanctum.db"));
+
+    // The vault stays open, and reads still work: the reader pool was rebuilt
+    // with the new key rather than left holding the old one.
+    let accounts = ctx.finance.get_accounts().expect("read after rekey");
+    assert!(accounts.iter().any(|a| a.name == "Before rekey"));
+
+    // Only the new password opens the vault again.
+    ctx.vault.close_db().expect("close");
+    assert!(
+        ctx.vault
+            .open_db("test-password-123".to_string(), None)
+            .is_err(),
+        "the old password must stop working"
+    );
+    ctx.vault
+        .open_db("a-brand-new-secret".to_string(), None)
+        .expect("open with the new password");
+}
+
+#[test]
+fn changing_the_master_password_rejects_a_wrong_current_password() {
+    let ctx = setup();
+
+    let result = ctx.vault.change_password(
+        "not-the-password".to_string(),
+        "a-brand-new-secret".to_string(),
+    );
+
+    assert!(result.is_err(), "a wrong current password must be refused");
+
+    // The vault is untouched: the original password still opens it.
+    ctx.vault.close_db().expect("close");
+    ctx.vault
+        .open_db("test-password-123".to_string(), None)
+        .expect("original password still works");
+}
+
+#[test]
+fn changing_the_master_password_rejects_reusing_the_same_one() {
+    let ctx = setup();
+
+    let result = ctx.vault.change_password(
+        "test-password-123".to_string(),
+        "test-password-123".to_string(),
+    );
+
+    assert!(
+        result.is_err(),
+        "reusing the current password must be refused"
+    );
+}

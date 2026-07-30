@@ -36,7 +36,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicI64, Ordering};
 use thiserror::Error;
@@ -416,6 +416,39 @@ impl Database {
                 .map_err(DbError::Sqlite)?;
             Ok(())
         })
+    }
+
+    /// Checks a password against the vault at `path` without opening it.
+    ///
+    /// Used to confirm the current password before a rekey; the already-open
+    /// connection cannot answer that, since it holds the key it was opened
+    /// with regardless of what the user typed.
+    pub fn verify_password(path: &Path, password: &SecretString) -> Result<(), DbError> {
+        let conn = Connection::open(path)?;
+        Self::configure_connection(&conn, password, true).map_err(|_| DbError::InvalidPassword)?;
+        Self::verify_key(&conn)
+    }
+
+    /// Re-encrypts the vault at `path` from `current_password` to `new_password`.
+    ///
+    /// Deliberately a free function over a path rather than a method: SQLCipher
+    /// rewrites the file in place, so the rekey must be the only connection to
+    /// it. The caller closes the `Database` first (writer *and* reader pool) and
+    /// reopens it afterwards with the new password.
+    pub fn rekey_file(
+        path: &Path,
+        current_password: &SecretString,
+        new_password: &SecretString,
+    ) -> Result<(), DbError> {
+        let conn = Connection::open(path)?;
+        Self::configure_connection(&conn, current_password, false)
+            .map_err(|_| DbError::InvalidPassword)?;
+        Self::verify_key(&conn)?;
+
+        conn.pragma_update(None, "rekey", new_password.expose_secret())
+            .map_err(DbError::Sqlite)?;
+
+        Ok(())
     }
 
     // ==================== Settings Methods ====================

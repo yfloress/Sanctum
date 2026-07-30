@@ -143,6 +143,34 @@ pub fn create_backup_copy(path: &Path) -> Result<PathBuf, VaultError> {
     Ok(backup_path)
 }
 
+/// Create a rollback copy before re-encrypting the vault
+///
+/// Written next to the vault rather than to a user-chosen path: this is the
+/// file that gets the database back if the rekey is interrupted, so it must
+/// not fail over a directory choice. It stays encrypted with the old password.
+pub fn create_pre_rekey_backup(path: &Path) -> Result<PathBuf, VaultError> {
+    if !path.exists() {
+        return Err(VaultError::FileNotFound);
+    }
+
+    let backup_path = path.with_extension("db.pre-password-change");
+
+    if backup_path.exists() {
+        fs::remove_file(&backup_path)?;
+    }
+
+    fs::copy(path, &backup_path)?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&backup_path, fs::Permissions::from_mode(0o600))?;
+    }
+
+    log::info!("Pre-rekey backup created at {:?}", backup_path);
+    Ok(backup_path)
+}
+
 /// Import (restore) vault from a backup file
 pub fn import_vault(backup: &Path, destination: &Path) -> Result<(), VaultError> {
     // 1. Validate backup file

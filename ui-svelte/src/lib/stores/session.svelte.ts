@@ -98,11 +98,14 @@ async function tick() {
     try {
       backendSample = { secs: await settingsApi.getSessionRemaining(), at: Date.now() }
     } catch (e) {
-      if (errorKind(e) === 'session_expired') {
+      const kind = errorKind(e)
+      // A closed vault behind a logged-in UI is a dead end: every command would
+      // fail. Treat it like an expired session rather than leaving it stuck.
+      if (kind === 'session_expired' || kind === 'no_vault_open') {
         await lock()
         return
       }
-      // Anything else (no vault open, transient failure): trust the local clock.
+      // Transient failure: trust the local clock.
       backendSample = null
     }
   }

@@ -35,6 +35,7 @@ pub enum SecurityEvent {
     VaultOpened,
     VaultClosed,
     VaultOpenFailed,
+    VaultPasswordChanged,
 
     /// Authentication
     AuthAttemptBlocked,
@@ -60,6 +61,7 @@ impl SecurityEvent {
             SecurityEvent::VaultOpened => "VAULT_OPENED",
             SecurityEvent::VaultClosed => "VAULT_CLOSED",
             SecurityEvent::VaultOpenFailed => "VAULT_OPEN_FAILED",
+            SecurityEvent::VaultPasswordChanged => "VAULT_PASSWORD_CHANGED",
             SecurityEvent::AuthAttemptBlocked => "AUTH_BLOCKED",
             SecurityEvent::RateLimitTriggered => "RATE_LIMIT",
             SecurityEvent::WalletCreated => "WALLET_CREATED",

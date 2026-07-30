@@ -356,6 +356,46 @@
     }
   }
 
+  let showPasswordChange = $state(false)
+  let currentPassword = $state('')
+  let newPassword = $state('')
+  let confirmPassword = $state('')
+  let changingPassword = $state(false)
+  let passwordError = $state('')
+  let rollbackPath = $state('')
+
+  let passwordsMatch = $derived(newPassword.length > 0 && newPassword === confirmPassword)
+
+  function resetPasswordForm() {
+    showPasswordChange = false
+    currentPassword = ''
+    newPassword = ''
+    confirmPassword = ''
+    passwordError = ''
+    rollbackPath = ''
+  }
+
+  async function changePassword() {
+    passwordError = ''
+    if (!passwordsMatch) {
+      passwordError = i18n.t('settings-password-mismatch', 'The new passwords do not match')
+      return
+    }
+
+    changingPassword = true
+    try {
+      rollbackPath = await vaultApi.changeVaultPassword(currentPassword, newPassword)
+      currentPassword = ''
+      newPassword = ''
+      confirmPassword = ''
+      app.showToast(i18n.t('settings-password-changed', 'Master password changed'))
+    } catch (e) {
+      passwordError = errorMessage(e)
+    } finally {
+      changingPassword = false
+    }
+  }
+
   /** Days since the last vault export, or null when never exported. */
   let daysSinceBackup = $derived.by(() => {
     const stamp = app.settings?.last_backup_at
@@ -444,6 +484,79 @@
           <option value={3600}>{i18n.t('settings-timeout-1hour', '1 hour')}</option>
         </select>
       </div>
+
+      <div class="setting-row">
+        <div>
+          <span class="setting-label">{i18n.t('settings-change-password', 'Master Password')}</span>
+          <span class="setting-desc">{i18n.t('settings-change-password-desc', 'Re-encrypts the whole vault with a new password')}</span>
+        </div>
+        {#if !showPasswordChange}
+          <button class="glass-btn" onclick={() => (showPasswordChange = true)}>
+            {i18n.t('settings-change-password-btn', 'Change')}
+          </button>
+        {/if}
+      </div>
+
+      {#if showPasswordChange}
+        <div class="password-form">
+          {#if rollbackPath}
+            <p class="password-done">
+              {i18n.t('settings-password-changed', 'Master password changed')}
+            </p>
+            <p class="password-warning">
+              {i18n.t('settings-password-rollback-at', 'Rollback copy, still using the old password:')}
+              <code>{rollbackPath}</code>
+            </p>
+            <div class="password-actions">
+              <button class="primary-btn" onclick={resetPasswordForm}>
+                {i18n.t('settings-import-done', 'Done')}
+              </button>
+            </div>
+          {:else}
+            <p class="password-warning">
+              {i18n.t(
+                'settings-password-backup-warning',
+                'A rollback copy is written next to the vault first. It keeps the OLD password: restoring it later needs the password you are replacing now.'
+              )}
+            </p>
+            <input
+              type="password"
+              autocomplete="current-password"
+              placeholder={i18n.t('settings-password-current', 'Current password')}
+              bind:value={currentPassword}
+            />
+            <input
+              type="password"
+              autocomplete="new-password"
+              placeholder={i18n.t('settings-password-new', 'New password')}
+              bind:value={newPassword}
+            />
+            <input
+              type="password"
+              autocomplete="new-password"
+              placeholder={i18n.t('settings-password-confirm', 'Confirm new password')}
+              bind:value={confirmPassword}
+            />
+            {#if passwordError}
+              <p class="password-error">{passwordError}</p>
+            {/if}
+            <div class="password-actions">
+              <button class="secondary-btn" onclick={resetPasswordForm} disabled={changingPassword}>
+                {i18n.t('settings-cancel', 'Cancel')}
+              </button>
+              <button
+                class="primary-btn"
+                onclick={changePassword}
+                disabled={changingPassword || !currentPassword || !passwordsMatch}
+              >
+                {changingPassword
+                  ? i18n.t('settings-password-changing', 'Re-encrypting…')
+                  : i18n.t('settings-change-password-btn', 'Change')}
+              </button>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </section>
 
     <!-- Vault Backup -->
@@ -473,6 +586,7 @@
         </div>
         <button class="glass-btn" onclick={exportTransactionsCsv}>{i18n.t('settings-export-btn', 'Export')}</button>
       </div>
+
     </section>
 
     <!-- Data Import -->
@@ -720,6 +834,32 @@
     letter-spacing: 0.08em; margin-bottom: 14px;
   }
   .section-note { font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 12px; }
+
+  .password-form {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 14px; margin: 4px 0 8px;
+    border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--glass);
+  }
+  .password-warning {
+    margin: 0; font-size: 0.8rem; line-height: 1.5; color: var(--warning);
+  }
+  .password-form input {
+    padding: 9px 12px;
+    border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.85rem;
+    transition: border-color 0.2s;
+  }
+  .password-form input:focus {
+    border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .password-error { margin: 0; font-size: 0.8rem; color: var(--danger); }
+  .password-done { margin: 0; font-size: 0.85rem; color: var(--success); }
+  .password-warning code {
+    display: block; margin-top: 4px; word-break: break-all;
+    font-size: 0.75rem; color: var(--text-secondary);
+  }
+  .password-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
   .setting-row {
     display: flex; justify-content: space-between; align-items: center;
