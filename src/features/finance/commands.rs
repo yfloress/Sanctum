@@ -89,3 +89,17 @@ pub struct UpdateTransfer {
     pub description: String,
     pub date: String,
 }
+
+/// Create a recurring transaction rule.
+#[derive(Debug, Clone)]
+pub struct NewRecurring {
+    pub account_id: String,
+    pub amount_cents: i64,
+    pub category: String,
+    pub description: String,
+    /// `weekly`, `monthly` or `yearly`.
+    pub frequency: String,
+    /// ISO date of the first occurrence.
+    pub first_date: String,
+    pub is_expense: bool,
+}

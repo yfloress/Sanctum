@@ -377,3 +377,59 @@ select option { background: var(--option-bg); color: var(--text-primary); }
     padding: 20px;
   }
 }
+
+/* ── Settings cards ──────────────────────────────────────────────── */
+/* Shared so every panel rendered inside a settings tab looks the same;
+   Svelte scopes styles per component, so this cannot live in one of them. */
+
+.settings-card {
+  position: relative;
+  background: var(--card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+.settings-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--card-accent-line);
+  opacity: 0.6;
+}
+.settings-card-label,
+.settings-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+.settings-card-label::before,
+.settings-card-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* Row marker shared by the ledger and the recurring list. */
+.tx-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+.tx-type-dot.expense  { background: var(--danger); }
+.tx-type-dot.transfer { background: #60a5fa; }

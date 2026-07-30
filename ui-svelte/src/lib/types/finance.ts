@@ -95,7 +95,10 @@ export interface TransferInput {
 
 export interface CategoryDto {
   id: string
+  /** Stored name: what filters and new transactions must send back. */
   name: string
+  /** Translated, display-ready version of `name`. */
+  label: string
   is_default: boolean
 }
 
@@ -110,4 +113,46 @@ export interface AccountInput {
   account_type: string
   currency: string
   initial_balance: string
+}
+
+export interface RecurringDto {
+  id: string
+  account_id: string
+  account_name: string
+  amount: string
+  amount_raw: string
+  /** Stored category name, for sending back on edits. */
+  category: string
+  /** Translated, display-ready category. */
+  category_label: string
+  description: string
+  frequency: 'weekly' | 'monthly' | 'yearly'
+  next_date: string
+  is_expense: boolean
+  is_active: boolean
+}
+
+export interface RecurringInput {
+  account_id: string
+  amount: string
+  category: string
+  description: string
+  frequency: string
+  first_date: string
+  is_expense: boolean
+}
+
+export interface BudgetDto {
+  /** Stored category name, for sending back on edits. */
+  category: string
+  /** Translated, display-ready category. */
+  category_label: string
+  limit: string
+  limit_raw: string
+  spent: string
+  /** Spent as a share of the limit, capped at 100. */
+  percentage: number
+  over_budget: boolean
+  /** Remaining amount, or the overspend when over_budget. */
+  remaining: string
 }

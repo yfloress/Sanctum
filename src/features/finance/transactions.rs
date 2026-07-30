@@ -331,7 +331,12 @@ impl CategoryOps {
 
     pub fn delete_transaction_category(db: &Database, id: &str) -> Result<(), FinanceError> {
         let validated_id = validate_category_id(id)?;
-        FinanceRepository::delete_transaction_category(db, &validated_id)
-            .map_err(FinanceError::Database)
+        FinanceRepository::delete_transaction_category(db, &validated_id).map_err(|e| match e {
+            // A guard the user can act on, not an internal failure.
+            DbError::CategoryInUse => FinanceError::Validation(
+                "This category still has transactions. Move or delete them first.".to_string(),
+            ),
+            other => FinanceError::Database(other),
+        })
     }
 }

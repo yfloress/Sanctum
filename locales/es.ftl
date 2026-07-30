@@ -1201,5 +1201,50 @@ settings-password-confirm = Confirmar contraseña nueva
 settings-password-mismatch = Las contraseñas nuevas no coinciden
 settings-password-changing = Recifrando…
 settings-password-changed = Contraseña maestra cambiada
+settings-password-rollback-at = Copia de rollback, aún con la contraseña antigua:
 settings-password-backup-title = Guardar el respaldo previo al cambio
 settings-password-backup-warning = Primero se guarda un respaldo, y es obligatorio. Ese respaldo conserva la contraseña ANTIGUA: restaurarlo más adelante requiere la contraseña que estás reemplazando ahora.
+
+# ==================== Default Categories ====================
+# Se resuelven desde los códigos sembrados, así las categorías de fábrica siguen
+# el idioma de la interfaz. Las que crea el usuario se muestran tal cual.
+category-food = Comida
+category-transport = Transporte
+category-utilities = Servicios
+category-entertainment = Entretenimiento
+category-health = Salud
+category-shopping = Compras
+category-education = Educación
+category-other = Otros
+category-salary = Sueldo
+category-freelance = Freelance
+category-investment = Inversión
+category-gift = Regalo
+category-transfer = Transferencia
+
+# ==================== Recurring Entries ====================
+finances-recurring = Entradas Recurrentes
+finances-recurring-desc = Se crean solas en su fecha. Si abres la app después de un tiempo, se completa todo lo pendiente.
+finances-recurring-new = Nueva
+finances-recurring-frequency = Frecuencia
+finances-recurring-weekly = Semanal
+finances-recurring-monthly = Mensual
+finances-recurring-yearly = Anual
+finances-recurring-first = Primera vez
+finances-recurring-next = Próxima
+finances-recurring-paused = Pausada
+finances-recurring-pause = Pausar
+finances-recurring-resume = Reanudar
+finances-recurring-added = Entrada recurrente guardada
+finances-recurring-deleted = Entrada recurrente eliminada
+finances-recurring-delete-confirm = ¿Eliminar esta entrada recurrente? Las transacciones que ya creó se conservan.
+finances-recurring-applied = {$count} transacciones recurrentes agregadas
+
+# ==================== Monthly Budgets ====================
+finances-budgets = Presupuestos Mensuales
+finances-budgets-desc = Un límite de gasto por categoría. El avance cubre el mes en curso y se reinicia el día 1.
+finances-budget-new = Nuevo
+finances-budget-saved = Presupuesto guardado
+finances-budget-left = disponible
+finances-budget-over = Excedido por
+finances-no-budgets = Sin presupuestos aún.

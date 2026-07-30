@@ -20,6 +20,7 @@
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as vaultApi from '../lib/api/vault'
   import * as settingsApi from '../lib/api/settings'
+  import * as financeApi from '../lib/api/finance'
   import { open } from '@tauri-apps/plugin-dialog'
 
   let vaultExists = $state<boolean | null>(null)
@@ -60,6 +61,24 @@
       const settings = await settingsApi.loadSettings()
       app.settings = settings
       await i18n.load()
+
+      // Fill in the recurring entries owed while the vault was closed, before
+      // the dashboard reads any balance.
+      try {
+        const created = await financeApi.applyDueRecurring()
+        if (created > 0) {
+          app.showToast(
+            i18n.tArgs(
+              'finances-recurring-applied',
+              { count: created },
+              '{$count} recurring transactions added'
+            )
+          )
+        }
+      } catch {
+        // Never block the unlock over this; the panel can retry later.
+      }
+
       app.login()
     } catch (e) {
       error = errorMessage(e)

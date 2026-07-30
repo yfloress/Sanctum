@@ -172,6 +172,84 @@ pub struct Transaction {
     pub transfer_account_id: Option<String>,
 }
 
+/// How often a recurring rule fires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RecurrenceFrequency {
+    Weekly,
+    Monthly,
+    Yearly,
+}
+
+impl RecurrenceFrequency {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Weekly => "weekly",
+            Self::Monthly => "monthly",
+            Self::Yearly => "yearly",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim().to_lowercase().as_str() {
+            "weekly" => Some(Self::Weekly),
+            "monthly" => Some(Self::Monthly),
+            "yearly" => Some(Self::Yearly),
+            _ => None,
+        }
+    }
+
+    /// The occurrence after `date`.
+    ///
+    /// Month and year steps clamp to the end of a shorter month, so a rule on
+    /// the 31st fires on the 28th in February and returns to the 31st after —
+    /// the anchor day is never lost, unlike repeatedly adding 30 days.
+    pub fn next_after(&self, date: chrono::NaiveDate) -> Option<chrono::NaiveDate> {
+        match self {
+            Self::Weekly => date.checked_add_days(chrono::Days::new(7)),
+            Self::Monthly => date.checked_add_months(chrono::Months::new(1)),
+            Self::Yearly => date.checked_add_months(chrono::Months::new(12)),
+        }
+    }
+}
+
+/// A template that materialises transactions on a schedule.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecurringTransaction {
+    pub id: String,
+    pub account_id: String,
+    pub amount: i64,
+    pub category: String,
+    pub description: String,
+    #[serde(rename = "type")]
+    pub transaction_type: String,
+    pub frequency: String,
+    /// ISO date of the next occurrence still to be created.
+    pub next_date: String,
+    pub last_created_date: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+}
+
+/// A monthly spending limit for one expense category.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryBudget {
+    pub id: String,
+    pub category: String,
+    pub amount: i64,
+    pub created_at: String,
+}
+
+/// A budget with the spending measured against it for a given month.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BudgetStatus {
+    pub category: String,
+    /// Monthly limit, in cents.
+    pub limit: i64,
+    /// Spent so far in the month, in cents.
+    pub spent: i64,
+}
+
 /// Represents a transaction category (income or expense)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionCategory {

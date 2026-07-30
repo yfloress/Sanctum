@@ -34,6 +34,8 @@
   import FinanceTransferModal from '../components/finance/FinanceTransferModal.svelte'
   import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
   import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
+  import FinanceRecurringPanel from '../components/finance/FinanceRecurringPanel.svelte'
+  import FinanceBudgetPanel from '../components/finance/FinanceBudgetPanel.svelte'
   import ConfirmDialog from '../components/ConfirmDialog.svelte'
 
   type Tab = 'overview' | 'activity' | 'accounts' | 'settings'
@@ -106,6 +108,8 @@
   let editingTransaction = $state<TransactionDto | null>(null)
   let duplicatingTransaction = $state<TransactionDto | null>(null)
   let searchInput = $state<HTMLInputElement | undefined>()
+  /** Bumped whenever the ledger changes, so budget progress re-reads. */
+  let ledgerRevision = $state(0)
   let editingAccount = $state<AccountDetailResponse | null>(null)
   let editingTransfer = $state<TransactionDto | null>(null)
   let pendingDeleteTx = $state<TransactionDto | null>(null)
@@ -218,7 +222,7 @@
   async function deleteTransaction(tx: TransactionDto) {
     try {
       await financeApi.deleteTransaction(tx.id)
-      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
+      ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
       app.showToast(
         i18n.t('finances-tx-deleted', 'Transaction deleted'),
         false,
@@ -248,7 +252,7 @@
           tx.description_raw, tx.date, tx.is_expense,
         )
       }
-      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
+      ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
       app.showToast(i18n.t('finances-tx-restored', 'Transaction restored'))
     } catch (e) {
       app.showToast(errorMessage(e), true)
@@ -629,7 +633,7 @@
           <select bind:value={filterCategory} onchange={() => loadTransactions()}>
             <option value="">{i18n.t('finances-all-categories', 'All Categories')}</option>
             {#each allCategories as cat}
-              <option value={cat.name}>{cat.name}</option>
+              <option value={cat.name}>{cat.label}</option>
             {/each}
           </select>
           <select
@@ -746,10 +750,19 @@
 
   <!-- SETTINGS TAB -->
   {:else if activeTab === 'settings'}
+    <div class="settings-stack">
     <FinanceCategoryPanel
       categories={categories}
       onadd={handleAddCategory}
       ondelete={handleDeleteCat}
+    />
+
+    <FinanceBudgetPanel categories={categories} revision={ledgerRevision} />
+
+    <FinanceRecurringPanel
+      accounts={accountsData?.accounts ?? []}
+      categories={categories}
+      onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
     />
 
     {#if archivedAccounts.length > 0}
@@ -771,6 +784,7 @@
         {/each}
       </div>
     {/if}
+    </div>
   {/if}
 </div>
 
@@ -792,7 +806,7 @@
   prefill={duplicatingTransaction}
   accounts={accountsData?.accounts ?? []}
   categories={categories ?? { expense: [], income: [] }}
-  onsubmit={async () => { await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+  onsubmit={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
   onclose={() => { showAddTransaction = false; duplicatingTransaction = null }}
 />
 
@@ -815,7 +829,7 @@
   bind:show={showTransfer}
   editing={editingTransfer}
   accounts={accountsData?.accounts ?? []}
-  onsubmit={async () => { await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+  onsubmit={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
   onclose={() => { showTransfer = false; editingTransfer = null }}
 />
 
@@ -837,6 +851,15 @@
 
   /* Give every tab's content breathing room from the tab bar */
   .tab-content { padding-top: 20px; }
+
+  /* One rhythm for every block in the settings tab, whatever each panel does
+     internally: the cards themselves carry no outer margin. */
+  .settings-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-bottom: 20px;
+  }
 
   .hero { text-align: center; padding: 20px 0 28px; }
   .balance { font-size: 2.4rem; font-weight: 700; color: var(--text-primary); margin: 0; letter-spacing: -0.02em; }

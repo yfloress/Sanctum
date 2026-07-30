@@ -68,13 +68,13 @@
         <div class="cat-chips">
           {#each categories.expense as cat}
             <div class="cat-chip" class:cat-chip--default={cat.is_default}>
-              <span class="cat-chip-name">{cat.name}</span>
+              <span class="cat-chip-name">{cat.label}</span>
               {#if cat.is_default}
                 <svg class="cat-chip-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
               {:else}
-                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name, type: 'expense' }} aria-label="Delete {cat.name}">
+                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name, type: 'expense' }} aria-label="Delete {cat.label}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M18 6L6 18M6 6l12 12"/>
                   </svg>
@@ -93,13 +93,13 @@
         <div class="cat-chips">
           {#each categories.income as cat}
             <div class="cat-chip" class:cat-chip--default={cat.is_default}>
-              <span class="cat-chip-name">{cat.name}</span>
+              <span class="cat-chip-name">{cat.label}</span>
               {#if cat.is_default}
                 <svg class="cat-chip-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
               {:else}
-                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name, type: 'income' }} aria-label="Delete {cat.name}">
+                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name, type: 'income' }} aria-label="Delete {cat.label}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M18 6L6 18M6 6l12 12"/>
                   </svg>
@@ -127,46 +127,6 @@
 
 <style>
   .tab-content { display: flex; flex-direction: column; gap: 20px; padding-top: 20px; }
-
-  .settings-card {
-    position: relative;
-    background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    padding: 22px;
-    margin-bottom: 20px;
-    box-shadow: var(--card-shadow);
-    overflow: hidden;
-  }
-  .settings-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--card-accent-line);
-    opacity: 0.6;
-  }
-  .settings-card-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.68rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 600;
-    margin-bottom: 14px;
-  }
-  .settings-card-label::before {
-    content: '';
-    width: 3px;
-    height: 12px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
-    box-shadow: 0 0 6px var(--accent-glow);
-  }
 
   .cat-add-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .cat-name-input {

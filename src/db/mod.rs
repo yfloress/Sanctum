@@ -76,6 +76,18 @@ pub enum DbError {
     #[error("Wallet has existing transactions")]
     WalletNotEmpty,
 
+    #[error("Category still has transactions")]
+    CategoryInUse,
+
+    #[error("Recurring rule not found")]
+    RecurringNotFound,
+
+    #[error("Invalid date")]
+    InvalidDate,
+
+    #[error("Budget not found")]
+    CategoryBudgetNotFound,
+
     #[error("Session expired due to inactivity")]
     SessionExpired,
 

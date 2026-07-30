@@ -135,14 +135,35 @@ pub fn normalize_bank_icon_path(icon_path: Option<String>) -> Option<String> {
 
 // ==================== Category Helpers ====================
 
-/// Formats category label with proper capitalization
+/// Display label for a category.
+///
+/// The seeded categories are stored as uppercase codes (`FOOD`, `SALARY`), so
+/// they resolve to a translated name and follow the interface language. Anything
+/// the user typed keeps at least one lowercase letter and is shown verbatim —
+/// their wording, their capitalisation.
 pub fn format_category_label(name: &str) -> String {
     let trimmed = name.trim();
-    if trimmed.is_empty() {
-        return String::new();
-    }
+
     if trimmed.chars().any(|c| c.is_lowercase()) {
         return trimmed.to_string();
+    }
+
+    if !trimmed.is_empty() {
+        let key = format!("category-{}", trimmed.to_lowercase().replace(' ', "-"));
+        let translated = crate::services::i18n::t(&key);
+        // The i18n layer echoes the key back when there is no entry for it.
+        if translated != key {
+            return translated;
+        }
+    }
+
+    format_category_title_case(trimmed)
+}
+
+/// Title-cases an uppercase code as a last resort when it has no translation.
+fn format_category_title_case(trimmed: &str) -> String {
+    if trimmed.is_empty() {
+        return String::new();
     }
     let mut parts = Vec::new();
     for word in trimmed.split_whitespace() {

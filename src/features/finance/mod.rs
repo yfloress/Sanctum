@@ -35,7 +35,8 @@ pub mod transactions;
 pub mod validation;
 
 pub use commands::{
-    NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
+    NewAccount, NewRecurring, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction,
+    UpdateTransfer,
 };
 pub use repository::FinanceRepository;
 pub use service::{FinanceError, FinanceService};

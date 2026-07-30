@@ -32,6 +32,8 @@ pub fn up(conn: &Connection) -> Result<(), DbError> {
     create_transactions_table(conn)?;
     create_transaction_categories_table(conn)?;
     initialize_default_categories(conn)?;
+    create_recurring_transactions_table(conn)?;
+    create_category_budgets_table(conn)?;
 
     // === Crypto Ledger System ===
     create_crypto_tables(conn)?;
@@ -122,6 +124,59 @@ fn create_transaction_categories_table(conn: &Connection) -> Result<(), DbError>
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_transaction_categories_type ON transaction_categories(category_type, sort_order)",
+        [],
+    )?;
+
+    Ok(())
+}
+
+/// Recurring transaction rules.
+///
+/// A rule is a template plus the date of its next occurrence. Occurrences are
+/// materialised into real rows in `transactions`, so everything that already
+/// reads the ledger keeps working untouched.
+fn create_recurring_transactions_table(conn: &Connection) -> Result<(), DbError> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS recurring_transactions (
+            id TEXT PRIMARY KEY NOT NULL,
+            account_id TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            type TEXT NOT NULL CHECK(type IN ('expense', 'income')),
+            frequency TEXT NOT NULL CHECK(frequency IN ('weekly', 'monthly', 'yearly')),
+            next_date TEXT NOT NULL,
+            last_created_date TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // The only hot query is "which active rules are due", so index exactly that.
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_recurring_due
+         ON recurring_transactions(is_active, next_date)",
+        [],
+    )?;
+
+    Ok(())
+}
+
+/// Monthly spending limits per expense category.
+///
+/// Keyed by the category name for the same reason transactions are: that name is
+/// what a transaction carries, so the limit and the spending line up without a
+/// join through ids.
+fn create_category_budgets_table(conn: &Connection) -> Result<(), DbError> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS category_budgets (
+            id TEXT PRIMARY KEY NOT NULL,
+            category TEXT NOT NULL UNIQUE,
+            amount INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )",
         [],
     )?;
 

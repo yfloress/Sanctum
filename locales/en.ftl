@@ -1201,5 +1201,50 @@ settings-password-confirm = Confirm new password
 settings-password-mismatch = The new passwords do not match
 settings-password-changing = Re-encrypting…
 settings-password-changed = Master password changed
+settings-password-rollback-at = Rollback copy, still using the old password:
 settings-password-backup-title = Save the pre-change backup
 settings-password-backup-warning = A backup is saved first and is required. That backup keeps the OLD password: restoring it later needs the password you are replacing now.
+
+# ==================== Default Categories ====================
+# Keyed off the seeded category codes, so the built-in categories follow the
+# interface language. Categories the user creates are shown verbatim instead.
+category-food = Food
+category-transport = Transport
+category-utilities = Utilities
+category-entertainment = Entertainment
+category-health = Health
+category-shopping = Shopping
+category-education = Education
+category-other = Other
+category-salary = Salary
+category-freelance = Freelance
+category-investment = Investment
+category-gift = Gift
+category-transfer = Transfer
+
+# ==================== Recurring Entries ====================
+finances-recurring = Recurring Entries
+finances-recurring-desc = Created automatically on their date. Opening the app after a while fills in everything it owes.
+finances-recurring-new = New
+finances-recurring-frequency = Frequency
+finances-recurring-weekly = Weekly
+finances-recurring-monthly = Monthly
+finances-recurring-yearly = Yearly
+finances-recurring-first = First occurrence
+finances-recurring-next = Next
+finances-recurring-paused = Paused
+finances-recurring-pause = Pause
+finances-recurring-resume = Resume
+finances-recurring-added = Recurring entry saved
+finances-recurring-deleted = Recurring entry deleted
+finances-recurring-delete-confirm = Delete this recurring entry? Transactions it already created are kept.
+finances-recurring-applied = {$count} recurring transactions added
+
+# ==================== Monthly Budgets ====================
+finances-budgets = Monthly Budgets
+finances-budgets-desc = A spending limit per category. Progress covers the current month and resets on the 1st.
+finances-budget-new = New
+finances-budget-saved = Budget saved
+finances-budget-left = left
+finances-budget-over = Over by
+finances-no-budgets = No budgets yet.

@@ -18,7 +18,8 @@
 import { invoke } from '@tauri-apps/api/core'
 import type {
   AccountsResponse, AccountDetailResponse,
-  TransactionsResponse, TransferInput, CategoriesResponse
+  TransactionsResponse, TransferInput, CategoriesResponse,
+  RecurringDto, RecurringInput, BudgetDto
 } from '../types'
 
 export async function fetchAccounts(): Promise<AccountsResponse> {
@@ -128,4 +129,37 @@ export async function deleteCategory(id: string): Promise<void> {
 /** Writes the whole ledger to `path` as CSV and returns the row count. */
 export async function exportTransactionsCsv(path: string): Promise<number> {
   return invoke<number>('export_transactions_csv', { path })
+}
+
+export async function fetchRecurring(): Promise<RecurringDto[]> {
+  return invoke<RecurringDto[]>('fetch_recurring')
+}
+
+export async function addRecurring(input: RecurringInput): Promise<void> {
+  return invoke('add_recurring', { input })
+}
+
+export async function setRecurringActive(id: string, active: boolean): Promise<void> {
+  return invoke('set_recurring_active', { id, active })
+}
+
+export async function deleteRecurring(id: string): Promise<void> {
+  return invoke('delete_recurring', { id })
+}
+
+/** Creates every occurrence owed up to today. Returns how many landed. */
+export async function applyDueRecurring(): Promise<number> {
+  return invoke<number>('apply_due_recurring')
+}
+
+export async function fetchBudgets(month?: string): Promise<BudgetDto[]> {
+  return invoke<BudgetDto[]>('fetch_budgets', { month })
+}
+
+export async function setBudget(category: string, amount: string): Promise<void> {
+  return invoke('set_budget', { input: { category, amount } })
+}
+
+export async function deleteBudget(category: string): Promise<void> {
+  return invoke('delete_budget', { category })
 }

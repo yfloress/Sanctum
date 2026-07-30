@@ -24,8 +24,9 @@ use sanctum::error::AppError;
 use sanctum::features::finance::FinanceService;
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::ui::dto::finance::{
-    AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, CategoriesResponse,
-    CategoryDto, TransactionDto, TransactionInput, TransactionsResponse, TransferInput,
+    AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, BudgetDto, BudgetInput,
+    CategoriesResponse, CategoryDto, RecurringDto, RecurringInput, TransactionDto,
+    TransactionInput, TransactionsResponse, TransferInput,
 };
 use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
@@ -362,8 +363,9 @@ pub fn load_categories(finance: State<'_, FinanceService>) -> Result<CategoriesR
         .map_err(AppError::from)?
         .into_iter()
         .map(|c| CategoryDto {
-            id: c.id,
+            label: format_category_label(&c.name),
             name: c.name,
+            id: c.id,
             is_default: c.is_default,
         })
         .collect();
@@ -373,8 +375,9 @@ pub fn load_categories(finance: State<'_, FinanceService>) -> Result<CategoriesR
         .map_err(AppError::from)?
         .into_iter()
         .map(|c| CategoryDto {
-            id: c.id,
+            label: format_category_label(&c.name),
             name: c.name,
+            id: c.id,
             is_default: c.is_default,
         })
         .collect();
@@ -483,5 +486,141 @@ pub fn export_transactions_csv(
 ) -> Result<usize, AppError> {
     finance
         .export_transactions_csv(&path)
+        .map_err(AppError::from)
+}
+
+// ==================== Recurring Transactions ====================
+
+/// List every recurring rule, soonest first.
+#[tauri::command]
+pub fn fetch_recurring(
+    finance: State<'_, FinanceService>,
+    settings: State<'_, SettingsService>,
+) -> Result<Vec<RecurringDto>, AppError> {
+    let rules = finance.get_recurring().map_err(AppError::from)?;
+    let accounts = finance.get_accounts().map_err(AppError::from)?;
+    let names: HashMap<String, (String, String)> = accounts
+        .iter()
+        .map(|a| (a.id.clone(), (a.name.clone(), a.currency.clone())))
+        .collect();
+    let preferred = settings
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string());
+
+    Ok(rules
+        .into_iter()
+        .map(|rule| {
+            let (account_name, currency) = names
+                .get(&rule.account_id)
+                .cloned()
+                .unwrap_or_else(|| (String::new(), preferred.clone()));
+            RecurringDto {
+                amount: format_money(rule.amount, &currency),
+                amount_raw: format_decimal_from_cents(rule.amount),
+                category_label: format_category_label(&rule.category),
+                is_expense: rule.transaction_type == "expense",
+                id: rule.id,
+                account_id: rule.account_id,
+                account_name,
+                category: rule.category,
+                description: rule.description,
+                frequency: rule.frequency,
+                next_date: rule.next_date,
+                is_active: rule.is_active,
+            }
+        })
+        .collect())
+}
+
+/// Create a recurring rule.
+#[tauri::command]
+pub fn add_recurring(
+    finance: State<'_, FinanceService>,
+    input: RecurringInput,
+) -> Result<(), AppError> {
+    finance.create_recurring(input.into_new()?)?;
+    Ok(())
+}
+
+/// Pause or resume a rule without losing it.
+#[tauri::command]
+pub fn set_recurring_active(
+    finance: State<'_, FinanceService>,
+    id: String,
+    active: bool,
+) -> Result<(), AppError> {
+    finance
+        .set_recurring_active(id, active)
+        .map_err(AppError::from)
+}
+
+/// Delete a rule. Transactions it already created stay.
+#[tauri::command]
+pub fn delete_recurring(finance: State<'_, FinanceService>, id: String) -> Result<(), AppError> {
+    finance.delete_recurring(id).map_err(AppError::from)
+}
+
+/// Create every occurrence owed up to today. Returns how many landed.
+#[tauri::command]
+pub fn apply_due_recurring(finance: State<'_, FinanceService>) -> Result<usize, AppError> {
+    finance.apply_due_recurring().map_err(AppError::from)
+}
+
+// ==================== Category Budgets ====================
+
+/// List the budgets with this month's progress against them.
+#[tauri::command]
+pub fn fetch_budgets(
+    finance: State<'_, FinanceService>,
+    settings: State<'_, SettingsService>,
+    month: Option<String>,
+) -> Result<Vec<BudgetDto>, AppError> {
+    let currency = settings
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string());
+
+    Ok(finance
+        .get_budget_status(month)
+        .map_err(AppError::from)?
+        .into_iter()
+        .map(|status| {
+            let over_budget = status.spent > status.limit;
+            let percentage = if status.limit > 0 {
+                ((status.spent as f64 / status.limit as f64) * 100.0).min(100.0) as f32
+            } else {
+                0.0
+            };
+            BudgetDto {
+                category_label: format_category_label(&status.category),
+                category: status.category,
+                limit: format_money(status.limit, &currency),
+                limit_raw: format_decimal_from_cents(status.limit),
+                spent: format_money(status.spent, &currency),
+                percentage,
+                over_budget,
+                remaining: format_money((status.limit - status.spent).abs(), &currency),
+            }
+        })
+        .collect())
+}
+
+/// Set or replace a category's monthly limit.
+#[tauri::command]
+pub fn set_budget(finance: State<'_, FinanceService>, input: BudgetInput) -> Result<(), AppError> {
+    let amount = sanctum::ui::parse_amount_input(&input.amount)
+        .filter(|v| *v > 0)
+        .ok_or_else(|| {
+            AppError::validation("Budget must be greater than zero").with_field("amount")
+        })?;
+    finance
+        .set_category_budget(input.category, amount)
+        .map_err(AppError::from)
+}
+
+/// Remove a category's budget.
+#[tauri::command]
+pub fn delete_budget(finance: State<'_, FinanceService>, category: String) -> Result<(), AppError> {
+    finance
+        .delete_category_budget(category)
         .map_err(AppError::from)
 }

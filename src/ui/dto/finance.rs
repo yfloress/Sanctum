@@ -28,7 +28,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 use crate::features::finance::{
-    NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
+    NewAccount, NewRecurring, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction,
+    UpdateTransfer,
 };
 use crate::ui::{normalize_account_type, parse_amount_input};
 
@@ -171,8 +172,12 @@ pub struct TransferInput {
 /// Transaction category as seen by the frontend.
 #[derive(Debug, Clone, Serialize)]
 pub struct CategoryDto {
-    pub id: String,
+    /// Stored name. Stays raw because transactions reference categories by it,
+    /// so it is what filters and new transactions must send back.
     pub name: String,
+    /// Translated, display-ready version of `name`.
+    pub label: String,
+    pub id: String,
     pub is_default: bool,
 }
 
@@ -336,4 +341,74 @@ mod tests {
         assert!(cmd.icon.is_none());
         assert_eq!(cmd.initial_balance_cents, 1000);
     }
+}
+
+/// A recurring rule as the interface shows it.
+#[derive(Debug, Clone, Serialize)]
+pub struct RecurringDto {
+    pub id: String,
+    pub account_id: String,
+    pub account_name: String,
+    pub amount: String,
+    pub amount_raw: String,
+    /// Stored category name, for sending back on edits.
+    pub category: String,
+    /// Translated, display-ready category.
+    pub category_label: String,
+    pub description: String,
+    pub frequency: String,
+    pub next_date: String,
+    pub is_expense: bool,
+    pub is_active: bool,
+}
+
+/// Input for creating a recurring rule.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RecurringInput {
+    pub account_id: String,
+    pub amount: String,
+    pub category: String,
+    pub description: String,
+    pub frequency: String,
+    pub first_date: String,
+    pub is_expense: bool,
+}
+
+impl RecurringInput {
+    pub fn into_new(self) -> Result<NewRecurring, AppError> {
+        Ok(NewRecurring {
+            account_id: self.account_id,
+            amount_cents: parse_positive_amount(&self.amount, "amount")?,
+            category: self.category,
+            description: self.description,
+            frequency: self.frequency,
+            first_date: self.first_date,
+            is_expense: self.is_expense,
+        })
+    }
+}
+
+/// A budget with its progress for the month, ready to render.
+#[derive(Debug, Clone, Serialize)]
+pub struct BudgetDto {
+    /// Stored category name, for sending back on edits.
+    pub category: String,
+    /// Translated, display-ready category.
+    pub category_label: String,
+    pub limit: String,
+    pub limit_raw: String,
+    pub spent: String,
+    /// Spent as a share of the limit, capped at 100 for the bar's width.
+    pub percentage: f32,
+    /// True once spending passes the limit, so the bar can turn red.
+    pub over_budget: bool,
+    /// Remaining amount, or the overspend when `over_budget`.
+    pub remaining: String,
+}
+
+/// Input for setting a category budget.
+#[derive(Debug, Clone, Deserialize)]
+pub struct BudgetInput {
+    pub category: String,
+    pub amount: String,
 }

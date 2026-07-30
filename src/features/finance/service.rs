@@ -21,7 +21,10 @@
 //! Split into focused submodules for maintainability.
 
 use crate::db::{Database, DbError};
-use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
+use crate::models::{
+    Account, AccountBalance, BalanceSummary, BudgetStatus, CategoryBudget, RecurrenceFrequency,
+    RecurringTransaction, Transaction, TransactionCategory,
+};
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::Utc;
 use std::collections::{HashMap, HashSet};
@@ -29,7 +32,8 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use super::commands::{
-    NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
+    NewAccount, NewRecurring, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction,
+    UpdateTransfer,
 };
 use super::export;
 use super::repository::FinanceRepository;
@@ -337,6 +341,157 @@ impl FinanceService {
             date,
             is_expense,
         )
+    }
+
+    // ==================== Category Budgets ====================
+
+    /// Sets (or replaces) the monthly limit for a category.
+    pub fn set_category_budget(
+        &self,
+        category: String,
+        amount_cents: i64,
+    ) -> Result<(), FinanceError> {
+        self.with_db(|db| {
+            let category = sanitize_string(&validate_field_length(
+                &category,
+                MAX_ACCOUNT_NAME_LENGTH,
+                "Category",
+            )?);
+            if category.is_empty() {
+                return Err(FinanceError::Validation(
+                    "Category cannot be empty".to_string(),
+                ));
+            }
+            if amount_cents <= 0 {
+                return Err(FinanceError::Validation(
+                    "Budget must be greater than zero".to_string(),
+                ));
+            }
+
+            let budget = CategoryBudget {
+                id: Uuid::new_v4().to_string(),
+                category,
+                amount: amount_cents,
+                created_at: Utc::now().to_rfc3339(),
+            };
+            db.upsert_category_budget(&budget)
+                .map_err(FinanceError::Database)
+        })
+    }
+
+    pub fn delete_category_budget(&self, category: String) -> Result<(), FinanceError> {
+        self.with_db(|db| {
+            db.delete_category_budget(category.trim())
+                .map_err(FinanceError::Database)
+        })
+    }
+
+    /// Budgets with the spending measured against them. Defaults to this month.
+    pub fn get_budget_status(
+        &self,
+        month: Option<String>,
+    ) -> Result<Vec<BudgetStatus>, FinanceError> {
+        let month = match month {
+            Some(value) if !value.trim().is_empty() => value.trim().to_string(),
+            _ => Utc::now().format("%Y-%m").to_string(),
+        };
+        self.with_db(|db| db.get_budget_status(&month).map_err(FinanceError::Database))
+    }
+
+    // ==================== Recurring Transactions ====================
+
+    /// Creates a recurring rule. `first_date` is when it fires for the first time.
+    pub fn create_recurring(&self, cmd: NewRecurring) -> Result<String, FinanceError> {
+        let NewRecurring {
+            account_id,
+            amount_cents,
+            category,
+            description,
+            frequency,
+            first_date,
+            is_expense,
+        } = cmd;
+
+        self.with_db(|db| {
+            let account_id = validate_uuid(&account_id)?;
+            let category = sanitize_string(&validate_field_length(
+                &category,
+                MAX_ACCOUNT_NAME_LENGTH,
+                "Category",
+            )?);
+            if category.is_empty() {
+                return Err(FinanceError::Validation(
+                    "Category cannot be empty".to_string(),
+                ));
+            }
+            if amount_cents <= 0 {
+                return Err(FinanceError::Validation(
+                    "Amount must be greater than zero".to_string(),
+                ));
+            }
+            let frequency = RecurrenceFrequency::parse(&frequency).ok_or_else(|| {
+                FinanceError::Validation("Frequency must be weekly, monthly or yearly".to_string())
+            })?;
+            let first_date = crate::core::validate_date(&first_date)?;
+            let description = sanitize_string(&description);
+
+            // Fails early rather than at the first occurrence.
+            FinanceRepository::get_account(db, &account_id)?;
+
+            let rule = RecurringTransaction {
+                id: Uuid::new_v4().to_string(),
+                account_id,
+                amount: amount_cents,
+                category,
+                description,
+                transaction_type: if is_expense { "expense" } else { "income" }.to_string(),
+                frequency: frequency.as_str().to_string(),
+                next_date: first_date,
+                last_created_date: None,
+                is_active: true,
+                created_at: Utc::now().to_rfc3339(),
+            };
+
+            db.create_recurring_transaction(&rule)
+                .map_err(FinanceError::Database)?;
+            Ok(rule.id)
+        })
+    }
+
+    pub fn get_recurring(&self) -> Result<Vec<RecurringTransaction>, FinanceError> {
+        self.with_db(|db| {
+            db.get_recurring_transactions()
+                .map_err(FinanceError::Database)
+        })
+    }
+
+    /// Pauses or resumes a rule, keeping it and its history.
+    pub fn set_recurring_active(&self, id: String, active: bool) -> Result<(), FinanceError> {
+        self.with_db(|db| {
+            let id = validate_uuid(&id)?;
+            db.set_recurring_active(&id, active)
+                .map_err(FinanceError::Database)
+        })
+    }
+
+    pub fn delete_recurring(&self, id: String) -> Result<(), FinanceError> {
+        self.with_db(|db| {
+            let id = validate_uuid(&id)?;
+            db.delete_recurring_transaction(&id)
+                .map_err(FinanceError::Database)
+        })
+    }
+
+    /// Materialises every occurrence owed up to today. Returns how many landed.
+    ///
+    /// Called on unlock, so a vault left closed for a month catches up in one
+    /// pass instead of needing the app open on the exact day.
+    pub fn apply_due_recurring(&self) -> Result<usize, FinanceError> {
+        let today = Utc::now().format("%Y-%m-%d").to_string();
+        self.with_db(|db| {
+            db.apply_due_recurring(&today)
+                .map_err(FinanceError::Database)
+        })
     }
 
     /// Writes the whole ledger to `path` as CSV and returns the row count.

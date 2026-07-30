@@ -741,3 +741,105 @@ fn test_get_dashboard_data_returns_structure() {
         .expect("get dashboard data");
     assert!(data.net_worth.contains("USD"));
 }
+
+// ==================== Category integrity ====================
+
+/// Finds a seeded category by its stored code.
+fn category_id(service: &FinanceService, kind: &str, name: &str) -> String {
+    service
+        .get_transaction_categories(kind.to_string())
+        .expect("categories")
+        .into_iter()
+        .find(|c| c.name == name)
+        .map(|c| c.id)
+        .unwrap_or_else(|| panic!("seeded category {name} not found"))
+}
+
+fn account_with_expense(harness: &TestServiceHarness, category: &str) -> String {
+    let account_id = harness
+        .service
+        .create_account(NewAccount {
+            name: "Checking".to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 100_000,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        })
+        .expect("create account");
+
+    harness
+        .service
+        .add_transaction(NewTransaction {
+            account_id: account_id.clone(),
+            amount_cents: 1_500,
+            category: category.to_string(),
+            description: "Lunch".to_string(),
+            date: "2026-07-29".to_string(),
+            is_expense: true,
+        })
+        .expect("add transaction");
+
+    account_id
+}
+
+#[test]
+fn renaming_a_category_moves_its_transactions_too() {
+    let harness = new_test_service();
+    account_with_expense(&harness, "FOOD");
+    let id = category_id(&harness.service, "expense", "FOOD");
+
+    harness
+        .service
+        .update_transaction_category(id, "Comida".to_string())
+        .expect("rename category");
+
+    // The transaction follows the rename instead of becoming a separate,
+    // unreachable category in filters and charts.
+    let transactions = harness.service.get_transactions().expect("transactions");
+    assert!(
+        transactions.iter().all(|t| t.category == "Comida"),
+        "transactions kept the old category name: {:?}",
+        transactions.iter().map(|t| &t.category).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn deleting_a_category_in_use_is_refused() {
+    let harness = new_test_service();
+    account_with_expense(&harness, "FOOD");
+    let id = category_id(&harness.service, "expense", "FOOD");
+
+    let result = harness.service.delete_transaction_category(id.clone());
+
+    assert!(result.is_err(), "a category in use must not be deleted");
+    assert!(
+        harness
+            .service
+            .get_transaction_categories("expense".to_string())
+            .expect("categories")
+            .iter()
+            .any(|c| c.id == id),
+        "the category must still be there"
+    );
+}
+
+#[test]
+fn deleting_an_unused_category_still_works() {
+    let harness = new_test_service();
+    let id = category_id(&harness.service, "expense", "SHOPPING");
+
+    harness
+        .service
+        .delete_transaction_category(id.clone())
+        .expect("delete unused category");
+
+    assert!(
+        !harness
+            .service
+            .get_transaction_categories("expense".to_string())
+            .expect("categories")
+            .iter()
+            .any(|c| c.id == id)
+    );
+}

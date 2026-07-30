@@ -127,7 +127,7 @@
         <select bind:value={txCategory}>
           <option value="">{i18n.t('finances-select', 'Select...')}</option>
           {#each txCategoryOptions as cat}
-            <option value={cat.name}>{cat.name}</option>
+            <option value={cat.name}>{cat.label}</option>
           {/each}
         </select>
       </label>

@@ -24,8 +24,11 @@
 //! connection uses `*_on(conn, …)` helpers to avoid nesting pool checkouts.
 
 use super::{Database, DbError};
-use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
-use rusqlite::{Connection, Error as RusqliteError, params};
+use crate::models::{
+    Account, AccountBalance, BalanceSummary, BudgetStatus, CategoryBudget, RecurrenceFrequency,
+    RecurringTransaction, Transaction, TransactionCategory,
+};
+use rusqlite::{Connection, Error as RusqliteError, Row, params};
 
 impl Database {
     // ==================== FIAT Accounts CRUD ====================
@@ -593,14 +596,18 @@ impl Database {
         })
     }
 
-    /// Updates a category name
+    /// Renames a category and every transaction filed under the old name.
+    ///
+    /// Transactions store the category name rather than its id, so both have to
+    /// move together or the existing rows silently become a separate category in
+    /// filters and charts. Atomic for that reason.
     pub fn update_transaction_category(&self, id: &str, new_name: &str) -> Result<(), DbError> {
-        self.write(|conn| {
+        self.with_transaction(|conn| {
             // Check if category exists and get its type
-            let category_type: String = conn.query_row(
-                "SELECT category_type FROM transaction_categories WHERE id = ?1",
+            let (category_type, old_name): (String, String) = conn.query_row(
+                "SELECT category_type, name FROM transaction_categories WHERE id = ?1",
                 params![id],
-                |row| row.get(0),
+                |row| Ok((row.get(0)?, row.get(1)?)),
             )?;
 
             // Check for duplicate names within the same type (excluding current category)
@@ -619,13 +626,38 @@ impl Database {
                 params![new_name, id],
             )?;
 
+            conn.execute(
+                "UPDATE transactions SET category = ?1 WHERE category = ?2 COLLATE NOCASE",
+                params![new_name, old_name],
+            )?;
+
             Ok(())
         })
     }
 
-    /// Deletes a category
+    /// Deletes a category, refusing while transactions still reference it.
+    ///
+    /// Without the guard those transactions would point at a name that no longer
+    /// exists in any list, which is invisible until a filter or a chart drops
+    /// them.
     pub fn delete_transaction_category(&self, id: &str) -> Result<(), DbError> {
-        self.write(|conn| {
+        self.with_transaction(|conn| {
+            let name: String = conn.query_row(
+                "SELECT name FROM transaction_categories WHERE id = ?1",
+                params![id],
+                |row| row.get(0),
+            )?;
+
+            let in_use: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM transactions WHERE category = ?1 COLLATE NOCASE",
+                params![name],
+                |row| row.get(0),
+            )?;
+
+            if in_use > 0 {
+                return Err(DbError::CategoryInUse);
+            }
+
             conn.execute(
                 "DELETE FROM transaction_categories WHERE id = ?1",
                 params![id],
@@ -671,4 +703,228 @@ impl Database {
             })
         })
     }
+    // ==================== Recurring Transactions ====================
+
+    /// Inserts a recurring rule.
+    pub fn create_recurring_transaction(&self, rule: &RecurringTransaction) -> Result<(), DbError> {
+        self.write(|conn| {
+            conn.execute(
+                "INSERT INTO recurring_transactions
+                    (id, account_id, amount, category, description, type, frequency,
+                     next_date, last_created_date, is_active, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                params![
+                    rule.id,
+                    rule.account_id,
+                    rule.amount,
+                    rule.category,
+                    rule.description,
+                    rule.transaction_type,
+                    rule.frequency,
+                    rule.next_date,
+                    rule.last_created_date,
+                    rule.is_active as i32,
+                    rule.created_at,
+                ],
+            )?;
+            Ok(())
+        })
+    }
+
+    /// Lists every rule, soonest first.
+    pub fn get_recurring_transactions(&self) -> Result<Vec<RecurringTransaction>, DbError> {
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT id, account_id, amount, category, description, type, frequency,
+                        next_date, last_created_date, is_active, created_at
+                 FROM recurring_transactions
+                 ORDER BY is_active DESC, next_date ASC",
+            )?;
+            let rules = stmt
+                .query_map([], row_to_recurring)?
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(rules)
+        })
+    }
+
+    /// Enables or disables a rule without deleting its history.
+    pub fn set_recurring_active(&self, id: &str, active: bool) -> Result<(), DbError> {
+        self.write(|conn| {
+            let changed = conn.execute(
+                "UPDATE recurring_transactions SET is_active = ?1 WHERE id = ?2",
+                params![active as i32, id],
+            )?;
+            if changed == 0 {
+                return Err(DbError::RecurringNotFound);
+            }
+            Ok(())
+        })
+    }
+
+    /// Deletes a rule. Transactions it already created are left alone.
+    pub fn delete_recurring_transaction(&self, id: &str) -> Result<(), DbError> {
+        self.write(|conn| {
+            let changed = conn.execute(
+                "DELETE FROM recurring_transactions WHERE id = ?1",
+                params![id],
+            )?;
+            if changed == 0 {
+                return Err(DbError::RecurringNotFound);
+            }
+            Ok(())
+        })
+    }
+
+    /// Creates every occurrence owed up to `today` and advances each rule.
+    ///
+    /// Runs in one transaction: a rule whose `next_date` moved must have its
+    /// transaction, and vice versa. A rule several periods behind catches up in
+    /// this single pass, which is what makes it safe to have skipped days.
+    /// Returns how many transactions were created.
+    pub fn apply_due_recurring(&self, today: &str) -> Result<usize, DbError> {
+        self.with_transaction(|conn| {
+            let due: Vec<RecurringTransaction> = {
+                let mut stmt = conn.prepare(
+                    "SELECT id, account_id, amount, category, description, type, frequency,
+                            next_date, last_created_date, is_active, created_at
+                     FROM recurring_transactions
+                     WHERE is_active = 1 AND next_date <= ?1
+                     ORDER BY next_date ASC",
+                )?;
+                stmt.query_map(params![today], row_to_recurring)?
+                    .collect::<Result<Vec<_>, _>>()?
+            };
+
+            let today_date = parse_iso_date(today)?;
+            let mut created = 0usize;
+
+            for rule in due {
+                let frequency = RecurrenceFrequency::parse(&rule.frequency)
+                    .ok_or(DbError::InvalidTransactionType)?;
+                let mut occurrence = parse_iso_date(&rule.next_date)?;
+                let mut last_created = rule.last_created_date.clone();
+
+                // Catch up period by period; a rule months behind lands every
+                // occurrence it owes rather than only the latest one.
+                while occurrence <= today_date {
+                    let occurrence_str = occurrence.format("%Y-%m-%d").to_string();
+                    conn.execute(
+                        "INSERT INTO transactions
+                            (id, account_id, amount, category, description, date, type, transfer_account_id)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL)",
+                        params![
+                            uuid::Uuid::new_v4().to_string(),
+                            rule.account_id,
+                            rule.amount,
+                            rule.category,
+                            rule.description,
+                            occurrence_str,
+                            rule.transaction_type,
+                        ],
+                    )?;
+                    created += 1;
+                    last_created = Some(occurrence_str);
+
+                    match frequency.next_after(occurrence) {
+                        Some(next) => occurrence = next,
+                        // Out of representable dates: stop rather than loop.
+                        None => break,
+                    }
+                }
+
+                conn.execute(
+                    "UPDATE recurring_transactions
+                     SET next_date = ?1, last_created_date = ?2
+                     WHERE id = ?3",
+                    params![
+                        occurrence.format("%Y-%m-%d").to_string(),
+                        last_created,
+                        rule.id
+                    ],
+                )?;
+            }
+
+            Ok(created)
+        })
+    }
+    // ==================== Category Budgets ====================
+
+    /// Creates or replaces the limit for a category.
+    pub fn upsert_category_budget(&self, budget: &CategoryBudget) -> Result<(), DbError> {
+        self.write(|conn| {
+            conn.execute(
+                "INSERT INTO category_budgets (id, category, amount, created_at)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(category) DO UPDATE SET amount = excluded.amount",
+                params![budget.id, budget.category, budget.amount, budget.created_at],
+            )?;
+            Ok(())
+        })
+    }
+
+    pub fn delete_category_budget(&self, category: &str) -> Result<(), DbError> {
+        self.write(|conn| {
+            let changed = conn.execute(
+                "DELETE FROM category_budgets WHERE category = ?1 COLLATE NOCASE",
+                params![category],
+            )?;
+            if changed == 0 {
+                return Err(DbError::CategoryBudgetNotFound);
+            }
+            Ok(())
+        })
+    }
+
+    /// Every budget with what has been spent against it inside `month`.
+    ///
+    /// `month` is a `YYYY-MM` prefix; dates are ISO text, so a prefix match is
+    /// both correct and index-friendly. Expenses only — income never counts
+    /// against a spending limit.
+    pub fn get_budget_status(&self, month: &str) -> Result<Vec<BudgetStatus>, DbError> {
+        let like = format!("{month}%");
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT b.category, b.amount,
+                        COALESCE((
+                            SELECT SUM(t.amount) FROM transactions t
+                            WHERE t.category = b.category COLLATE NOCASE
+                              AND t.type = 'expense'
+                              AND t.date LIKE ?1
+                        ), 0)
+                 FROM category_budgets b
+                 ORDER BY b.category ASC",
+            )?;
+            let rows = stmt
+                .query_map(params![like], |row| {
+                    Ok(BudgetStatus {
+                        category: row.get(0)?,
+                        limit: row.get(1)?,
+                        spent: row.get(2)?,
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(rows)
+        })
+    }
+}
+
+fn row_to_recurring(row: &Row<'_>) -> rusqlite::Result<RecurringTransaction> {
+    Ok(RecurringTransaction {
+        id: row.get(0)?,
+        account_id: row.get(1)?,
+        amount: row.get(2)?,
+        category: row.get(3)?,
+        description: row.get(4)?,
+        transaction_type: row.get(5)?,
+        frequency: row.get(6)?,
+        next_date: row.get(7)?,
+        last_created_date: row.get(8)?,
+        is_active: row.get::<_, i32>(9)? != 0,
+        created_at: row.get(10)?,
+    })
+}
+
+/// Parses an ISO date, mapping a malformed one to a database error.
+fn parse_iso_date(value: &str) -> Result<chrono::NaiveDate, DbError> {
+    chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").map_err(|_| DbError::InvalidDate)
 }
