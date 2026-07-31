@@ -337,7 +337,9 @@
         .filter((p): p is CryptoAssetPriceDto => p !== undefined)
     } catch (_) { /* silently fail on initial load */ }
     try {
-      const result = await cryptoApi.loadExchangeRate('USD/CLP')
+      // Storage key, not a display label: sync_crypto_data writes CLP per USD
+      // under this pair. "USD/CLP" is only what the badge shows.
+      const result = await cryptoApi.loadExchangeRate('CLP_USD')
       if (result) usdClpRate = result[0]
     } catch (_) { /* ignore */ }
   }
