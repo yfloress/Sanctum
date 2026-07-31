@@ -1,3 +1,14 @@
+# The only two dependencies allowed to run an install script. Everything else
+# is denied by default, which is why `ignoreScripts` is not set here: the site
+# needs sharp's native binary to build.
 allowBuilds:
   esbuild: true
   sharp: true
+
+# Quarantine: refuse any release younger than this, in minutes. 4320 is three
+# days, the same value the application uses. pnpm's own default is 1440.
+#
+# This is checked against every lockfile entry, so a lockfile carrying something
+# newer fails the build rather than the deploy: the site stops updating until
+# the lockfile is fixed, and the published version stays up.
+minimumReleaseAge: 4320
