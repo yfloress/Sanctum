@@ -107,7 +107,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: ui-svelte/pnpm-lock.yaml
 
-      # .npmrc pins ignore-scripts, so no dependency lifecycle script runs here.
+      # pnpm-workspace.yaml sets ignoreScripts, so no dependency lifecycle
+      # script runs here.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

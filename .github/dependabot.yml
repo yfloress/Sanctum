@@ -4,8 +4,9 @@
 #
 #   - Routine (this file): weekly, grouped, and quarantined. `cooldown` skips
 #     any release published less than a week ago, which is the window in which
-#     a compromised package is normally spotted and yanked. It mirrors the
-#     `min-release-age` already enforced for pnpm in `.npmrc`.
+#     a compromised package is normally spotted and yanked. It complements the
+#     shorter `minimumReleaseAge` in `pnpm-workspace.yaml`, which pnpm enforces
+#     over the whole tree including transitive packages.
 #
 #   - Security (Dependabot security updates, enabled in repository settings):
 #     immediate and NOT quarantined, so an advisory that affects us opens a
