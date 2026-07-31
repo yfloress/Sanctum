@@ -34,7 +34,7 @@
   import type {
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
-    CryptoTransactionDto, CoinCatalogDto,
+    CryptoTransactionDto, CryptoTransactionEditData, CoinCatalogDto,
     CryptoAssetPriceDto, IpcSummaryDto,
     TaxReportDto, TaxSettingsDto, TaxSummaryDto
   } from '../lib/types'
@@ -399,18 +399,72 @@
     showEditTransaction = true
   }
 
+  /** Pulls back every view that shows transactions, after one of them changed. */
+  async function refreshAfterTxChange() {
+    if (showAssetDetail) {
+      assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
+    }
+    if (selectedWallet) {
+      selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
+    }
+    await load()
+    if (activeTab === 'activity') await loadTransactionsList()
+  }
+
+  /**
+   * The full entry, read before deleting it, or null when it must not be
+   * offered back. A swap leg or a transfer only makes sense next to its pair,
+   * and restoring one on its own would leave the ledger inconsistent.
+   */
+  async function captureForUndo(id: string): Promise<CryptoTransactionEditData | null> {
+    try {
+      const data = await cryptoApi.getCryptoTransaction(id)
+      if (data.is_paired_swap || data.transaction_type === 'transfer') return null
+      return data
+    } catch (_) {
+      // Undo is a convenience; failing to arm it must not block the delete.
+      return null
+    }
+  }
+
   async function deleteCryptoTx(id: string) {
+    const restore = await captureForUndo(id)
     try {
       await cryptoApi.deleteCryptoTransaction(id)
-      if (showAssetDetail) {
-        assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
-      }
-      if (selectedWallet) {
-        selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
-      }
-      await load()
-      if (activeTab === 'activity') await loadTransactionsList()
-      app.showToast(i18n.t('crypto-toast-tx-deleted', 'Transaction deleted'))
+      await refreshAfterTxChange()
+      app.showToast(
+        i18n.t('crypto-toast-tx-deleted', 'Transaction deleted'),
+        false,
+        restore ? 6000 : 3000,
+        restore
+          ? { label: i18n.t('action-undo', 'Undo'), handler: () => undoDeleteCryptoTx(restore) }
+          : null,
+      )
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
+  async function undoDeleteCryptoTx(data: CryptoTransactionEditData) {
+    try {
+      await cryptoApi.addCryptoTransaction({
+        wallet_id: data.wallet_id,
+        coin_id: data.coin_id,
+        symbol: data.symbol,
+        transaction_type: data.transaction_type,
+        amount: data.amount,
+        price: data.price,
+        fee: data.fee,
+        fee_coin_id: data.fee_coin_id ?? undefined,
+        fee_coin_amount: data.fee_coin_amount ?? undefined,
+        date: data.date,
+        notes: data.notes ?? undefined,
+        subtype: data.subtype ?? undefined,
+        override_proceeds: data.override_proceeds ?? undefined,
+        override_cost_basis: data.override_cost_basis ?? undefined,
+      })
+      await refreshAfterTxChange()
+      app.showToast(i18n.t('crypto-toast-tx-restored', 'Transaction restored'))
     } catch (e) {
       app.showToast(errorMessage(e), true)
     }

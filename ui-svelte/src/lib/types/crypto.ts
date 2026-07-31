@@ -180,6 +180,7 @@ export interface CryptoTransactionUpdateInput {
 
 export interface CryptoTransactionEditData {
   id: string
+  wallet_id: string
   wallet_name: string
   coin_id: string
   symbol: string

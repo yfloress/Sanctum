@@ -383,6 +383,9 @@ impl CryptoTransactionUpdateInput {
 #[derive(Debug, Clone, Serialize)]
 pub struct CryptoTransactionEditData {
     pub id: String,
+    /// Carried alongside the name so a caller can rebuild the entry, not just
+    /// display it: restoring a deleted transaction needs the wallet it was in.
+    pub wallet_id: String,
     pub wallet_name: String,
     pub coin_id: String,
     pub symbol: String,

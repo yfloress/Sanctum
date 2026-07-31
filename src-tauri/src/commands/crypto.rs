@@ -463,6 +463,7 @@ pub fn get_crypto_transaction(
         .unwrap_or_default();
     Ok(CryptoTransactionEditData {
         id: tx.id,
+        wallet_id: tx.wallet_id,
         wallet_name: wn,
         coin_id: tx.coin_id,
         symbol: tx.symbol,

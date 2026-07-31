@@ -465,6 +465,7 @@ crypto-toast-custom-deleted = Moneda personalizada eliminada
 crypto-toast-tx-added = Transacción agregada
 crypto-toast-tx-updated = Transacción actualizada
 crypto-toast-tx-deleted = Transacción eliminada
+crypto-toast-tx-restored = Transacción restaurada
 crypto-toast-wallet-created = Billetera creada
 crypto-toast-wallet-deleted = Billetera eliminada
 crypto-toast-wallet-renamed = Billetera renombrada
