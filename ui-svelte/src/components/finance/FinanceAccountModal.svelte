@@ -70,7 +70,11 @@
     }
   })
 
+  let canSubmit = $derived(!!accName.trim())
+
   async function submit() {
+    // Enter reaches this even when the confirm button is disabled.
+    if (!canSubmit) return
     try {
       const isEditing = !!editing
       if (isEditing) {
@@ -105,7 +109,7 @@
 {#if show}
   <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal" use:dialog={{ onclose: close }}>
+    <div class="modal" use:dialog={{ onclose: close, onsubmit: submit }}>
       <h3>{editing ? i18n.t('finances-edit-account-modal', 'Edit Account') : i18n.t('finances-new-account-modal', 'New Account')}</h3>
       <div class="form-grid">
         <label>
@@ -160,7 +164,7 @@
       </div>
       <div class="modal-actions">
         <button class="secondary-btn" onclick={close}>{i18n.t('finances-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submit} disabled={!accName.trim()}>
+        <button class="primary-btn" onclick={submit} disabled={!canSubmit}>
           {editing ? i18n.t('finances-update', 'Update') : i18n.t('finances-create', 'Create')}
         </button>
       </div>

@@ -27,9 +27,15 @@ export interface PageActions {
   focusSearch?: () => void
 }
 
+export interface GlobalActions {
+  /** Show the cheat sheet. Without it the shortcuts below are undiscoverable. */
+  openHelp?: () => void
+}
+
 const PAGES: Page[] = ['dashboard', 'finances', 'crypto', 'settings']
 
 let pageActions: PageActions = {}
+let globalActions: GlobalActions = {}
 
 /** Called by the active page; run the returned cleanup on unmount. */
 export function setPageActions(actions: PageActions) {
@@ -86,7 +92,13 @@ function onKeydown(event: KeyboardEvent) {
     return
   }
 
-  // Checked before the Shift guard: on some layouts "/" is Shift+7.
+  // Both checked before the Shift guard: "?" is Shift+something everywhere, and
+  // on some layouts "/" is Shift+7.
+  if (event.key === '?') {
+    run(event, globalActions.openHelp)
+    return
+  }
+
   if (event.key === '/') {
     run(event, pageActions.focusSearch)
     return
@@ -101,7 +113,11 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-export function startShortcuts() {
+export function startShortcuts(actions: GlobalActions = {}) {
+  globalActions = actions
   window.addEventListener('keydown', onKeydown)
-  return () => window.removeEventListener('keydown', onKeydown)
+  return () => {
+    globalActions = {}
+    window.removeEventListener('keydown', onKeydown)
+  }
 }

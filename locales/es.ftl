@@ -1248,3 +1248,16 @@ finances-budget-saved = Presupuesto guardado
 finances-budget-left = disponible
 finances-budget-over = Excedido por
 finances-no-budgets = Sin presupuestos aún.
+
+# ==================== Keyboard Shortcuts ====================
+shortcuts-title = Atajos de Teclado
+shortcuts-group-navigation = Navegación
+shortcuts-group-actions = Acciones
+shortcuts-group-dialogs = Diálogos
+shortcuts-toggle-sidebar = Contraer o expandir la barra lateral
+shortcuts-new-entry = Nueva entrada en la página actual
+shortcuts-search = Ir al campo de búsqueda
+shortcuts-lock = Bloquear la bóveda ahora
+shortcuts-confirm = Confirmar el formulario abierto
+shortcuts-close = Cerrar sin guardar
+shortcuts-help = Mostrar esta lista

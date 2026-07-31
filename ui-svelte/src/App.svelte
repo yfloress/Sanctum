@@ -26,20 +26,24 @@
   import Dragon from './components/Dragon.svelte'
   import Toast from './components/Toast.svelte'
   import SessionLockWarning from './components/SessionLockWarning.svelte'
+  import ShortcutsHelp from './components/ShortcutsHelp.svelte'
   import LoginPage from './pages/LoginPage.svelte'
   import DashboardPage from './pages/DashboardPage.svelte'
   import FinancesPage from './pages/FinancesPage.svelte'
   import CryptoPage from './pages/CryptoPage.svelte'
   import SettingsPage from './pages/SettingsPage.svelte'
 
+  let showShortcuts = $state(false)
+
   $effect(() => {
     if (app.isLoggedIn) {
       i18n.load()
       const stopSession = startSessionMonitor()
-      const stopShortcuts = startShortcuts()
+      const stopShortcuts = startShortcuts({ openHelp: () => showShortcuts = true })
       return () => {
         stopSession()
         stopShortcuts()
+        showShortcuts = false
       }
     }
   })
@@ -128,6 +132,8 @@
 {/if}
 
 <SessionLockWarning />
+
+<ShortcutsHelp bind:show={showShortcuts} onclose={() => showShortcuts = false} />
 
 <Toast />
 

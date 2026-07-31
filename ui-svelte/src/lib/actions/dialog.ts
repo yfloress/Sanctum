@@ -22,11 +22,18 @@ export interface DialogOptions {
   onclose: () => void
   /** Focus the first field on open. Pass `false` for read-only panels. */
   autofocus?: boolean
+  /**
+   * Confirm with Enter from any field. The handler is responsible for
+   * rejecting an incomplete form: Enter reaches it even when the confirm
+   * button is disabled.
+   */
+  onsubmit?: () => void
 }
 
 interface Entry {
   node: HTMLElement
   onclose: () => void
+  onsubmit?: () => void
 }
 
 const FOCUSABLE =
@@ -85,11 +92,29 @@ function onKeydown(event: KeyboardEvent) {
     top.onclose()
   } else if (event.key === 'Tab') {
     trapTab(event, top.node)
+  } else if (event.key === 'Enter') {
+    submitOnEnter(event, top)
   }
 }
 
+/**
+ * Enter confirms, except where the key already means something else: inside a
+ * textarea it is a newline, on a button or link it activates that control, and
+ * mid-composition it is the IME accepting a candidate.
+ */
+function submitOnEnter(event: KeyboardEvent, top: Entry) {
+  if (!top.onsubmit || event.isComposing || event.shiftKey) return
+
+  const active = document.activeElement as HTMLElement | null
+  if (!active || !top.node.contains(active)) return
+  if (active.tagName === 'TEXTAREA' || active.tagName === 'BUTTON' || active.tagName === 'A') return
+
+  event.preventDefault()
+  top.onsubmit()
+}
+
 export function dialog(node: HTMLElement, options: DialogOptions) {
-  const entry: Entry = { node, onclose: options.onclose }
+  const entry: Entry = { node, onclose: options.onclose, onsubmit: options.onsubmit }
   const previouslyFocused = document.activeElement as HTMLElement | null
 
   if (stack.length === 0) window.addEventListener('keydown', onKeydown)
@@ -109,6 +134,7 @@ export function dialog(node: HTMLElement, options: DialogOptions) {
   return {
     update(next: DialogOptions) {
       entry.onclose = next.onclose
+      entry.onsubmit = next.onsubmit
     },
     destroy() {
       const index = stack.indexOf(entry)

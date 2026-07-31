@@ -192,7 +192,7 @@
 {#if show}
   <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal wide" use:dialog={{ onclose: close }}>
+    <div class="modal wide" use:dialog={{ onclose: close, onsubmit: submitCryptoTransaction }}>
       <h3>{i18n.t('crypto-tx-title', 'New Transaction')}</h3>
       <div class="tx-type-bar">
         {#each (['buy', 'sell', 'income', 'fee', 'transfer', 'swap'] as const) as t}

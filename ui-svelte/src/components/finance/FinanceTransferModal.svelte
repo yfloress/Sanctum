@@ -57,7 +57,11 @@
     }
   })
 
+  let canSubmit = $derived(!!amount && fromId !== toId)
+
   async function submit() {
+    // Enter reaches this even when the confirm button is disabled.
+    if (!canSubmit) return
     const isEditing = !!editing
     try {
       if (isEditing) {
@@ -97,7 +101,7 @@
 {#if show}
   <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal" use:dialog={{ onclose: close }}>
+    <div class="modal" use:dialog={{ onclose: close, onsubmit: submit }}>
       <h3>{editing ? i18n.t('finances-edit-transfer', 'Edit Transfer') : i18n.t('finances-transfer-funds', 'Transfer Funds')}</h3>
       <div class="form-grid">
         <label>
@@ -131,7 +135,7 @@
       </div>
       <div class="modal-actions">
         <button class="secondary-btn" onclick={close}>{i18n.t('finances-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submit} disabled={!amount || fromId === toId}>
+        <button class="primary-btn" onclick={submit} disabled={!canSubmit}>
           {editing ? i18n.t('finances-update', 'Update') : i18n.t('finances-transfer-btn', 'Transfer')}
         </button>
       </div>

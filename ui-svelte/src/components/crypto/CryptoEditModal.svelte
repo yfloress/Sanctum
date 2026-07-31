@@ -77,7 +77,8 @@
   }
 
   async function submitEditTransaction() {
-    if (!editTxData) return
+    // Enter reaches this even while a save is already in flight.
+    if (!editTxData || loading) return
     loading = true
     try {
       await cryptoApi.updateCryptoTransaction({
@@ -113,7 +114,7 @@
 {#if show && editTxData}
   <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal wide" use:dialog={{ onclose: close }}>
+    <div class="modal wide" use:dialog={{ onclose: close, onsubmit: submitEditTransaction }}>
       <h3>{i18n.t('crypto-tx-edit-title', 'Edit Transaction')}</h3>
       <div class="edit-tx-meta">
         <span class="etm-wallet">{editTxData.wallet_name}</span>

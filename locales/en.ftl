@@ -1248,3 +1248,16 @@ finances-budget-saved = Budget saved
 finances-budget-left = left
 finances-budget-over = Over by
 finances-no-budgets = No budgets yet.
+
+# ==================== Keyboard Shortcuts ====================
+shortcuts-title = Keyboard Shortcuts
+shortcuts-group-navigation = Navigation
+shortcuts-group-actions = Actions
+shortcuts-group-dialogs = Dialogs
+shortcuts-toggle-sidebar = Collapse or expand the sidebar
+shortcuts-new-entry = New entry on the current page
+shortcuts-search = Jump to the search box
+shortcuts-lock = Lock the vault now
+shortcuts-confirm = Confirm the open form
+shortcuts-close = Close without saving
+shortcuts-help = Show this list
