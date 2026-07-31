@@ -1249,6 +1249,17 @@ finances-budget-left = disponible
 finances-budget-over = Excedido por
 finances-no-budgets = Sin presupuestos aún.
 
+# ==================== Activity Sorting ====================
+finances-sort = Ordenar por
+finances-sort-date-desc = Más recientes primero
+finances-sort-date-asc = Más antiguas primero
+finances-sort-amount-desc = Monto mayor
+finances-sort-amount-asc = Monto menor
+
+# ==================== Entry Form ====================
+finances-date-today = Hoy
+finances-date-yesterday = Ayer
+
 # ==================== Keyboard Shortcuts ====================
 shortcuts-title = Atajos de Teclado
 shortcuts-group-navigation = Navegación

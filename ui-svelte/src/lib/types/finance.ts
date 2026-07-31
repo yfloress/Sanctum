@@ -77,11 +77,23 @@ export interface TransactionInput {
   is_expense: boolean
 }
 
+/** Ordering keys the backend understands; anything else keeps newest first. */
+export type TransactionSort = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'
+
+/**
+ * Filtering, ordering and paging for a transaction query. Field names are
+ * snake_case on purpose: Tauri only camel-maps a command's own arguments, not
+ * the fields inside one.
+ */
 export interface TransactionFilter {
   query?: string
   account_id?: string
   category?: string
+  /** Inclusive ISO `YYYY-MM-DD` bounds. */
+  date_from?: string
+  date_to?: string
   limit?: number
+  sort?: TransactionSort
 }
 
 export interface TransferInput {

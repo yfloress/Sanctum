@@ -20,7 +20,7 @@
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as financeApi from '../lib/api/finance'
   import type {
-    TransactionDto, CategoriesResponse, CategoryDto,
+    TransactionDto, TransactionSort, CategoriesResponse, CategoryDto,
     AccountsResponse, AccountDetailResponse, AccountDto
   } from '../lib/types'
   import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
@@ -30,6 +30,7 @@
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
   import FinanceTransactionModal from '../components/finance/FinanceTransactionModal.svelte'
+  import type { DescriptionHistoryEntry } from '../components/finance/FinanceTransactionModal.svelte'
   import FinanceAccountModal from '../components/finance/FinanceAccountModal.svelte'
   import FinanceTransferModal from '../components/finance/FinanceTransferModal.svelte'
   import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
@@ -55,6 +56,7 @@
   let filterDateRange = $state<DateRange>('all')
   let filterDateFrom = $state('')
   let filterDateTo = $state('')
+  let sortBy = $state<TransactionSort>('date-desc')
 
   function computeDateBounds(): { from: string | undefined; to: string | undefined } {
     const today = new Date()
@@ -89,6 +91,15 @@
   let hasActiveFilters = $derived(
     !!filterQuery || !!filterAccountId || !!filterCategory ||
     filterDateRange !== 'all'
+  )
+
+  // Suggestions for the entry form. Built from the unfiltered set so they do
+  // not shrink while a filter is on, and from the raw fields because those are
+  // what the form writes back: `description` is decorated for transfers.
+  let descriptionHistory = $derived<DescriptionHistoryEntry[]>(
+    chartTransactions
+      .filter(tx => !tx.is_transfer && tx.description_raw)
+      .map(tx => ({ category: tx.category_raw, description: tx.description_raw }))
   )
 
   // Accounts state
@@ -133,7 +144,7 @@
 
   async function loadChartTransactions() {
     try {
-      const res = await financeApi.fetchTransactions(undefined, undefined, undefined, undefined, undefined, 1000)
+      const res = await financeApi.fetchTransactions({ limit: 1000 })
       chartTransactions = res.transactions
     } catch (_) {
       // charts degrade gracefully
@@ -143,10 +154,15 @@
   async function loadTransactions() {
     try {
       const { from, to } = computeDateBounds()
-      const res = await financeApi.fetchTransactions(
-        filterQuery || undefined, filterAccountId || undefined,
-        filterCategory || undefined, from, to, 100
-      )
+      const res = await financeApi.fetchTransactions({
+        query: filterQuery || undefined,
+        account_id: filterAccountId || undefined,
+        category: filterCategory || undefined,
+        date_from: from,
+        date_to: to,
+        limit: 100,
+        sort: sortBy,
+      })
       transactions = res.transactions
       hasMore = res.has_more
     } catch (e) {
@@ -163,10 +179,15 @@
   async function loadMoreTransactions() {
     try {
       const { from, to } = computeDateBounds()
-      const res = await financeApi.fetchTransactions(
-        filterQuery || undefined, filterAccountId || undefined,
-        filterCategory || undefined, from, to, transactions.length + 100
-      )
+      const res = await financeApi.fetchTransactions({
+        query: filterQuery || undefined,
+        account_id: filterAccountId || undefined,
+        category: filterCategory || undefined,
+        date_from: from,
+        date_to: to,
+        limit: transactions.length + 100,
+        sort: sortBy,
+      })
       transactions = res.transactions
       hasMore = res.has_more
     } catch (e) {
@@ -664,6 +685,16 @@
               onchange={() => loadTransactions()}
             />
           {/if}
+          <select
+            bind:value={sortBy}
+            aria-label={i18n.t('finances-sort', 'Sort by')}
+            onchange={() => loadTransactions()}
+          >
+            <option value="date-desc">{i18n.t('finances-sort-date-desc', 'Newest first')}</option>
+            <option value="date-asc">{i18n.t('finances-sort-date-asc', 'Oldest first')}</option>
+            <option value="amount-desc">{i18n.t('finances-sort-amount-desc', 'Largest amount')}</option>
+            <option value="amount-asc">{i18n.t('finances-sort-amount-asc', 'Smallest amount')}</option>
+          </select>
           {#if hasActiveFilters}
             <button class="clear-btn" onclick={clearFilters}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
@@ -806,6 +837,7 @@
   prefill={duplicatingTransaction}
   accounts={accountsData?.accounts ?? []}
   categories={categories ?? { expense: [], income: [] }}
+  {descriptionHistory}
   onsubmit={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
   onclose={() => { showAddTransaction = false; duplicatingTransaction = null }}
 />

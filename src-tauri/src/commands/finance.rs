@@ -26,7 +26,7 @@ use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::ui::dto::finance::{
     AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, BudgetDto, BudgetInput,
     CategoriesResponse, CategoryDto, RecurringDto, RecurringInput, TransactionDto,
-    TransactionInput, TransactionsResponse, TransferInput,
+    TransactionFilter, TransactionInput, TransactionsResponse, TransferInput,
 };
 use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
@@ -234,13 +234,18 @@ pub fn update_account_name(
 #[tauri::command]
 pub fn fetch_transactions(
     finance: State<'_, FinanceService>,
-    query: Option<String>,
-    account_id: Option<String>,
-    category: Option<String>,
-    date_from: Option<String>,
-    date_to: Option<String>,
-    limit: Option<usize>,
+    filter: TransactionFilter,
 ) -> Result<TransactionsResponse, AppError> {
+    let TransactionFilter {
+        query,
+        account_id,
+        category,
+        date_from,
+        date_to,
+        limit,
+        sort,
+    } = filter;
+
     let accounts = finance.get_accounts().map_err(AppError::from)?;
     let account_lookup: HashMap<String, (String, String)> = accounts
         .iter()
@@ -257,11 +262,9 @@ pub fn fetch_transactions(
     let date_to_filter = date_to.unwrap_or_default();
     let display_limit = limit.unwrap_or(100);
 
-    let mut matched_count: usize = 0;
-
-    let mapped: Vec<TransactionDto> = transactions
+    let mut matched: Vec<sanctum::models::Transaction> = transactions
         .into_iter()
-        .filter_map(|tx| {
+        .filter(|tx| {
             let is_transfer = tx.transaction_type == "transfer";
 
             // Account filter
@@ -269,7 +272,7 @@ pub fn fetch_transactions(
                 && tx.account_id != account_filter
                 && tx.transfer_account_id.as_deref() != Some(account_filter.as_str())
             {
-                return None;
+                return false;
             }
 
             // Category filter
@@ -279,15 +282,15 @@ pub fn fetch_transactions(
                         && (category_filter_upper == "TRANSFER"
                             || !tx.category.eq_ignore_ascii_case(&category_filter))))
             {
-                return None;
+                return false;
             }
 
             // Date range filter (ISO YYYY-MM-DD compares lexicographically)
             if !date_from_filter.is_empty() && tx.date.as_str() < date_from_filter.as_str() {
-                return None;
+                return false;
             }
             if !date_to_filter.is_empty() && tx.date.as_str() > date_to_filter.as_str() {
-                return None;
+                return false;
             }
 
             // Text search
@@ -309,17 +312,23 @@ pub fn fetch_transactions(
                     haystack.push_str(&tname.to_lowercase());
                 }
                 if !haystack.contains(&query_lower) {
-                    return None;
+                    return false;
                 }
             }
 
-            matched_count += 1;
-            if matched_count > display_limit {
-                return None;
-            }
-
-            Some(build_transaction_dto(&tx, &account_lookup))
+            true
         })
+        .collect();
+
+    // Sorted over everything that matched, not over the page: ordering after
+    // truncation would rank the newest hundred rather than the whole ledger.
+    sort_transactions(&mut matched, sort.as_deref());
+
+    let matched_count = matched.len();
+    let mapped: Vec<TransactionDto> = matched
+        .iter()
+        .take(display_limit)
+        .map(|tx| build_transaction_dto(tx, &account_lookup))
         .collect();
 
     Ok(TransactionsResponse {
@@ -421,6 +430,22 @@ pub fn delete_category(finance: State<'_, FinanceService>, id: String) -> Result
 // ==================== Helpers ====================
 
 /// Build a TransactionDto from a raw transaction model.
+/// Reorders the matched transactions in place.
+///
+/// Amount ordering compares magnitudes: the sign carries expense versus income,
+/// which every row already shows on its own, so the useful question is which
+/// movements were the largest. The sort is stable, so ties keep the newest
+/// first, and an unrecognised key leaves the query's own order untouched.
+fn sort_transactions(transactions: &mut [sanctum::models::Transaction], sort: Option<&str>) {
+    match sort {
+        // The query returns `date DESC, rowid DESC`, so this is `date ASC`.
+        Some("date-asc") => transactions.reverse(),
+        Some("amount-desc") => transactions.sort_by_key(|tx| std::cmp::Reverse(tx.amount.abs())),
+        Some("amount-asc") => transactions.sort_by_key(|tx| tx.amount.abs()),
+        _ => {}
+    }
+}
+
 fn build_transaction_dto(
     tx: &sanctum::models::Transaction,
     account_lookup: &HashMap<String, (String, String)>,

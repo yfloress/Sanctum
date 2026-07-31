@@ -14,6 +14,26 @@
      You should have received a copy of the GNU Affero General Public License
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
+<script module lang="ts">
+  /** One past entry, used to suggest descriptions already typed for a category. */
+  export interface DescriptionHistoryEntry {
+    category: string
+    description: string
+  }
+
+  /** Longest datalist offered; beyond this the dropdown stops being a shortcut. */
+  const MAX_SUGGESTIONS = 40
+
+  // What the last saved entry used, so a run of similar transactions does not
+  // mean picking the same account over and over. Deliberately module state and
+  // not persisted: an account id written outside the encrypted vault would be
+  // spending data sitting in the clear.
+  const recalled = {
+    accountId: '',
+    category: { expense: '', income: '' },
+  }
+</script>
+
 <script lang="ts">
   import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
@@ -29,24 +49,73 @@
     prefill?: TransactionDto | null
     accounts: { id: string; name: string }[]
     categories: { expense: CategoryDto[]; income: CategoryDto[] }
+    /** Past entries, newest first, used for the description suggestions. */
+    descriptionHistory?: DescriptionHistoryEntry[]
     onsubmit: () => Promise<void>
     onclose: () => void
   }
 
-  let { show = $bindable(false), editing, prefill = null, accounts, categories, onsubmit, onclose }: Props = $props()
+  let {
+    show = $bindable(false), editing, prefill = null, accounts, categories,
+    descriptionHistory = [], onsubmit, onclose,
+  }: Props = $props()
 
-  const today = () => new Date().toISOString().slice(0, 10)
+  /**
+   * `offset` days back from today, in the YYYY-MM-DD the date input expects.
+   * Built from the local date parts, not `toISOString`, which is UTC and so
+   * lands on tomorrow for anyone west of Greenwich late in the evening.
+   */
+  function dayOffset(offset: number): string {
+    const d = new Date()
+    d.setDate(d.getDate() - offset)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  const today = () => dayOffset(0)
 
   let txAccountId = $state('')
   let txAmount = $state('')
   let txCategory = $state('')
   let txDescription = $state('')
-  let txDate = $state(new Date().toISOString().slice(0, 10))
+  let txDate = $state(today())
   let txIsExpense = $state(true)
 
   let txCategoryOptions = $derived<CategoryDto[]>(
     txIsExpense ? (categories.expense ?? []) : (categories.income ?? [])
   )
+
+  // Narrowed to the chosen category so the dropdown offers what fits, and
+  // deduplicated keeping the newest first because the caller sorts by date.
+  let descriptionSuggestions = $derived(
+    Array.from(
+      new Set(
+        descriptionHistory
+          .filter(entry => !txCategory || entry.category === txCategory)
+          .map(entry => entry.description)
+          .filter(description => description.length > 0)
+      )
+    ).slice(0, MAX_SUGGESTIONS)
+  )
+
+  let canSubmit = $derived(!!txAmount && !!txAccountId)
+
+  /** The remembered category, but only while it is still an option. */
+  function recalledCategory(isExpense: boolean): string {
+    const name = recalled.category[isExpense ? 'expense' : 'income']
+    const options = (isExpense ? categories.expense : categories.income) ?? []
+    return options.some(cat => cat.name === name) ? name : ''
+  }
+
+  function setType(isExpense: boolean) {
+    if (txIsExpense === isExpense) return
+    txIsExpense = isExpense
+    // The category list is swapped out with the type, so a name from the old
+    // list would leave the select showing nothing at all.
+    const options = (isExpense ? categories.expense : categories.income) ?? []
+    if (!options.some(cat => cat.name === txCategory)) {
+      txCategory = recalledCategory(isExpense)
+    }
+  }
 
   $effect(() => {
     show
@@ -62,9 +131,12 @@
         txDate = editing ? source.date : today()
         txIsExpense = source.is_expense
       } else {
-        txAccountId = accounts[0]?.id ?? ''
+        // Falls back to the first account when the remembered one is gone.
+        txAccountId = accounts.some(acc => acc.id === recalled.accountId)
+          ? recalled.accountId
+          : (accounts[0]?.id ?? '')
         txAmount = ''
-        txCategory = ''
+        txCategory = recalledCategory(true)
         txDescription = ''
         txDate = today()
         txIsExpense = true
@@ -73,6 +145,7 @@
   })
 
   async function submitTransaction() {
+    if (!canSubmit) return
     try {
       if (editing) {
         await financeApi.updateTransaction(
@@ -83,6 +156,8 @@
           txAccountId, txAmount, txCategory, txDescription, txDate, txIsExpense
         )
       }
+      recalled.accountId = txAccountId
+      recalled.category[txIsExpense ? 'expense' : 'income'] = txCategory
       show = false
       await onsubmit()
       app.showToast(editing ? i18n.t('finances-tx-updated', 'Transaction updated') : i18n.t('finances-tx-added', 'Transaction added'))
@@ -100,7 +175,7 @@
 {#if show}
   <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper">
-    <div class="modal" use:dialog={{ onclose: close }}>
+    <div class="modal" use:dialog={{ onclose: close, onsubmit: submitTransaction }}>
     <h3>{editing ? i18n.t('finances-edit-transaction', 'Edit Transaction') : i18n.t('finances-add-transaction', 'Add Transaction')}</h3>
     <div class="form-grid">
       <label>
@@ -118,8 +193,8 @@
       <label>
         {i18n.t('finances-type', 'Type')}
         <div class="toggle-row">
-          <button class="toggle-btn" class:active={txIsExpense} onclick={() => txIsExpense = true}>{i18n.t('finances-expense', 'Expense')}</button>
-          <button class="toggle-btn" class:active={!txIsExpense} onclick={() => txIsExpense = false}>{i18n.t('finances-income', 'Income')}</button>
+          <button class="toggle-btn" class:active={txIsExpense} onclick={() => setType(true)}>{i18n.t('finances-expense', 'Expense')}</button>
+          <button class="toggle-btn" class:active={!txIsExpense} onclick={() => setType(false)}>{i18n.t('finances-income', 'Income')}</button>
         </div>
       </label>
       <label>
@@ -133,16 +208,35 @@
       </label>
       <label>
         {i18n.t('finances-description', 'Description')}
-        <input type="text" bind:value={txDescription} placeholder={i18n.t('finances-description', 'Description')} />
+        <input
+          type="text"
+          list="tx-description-history"
+          bind:value={txDescription}
+          placeholder={i18n.t('finances-description', 'Description')}
+        />
+        <!-- Suggestions only: any other text is still accepted. -->
+        <datalist id="tx-description-history">
+          {#each descriptionSuggestions as suggestion}
+            <option value={suggestion}></option>
+          {/each}
+        </datalist>
       </label>
       <label>
         {i18n.t('finances-date', 'Date')}
-        <input type="date" bind:value={txDate} />
+        <div class="date-row">
+          <input type="date" bind:value={txDate} />
+          <button class="date-shortcut" class:active={txDate === dayOffset(0)} onclick={() => txDate = dayOffset(0)}>
+            {i18n.t('finances-date-today', 'Today')}
+          </button>
+          <button class="date-shortcut" class:active={txDate === dayOffset(1)} onclick={() => txDate = dayOffset(1)}>
+            {i18n.t('finances-date-yesterday', 'Yesterday')}
+          </button>
+        </div>
       </label>
     </div>
     <div class="modal-actions">
       <button class="secondary-btn" onclick={close}>{i18n.t('finances-cancel', 'Cancel')}</button>
-      <button class="primary-btn" onclick={submitTransaction} disabled={!txAmount || !txAccountId}>
+      <button class="primary-btn" onclick={submitTransaction} disabled={!canSubmit}>
         {editing ? i18n.t('finances-update', 'Update') : i18n.t('finances-add-btn', 'Add')}
       </button>
     </div>

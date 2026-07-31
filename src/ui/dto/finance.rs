@@ -145,13 +145,22 @@ pub struct TransactionInput {
     pub is_expense: bool,
 }
 
-/// Filter parameters for transaction queries.
-#[derive(Debug, Clone, Deserialize)]
+/// Filtering, ordering and paging for a transaction query.
+///
+/// Every field is independently optional; `None` means "do not narrow by this".
+/// They travel as one value so the query can grow another dimension without
+/// lengthening a positional argument list nobody can read at the call site.
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct TransactionFilter {
     pub query: Option<String>,
     pub account_id: Option<String>,
     pub category: Option<String>,
+    /// Inclusive ISO `YYYY-MM-DD` bounds.
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
     pub limit: Option<usize>,
+    /// One of `date-desc`, `date-asc`, `amount-desc`, `amount-asc`.
+    pub sort: Option<String>,
 }
 
 // ==================== Transfers ====================

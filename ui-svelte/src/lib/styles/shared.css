@@ -105,6 +105,21 @@
   border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-glow) inset;
 }
 
+/* ── Date field with shortcuts ─────────────────────────────────── */
+
+.date-row { display: flex; gap: 4px; align-items: stretch; }
+.date-row input[type="date"] { flex: 1; min-width: 0; }
+.date-shortcut {
+  padding: 0 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+  background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
+  white-space: nowrap; transition: all 0.15s;
+}
+.date-shortcut:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
+.date-shortcut.active {
+  background: var(--glass-active); color: var(--text-primary);
+  border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-glow) inset;
+}
+
 /* ── Modal action buttons ──────────────────────────────────────── */
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
