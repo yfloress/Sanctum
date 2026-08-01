@@ -1273,6 +1273,11 @@ finances-bulk-restored = {$count} transactions restored
 finances-bulk-restored-partial = Restored {$count} of {$total} transactions
 confirm-delete-transactions = Delete {$count} transactions?
 
+# ==================== Command Palette ====================
+palette-title = Command palette
+palette-placeholder = Type a command...
+palette-no-results = No matching command
+
 # ==================== Keyboard Shortcuts ====================
 shortcuts-title = Keyboard Shortcuts
 shortcuts-group-navigation = Navigation
@@ -1285,3 +1290,4 @@ shortcuts-lock = Lock the vault now
 shortcuts-confirm = Confirm the open form
 shortcuts-close = Close without saving
 shortcuts-help = Show this list
+shortcuts-palette = Open the command palette

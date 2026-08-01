@@ -27,6 +27,7 @@
   import Toast from './components/Toast.svelte'
   import SessionLockWarning from './components/SessionLockWarning.svelte'
   import ShortcutsHelp from './components/ShortcutsHelp.svelte'
+  import CommandPalette from './components/CommandPalette.svelte'
   import LoginPage from './pages/LoginPage.svelte'
   import DashboardPage from './pages/DashboardPage.svelte'
   import FinancesPage from './pages/FinancesPage.svelte'
@@ -34,16 +35,21 @@
   import SettingsPage from './pages/SettingsPage.svelte'
 
   let showShortcuts = $state(false)
+  let showPalette = $state(false)
 
   $effect(() => {
     if (app.isLoggedIn) {
       i18n.load()
       const stopSession = startSessionMonitor()
-      const stopShortcuts = startShortcuts({ openHelp: () => showShortcuts = true })
+      const stopShortcuts = startShortcuts({
+        openHelp: () => showShortcuts = true,
+        openPalette: () => showPalette = true,
+      })
       return () => {
         stopSession()
         stopShortcuts()
         showShortcuts = false
+        showPalette = false
       }
     }
   })
@@ -134,6 +140,12 @@
 <SessionLockWarning />
 
 <ShortcutsHelp bind:show={showShortcuts} onclose={() => showShortcuts = false} />
+
+<CommandPalette
+  bind:show={showPalette}
+  onclose={() => showPalette = false}
+  onopenhelp={() => showShortcuts = true}
+/>
 
 <Toast />
 

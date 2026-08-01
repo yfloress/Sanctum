@@ -1273,6 +1273,11 @@ finances-bulk-restored = {$count} transacciones restauradas
 finances-bulk-restored-partial = Se restauraron {$count} de {$total} transacciones
 confirm-delete-transactions = ¿Eliminar {$count} transacciones?
 
+# ==================== Command Palette ====================
+palette-title = Paleta de comandos
+palette-placeholder = Escribe un comando...
+palette-no-results = Ningún comando coincide
+
 # ==================== Keyboard Shortcuts ====================
 shortcuts-title = Atajos de Teclado
 shortcuts-group-navigation = Navegación
@@ -1285,3 +1290,4 @@ shortcuts-lock = Bloquear la bóveda ahora
 shortcuts-confirm = Confirmar el formulario abierto
 shortcuts-close = Cerrar sin guardar
 shortcuts-help = Mostrar esta lista
+shortcuts-palette = Abrir la paleta de comandos

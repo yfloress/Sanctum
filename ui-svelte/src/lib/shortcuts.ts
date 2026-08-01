@@ -22,14 +22,28 @@ import { lockNow } from './stores/session.svelte'
 import { isDialogOpen } from './actions/dialog'
 import * as settingsApi from './api/settings'
 
+/** One entry in the command palette. */
+export interface PaletteCommand {
+  id: string
+  /** Already translated: the palette matches on what the user can read. */
+  label: string
+  /** Where it belongs, e.g. "Finances". Shown beside the label and matched too. */
+  group: string
+  run: () => void
+}
+
 export interface PageActions {
   newEntry?: () => void
   focusSearch?: () => void
+  /** Extra entries the palette offers while this page is mounted. */
+  commands?: PaletteCommand[]
 }
 
 export interface GlobalActions {
   /** Show the cheat sheet. Without it the shortcuts below are undiscoverable. */
   openHelp?: () => void
+  /** Show the command palette, the searchable form of everything here. */
+  openPalette?: () => void
 }
 
 const PAGES: Page[] = ['dashboard', 'finances', 'crypto', 'settings']
@@ -45,6 +59,16 @@ export function setPageActions(actions: PageActions) {
   }
 }
 
+/** What the mounted page currently offers, for the command palette to list. */
+export function currentPageActions(): PageActions {
+  return pageActions
+}
+
+/** The pages the number keys walk through, in that order. */
+export function shortcutPages(): Page[] {
+  return PAGES
+}
+
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
   if (!el) return false
@@ -56,7 +80,7 @@ function isTyping(target: EventTarget | null): boolean {
   )
 }
 
-async function toggleSidebar() {
+export async function toggleSidebar() {
   const next = !app.sidebarCollapsed
   if (app.settings) app.settings.sidebar_collapsed = next
   await settingsApi.setSidebarCollapsed(next)
@@ -69,8 +93,11 @@ function run(event: KeyboardEvent, action: (() => void) | undefined) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (!app.isLoggedIn || event.altKey || isDialogOpen() || isTyping(event.target)) return
+  if (!app.isLoggedIn || event.altKey || isDialogOpen()) return
 
+  // Modifier combos fire from anywhere, a field included: locking the vault or
+  // reaching for the palette should not mean leaving the form first. Bare keys
+  // below belong to whatever is being typed into.
   if (event.ctrlKey || event.metaKey) {
     if (event.shiftKey) return
     switch (event.key.toLowerCase()) {
@@ -88,9 +115,14 @@ function onKeydown(event: KeyboardEvent) {
       case 'k':
         run(event, pageActions.focusSearch)
         return
+      case 'p':
+        run(event, globalActions.openPalette)
+        return
     }
     return
   }
+
+  if (isTyping(event.target)) return
 
   // Both checked before the Shift guard: "?" is Shift+something everywhere, and
   // on some layouts "/" is Shift+7.

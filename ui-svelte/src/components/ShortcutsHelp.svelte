@@ -43,6 +43,7 @@
     {
       title: i18n.t('shortcuts-group-actions', 'Actions'),
       rows: [
+        { keys: [mod, 'P'], label: i18n.t('shortcuts-palette', 'Open the command palette') },
         { keys: [mod, 'N'], label: i18n.t('shortcuts-new-entry', 'New entry on the current page') },
         { keys: [mod, 'K'], label: i18n.t('shortcuts-search', 'Jump to the search box') },
         { keys: ['/'], label: i18n.t('shortcuts-search', 'Jump to the search box') },
