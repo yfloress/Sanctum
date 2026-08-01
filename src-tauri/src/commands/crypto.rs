@@ -637,6 +637,7 @@ pub fn get_monitored_coin_ids(crypto: State<'_, CryptoService>) -> Result<Vec<St
 pub async fn sync_crypto_data(
     crypto: State<'_, CryptoService>,
     finance: State<'_, FinanceService>,
+    settings: State<'_, SettingsService>,
 ) -> Result<String, AppError> {
     // 1. Fetch and save crypto prices
     let ids = crypto.get_monitored_coin_ids().map_err(AppError::from)?;
@@ -648,13 +649,24 @@ pub async fn sync_crypto_data(
         crypto.save_crypto_prices(prices).map_err(AppError::from)?;
     }
 
-    // 2. Fetch and save CLP rate using backend provider (Mindicador/USDT fallback)
-    match crypto.get_usd_fx_rate("CLP".to_string()).await {
-        Ok(rate) => {
-            let _ = finance.save_exchange_rate("CLP_USD".to_string(), rate);
-        }
-        Err(_) => {
-            // Soft failure for fx rate, not fatal
+    // 2. Refresh the USD rates anything downstream can ask for. Two and only
+    //    two currencies ever come up: the preferred one, which every value on
+    //    screen is converted into, and CLP, which the Chilean tax report always
+    //    reports in whatever the preference happens to be. USD needs no rate.
+    let preferred = settings
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string())
+        .to_uppercase();
+
+    let mut currencies = vec!["CLP".to_string()];
+    if preferred != "USD" && preferred != "CLP" {
+        currencies.push(preferred);
+    }
+
+    for currency in currencies {
+        // Soft failure: a missing rate degrades a badge, it does not fail a sync.
+        if let Ok(rate) = crypto.get_usd_fx_rate(currency.clone()).await {
+            let _ = finance.save_exchange_rate(format!("{currency}_USD"), rate);
         }
     }
 

@@ -219,8 +219,13 @@
 
   // Ticker bar
   let tickerPrices = $state<CryptoAssetPriceDto[]>([])
-  let usdClpRate = $state<number | null>(null)
+  let fxRate = $state<number | null>(null)
   let tickerSyncing = $state(false)
+
+  /** What one dollar buys, in the currency every figure on this page is shown
+      in. Against USD itself the badge would only ever read 1, so it is hidden. */
+  let fxCurrency = $derived((app.settings?.preferred_currency ?? 'USD').toUpperCase())
+  let showFxBadge = $derived(fxCurrency !== 'USD')
 
   // Ticker config (with Coins tab)
   let showTickerConfig = $state(false)
@@ -336,11 +341,15 @@
         .map(id => priceMap.get(id))
         .filter((p): p is CryptoAssetPriceDto => p !== undefined)
     } catch (_) { /* silently fail on initial load */ }
+    if (!showFxBadge) {
+      fxRate = null
+      return
+    }
     try {
-      // Storage key, not a display label: sync_crypto_data writes CLP per USD
-      // under this pair. "USD/CLP" is only what the badge shows.
-      const result = await cryptoApi.loadExchangeRate('CLP_USD')
-      if (result) usdClpRate = result[0]
+      // Storage key, not a display label: the pair is written as units of the
+      // currency per USD. "USD/CLP" is only how the badge reads it out.
+      const result = await cryptoApi.loadExchangeRate(`${fxCurrency}_USD`)
+      fxRate = result ? result[0] : null
     } catch (_) { /* ignore */ }
   }
 
@@ -844,10 +853,12 @@
 <div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
   <!-- Ticker Bar -->
   <div class="ticker-bar">
-    <div class="ticker-fx">
-      <span class="ticker-fx-pair">USD/CLP</span>
-      <span class="ticker-fx-rate">{usdClpRate != null ? formatCurrency(usdClpRate, 'CLP') : '--'}</span>
-    </div>
+    {#if showFxBadge}
+      <div class="ticker-fx">
+        <span class="ticker-fx-pair">USD/{fxCurrency}</span>
+        <span class="ticker-fx-rate">{fxRate != null ? formatCurrency(fxRate, fxCurrency) : '--'}</span>
+      </div>
+    {/if}
     <div class="ticker-prices">
       {#each tickerPrices as coin}
         <div class="ticker-coin">
