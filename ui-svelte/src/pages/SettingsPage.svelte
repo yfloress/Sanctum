@@ -418,11 +418,62 @@
 
   $effect(() => { load() })
 
+  // ── Palette targets ────────────────────────────────────────────────────────
+
+  /** Which setting the palette asked for, until it has been scrolled to. */
+  let revealed = $state<string | null>(null)
+  let revealTimer = 0
+
+  /**
+   * Marks a setting as the one to go to. The scrolling itself waits for the
+   * effect below, because the row may not exist yet: arriving from another page
+   * the whole section is still behind the `app.settings` guard.
+   */
+  function reveal(target: string) {
+    revealed = target
+  }
+
+  $effect(() => {
+    const target = revealed
+    // Read so the effect runs again once the page has something to scroll to.
+    const ready = app.settings !== null
+    if (!target || !ready) return
+
+    const frame = requestAnimationFrame(() => {
+      document
+        .getElementById(`setting-${target}`)
+        ?.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    })
+
+    // Long enough to catch the eye after the scroll settles, short enough that
+    // the page is not left permanently marked.
+    clearTimeout(revealTimer)
+    revealTimer = window.setTimeout(() => { revealed = null }, 2400)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(revealTimer)
+    }
+  })
+
+  function prefersReducedMotion(): boolean {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+
   /** Bodies for the palette commands declared for this page in `lib/commands.ts`. */
   function commandHandlers(): Record<string, () => void> {
     return {
       'set-export-vault': () => void exportVault(),
       'set-export-csv': () => void exportTransactionsCsv(),
+      'set-password': () => reveal('password'),
+      'set-timeout': () => reveal('timeout'),
+      'set-currency': () => reveal('currency'),
+      'set-language': () => reveal('language'),
+      'set-background': () => reveal('background'),
+      'set-auto-fetch': () => reveal('auto-fetch'),
+      'set-proxy': () => reveal('proxy'),
+      'set-import': () => reveal('import'),
+      'set-reset': () => reveal('reset'),
     }
   }
 
@@ -447,7 +498,7 @@
           <span class="toggle-knob"></span>
         </button>
       </div>
-      <div class="setting-row">
+      <div class="setting-row" id="setting-background" class:setting-highlight={revealed === 'background'}>
         <div>
           <span class="setting-label">{i18n.t('settings-background', 'Background')}</span>
           <span class="setting-desc">{i18n.t('settings-background-desc', 'Choose the backdrop design')}</span>
@@ -465,7 +516,7 @@
     <!-- Regional -->
     <section class="section">
       <h3>{i18n.t('settings-regional', 'Regional')}</h3>
-      <div class="setting-row">
+      <div class="setting-row" id="setting-currency" class:setting-highlight={revealed === 'currency'}>
         <span class="setting-label">{i18n.t('settings-preferred-currency', 'Preferred Currency')}</span>
         <select value={app.settings.preferred_currency} onchange={changeCurrency}>
           {#each ['USD', 'CLP', 'EUR', 'GBP', 'BRL', 'MXN', 'ARS', 'CAD', 'AUD', 'CHF', 'JPY'] as cur}
@@ -473,7 +524,7 @@
           {/each}
         </select>
       </div>
-      <div class="setting-row">
+      <div class="setting-row" id="setting-language" class:setting-highlight={revealed === 'language'}>
         <span class="setting-label">{i18n.t('settings-language', 'Language')}</span>
         <select value={app.settings.preferred_language} onchange={changeLanguage}>
           <option value="en">English</option>
@@ -485,7 +536,7 @@
     <!-- Security -->
     <section class="section">
       <h3>{i18n.t('settings-security', 'Security')}</h3>
-      <div class="setting-row">
+      <div class="setting-row" id="setting-timeout" class:setting-highlight={revealed === 'timeout'}>
         <div>
           <span class="setting-label">{i18n.t('settings-session-timeout', 'Session Timeout')}</span>
           <span class="setting-desc">{i18n.t('settings-session-timeout-desc', 'Auto-lock after inactivity')}</span>
@@ -498,7 +549,7 @@
         </select>
       </div>
 
-      <div class="setting-row">
+      <div class="setting-row" id="setting-password" class:setting-highlight={revealed === 'password'}>
         <div>
           <span class="setting-label">{i18n.t('settings-change-password', 'Master Password')}</span>
           <span class="setting-desc">{i18n.t('settings-change-password-desc', 'Re-encrypts the whole vault with a new password')}</span>
@@ -603,7 +654,7 @@
     </section>
 
     <!-- Data Import -->
-    <section class="section">
+    <section class="section" id="setting-import" class:setting-highlight={revealed === 'import'}>
       <h3>{i18n.t('settings-data-import', 'Data Import')}</h3>
 
       {#if importStep === 'idle'}
@@ -760,7 +811,7 @@
     <!-- Data Sync -->
     <section class="section">
       <h3>{i18n.t('settings-data-sync', 'Data Sync')}</h3>
-      <div class="setting-row">
+      <div class="setting-row" id="setting-auto-fetch" class:setting-highlight={revealed === 'auto-fetch'}>
         <div>
           <span class="setting-label">{i18n.t('settings-auto-fetch', 'Auto-fetch Prices')}</span>
           <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Automatically fetch crypto prices on sync')}</span>
@@ -769,7 +820,7 @@
           <span class="toggle-knob"></span>
         </button>
       </div>
-      <div class="setting-row">
+      <div class="setting-row" id="setting-proxy" class:setting-highlight={revealed === 'proxy'}>
         <div>
           <span class="setting-label">{i18n.t('settings-use-proxy', 'Use Proxy')}</span>
           <span class="setting-desc">{i18n.t('settings-use-proxy-desc', 'Route API calls through a proxy')}</span>
@@ -813,7 +864,7 @@
     <!-- Danger Zone -->
     <section class="section danger-section">
       <h3>{i18n.t('settings-reset-section', 'Reset')}</h3>
-      <div class="setting-row">
+      <div class="setting-row" id="setting-reset" class:setting-highlight={revealed === 'reset'}>
         <div>
           <span class="setting-label">{i18n.t('settings-reset-all', 'Reset All Settings')}</span>
           <span class="setting-desc">{i18n.t('settings-reset-all-desc', 'Restore default values for all settings')}</span>
@@ -878,6 +929,24 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; gap: 16px;
   }
+  /* Where a palette command just landed. An outline rather than a border or a
+     shadow: it is drawn outside the box and takes up no space, so nothing on
+     the page shifts when it appears. It fades on its own, because a page left
+     permanently marked stops meaning anything. */
+  .setting-highlight {
+    border-radius: var(--radius-sm);
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    animation: setting-flash 2.4s ease-out forwards;
+  }
+  @keyframes setting-flash {
+    0%, 60% { outline-color: var(--accent); }
+    100% { outline-color: transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .setting-highlight { animation: none; }
+  }
+
   .setting-label { font-size: 0.9rem; color: var(--text-secondary); display: block; }
   .setting-desc { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-top: 2px; }
   .exchange-help { margin-top: 4px; font-size: 0.8rem; }

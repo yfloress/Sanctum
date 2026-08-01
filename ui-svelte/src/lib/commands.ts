@@ -48,6 +48,8 @@ export const PAGE_COMMANDS: CommandSpec[] = [
   { id: 'crypto-sync', key: 'crypto-sync-prices', fallback: 'Sync prices', page: 'crypto' },
   { id: 'crypto-ticker', key: 'crypto-configure-ticker', fallback: 'Configure ticker', page: 'crypto' },
 
+  // These two do the thing rather than point at it: walking someone to a button
+  // so they can press it themselves is not an improvement over pressing it.
   { id: 'set-export-vault', key: 'settings-export-vault', fallback: 'Export Vault', page: 'settings' },
   {
     id: 'set-export-csv',
@@ -55,4 +57,21 @@ export const PAGE_COMMANDS: CommandSpec[] = [
     fallback: 'Export Transactions',
     page: 'settings',
   },
+
+  // The rest scroll to the setting and flash it. Settings is one long page, so
+  // arriving at the top of it is barely better than not going at all.
+  { id: 'set-password', key: 'settings-change-password', fallback: 'Master Password', page: 'settings' },
+  { id: 'set-timeout', key: 'settings-session-timeout', fallback: 'Session Timeout', page: 'settings' },
+  {
+    id: 'set-currency',
+    key: 'settings-preferred-currency',
+    fallback: 'Preferred Currency',
+    page: 'settings',
+  },
+  { id: 'set-language', key: 'settings-language', fallback: 'Language', page: 'settings' },
+  { id: 'set-background', key: 'settings-background', fallback: 'Background', page: 'settings' },
+  { id: 'set-auto-fetch', key: 'settings-auto-fetch', fallback: 'Auto-fetch Prices', page: 'settings' },
+  { id: 'set-proxy', key: 'settings-use-proxy', fallback: 'Use Proxy', page: 'settings' },
+  { id: 'set-import', key: 'settings-data-import', fallback: 'Data Import', page: 'settings' },
+  { id: 'set-reset', key: 'settings-reset-all', fallback: 'Reset All Settings', page: 'settings' },
 ]
