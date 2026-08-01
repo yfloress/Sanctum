@@ -20,7 +20,7 @@
 //! CRUD operations for crypto transactions.
 
 use crate::db::{Database, DbError};
-use crate::models::{CryptoTransaction, CryptoTxFilter};
+use crate::models::{CryptoTransaction, CryptoTransactionUpdate, CryptoTxFilter};
 use rusqlite::{Error as RusqliteError, Row, params};
 
 /// Escapes LIKE wildcards so searching for `50%` does not match every row.
@@ -274,21 +274,24 @@ impl Database {
     }
 
     /// Updates editable fields of a crypto transaction
-    #[allow(clippy::too_many_arguments)]
     pub fn update_crypto_transaction_fields(
         &self,
-        id: &str,
-        amount: f64,
-        price_per_coin: Option<f64>,
-        fee: Option<f64>,
-        fee_coin_id: Option<&str>,
-        fee_amount: Option<f64>,
-        date: &str,
-        notes: Option<&str>,
-        subtype: Option<&str>,
-        override_proceeds: Option<f64>,
-        override_cost_basis: Option<f64>,
+        update: CryptoTransactionUpdate<'_>,
     ) -> Result<(), DbError> {
+        let CryptoTransactionUpdate {
+            id,
+            amount,
+            price_per_coin,
+            fee,
+            fee_coin_id,
+            fee_amount,
+            date,
+            notes,
+            subtype,
+            override_proceeds,
+            override_cost_basis,
+        } = update;
+
         self.write(|conn| {
             conn.execute(
                 "UPDATE crypto_transactions

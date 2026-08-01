@@ -30,7 +30,7 @@ use super::tax::{
 };
 use crate::core::csv_escape;
 use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
-use crate::models::CryptoTransaction;
+use crate::models::{CryptoTransaction, CryptoTransactionUpdate};
 use chrono::Local;
 
 impl CryptoService {
@@ -281,19 +281,19 @@ impl CryptoService {
                 return Ok(false);
             }
 
-            db.update_crypto_transaction_fields(
-                &existing.id,
-                existing.amount,
-                next_price,
-                next_fee,
-                existing.fee_coin_id.as_deref(),
-                existing.fee_amount,
-                &existing.date,
-                existing.notes.as_deref(),
-                existing.subtype.as_deref(),
-                next_override_proceeds,
-                existing.override_cost_basis,
-            )
+            db.update_crypto_transaction_fields(CryptoTransactionUpdate {
+                id: &existing.id,
+                amount: existing.amount,
+                price_per_coin: next_price,
+                fee: next_fee,
+                fee_coin_id: existing.fee_coin_id.as_deref(),
+                fee_amount: existing.fee_amount,
+                date: &existing.date,
+                notes: existing.notes.as_deref(),
+                subtype: existing.subtype.as_deref(),
+                override_proceeds: next_override_proceeds,
+                override_cost_basis: existing.override_cost_basis,
+            })
             .map_err(CryptoError::Database)?;
 
             Ok(true)

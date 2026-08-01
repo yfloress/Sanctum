@@ -19,7 +19,9 @@
 //!
 //! Handles adding, updating, and deleting crypto transactions including transfers and swaps.
 
-use crate::models::{CryptoTransaction, CryptoTransactionType, CryptoTxFilter};
+use crate::models::{
+    CryptoTransaction, CryptoTransactionType, CryptoTransactionUpdate, CryptoTxFilter,
+};
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::Utc;
 use uuid::Uuid;
@@ -736,19 +738,19 @@ impl CryptoService {
                 }
             }
 
-            db.update_crypto_transaction_fields(
-                &validated_id,
+            db.update_crypto_transaction_fields(CryptoTransactionUpdate {
+                id: &validated_id,
                 amount,
-                price,
+                price_per_coin: price,
                 fee,
-                fee_coin_id.as_deref(),
+                fee_coin_id: fee_coin_id.as_deref(),
                 fee_amount,
-                &date,
-                notes.as_deref(),
-                subtype.as_deref(),
+                date: &date,
+                notes: notes.as_deref(),
+                subtype: subtype.as_deref(),
                 override_proceeds,
                 override_cost_basis,
-            )?;
+            })?;
 
             Ok(())
         })

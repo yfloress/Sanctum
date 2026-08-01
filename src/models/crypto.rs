@@ -182,6 +182,27 @@ pub struct CryptoTransaction {
     pub related_tx_id: Option<String>,
 }
 
+/// The editable fields of a crypto transaction, as one value.
+///
+/// Borrowed because the caller already owns a [`CryptoTransaction`] or the
+/// values it just computed. Grouping them matters more here than elsewhere:
+/// `override_proceeds` and `override_cost_basis` are adjacent `Option<f64>`,
+/// and swapping them turns a capital gain into a loss with nothing to catch it.
+#[derive(Debug, Clone, Copy)]
+pub struct CryptoTransactionUpdate<'a> {
+    pub id: &'a str,
+    pub amount: f64,
+    pub price_per_coin: Option<f64>,
+    pub fee: Option<f64>,
+    pub fee_coin_id: Option<&'a str>,
+    pub fee_amount: Option<f64>,
+    pub date: &'a str,
+    pub notes: Option<&'a str>,
+    pub subtype: Option<&'a str>,
+    pub override_proceeds: Option<f64>,
+    pub override_cost_basis: Option<f64>,
+}
+
 impl CryptoTransaction {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
