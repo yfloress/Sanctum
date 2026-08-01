@@ -1192,6 +1192,7 @@ session-warning-title = La bóveda está por bloquearse
 session-warning-body = Se bloqueará en {$seconds} s por inactividad.
 session-warning-stay = Seguir abierta
 session-warning-lock-now = Bloquear ahora
+session-locked = Bóveda bloqueada
 
 # ==================== Master Password ====================
 settings-change-password = Contraseña Maestra

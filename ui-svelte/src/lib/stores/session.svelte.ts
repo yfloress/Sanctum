@@ -20,7 +20,9 @@
 // takes whichever runs out first, and interaction refreshes both.
 
 import { app } from './app.svelte'
+import { i18n } from './i18n.svelte'
 import { errorKind } from '../errors'
+import { setSessionLostHandler } from '../api/ipc'
 import * as vaultApi from '../api/vault'
 import * as settingsApi from '../api/settings'
 
@@ -83,7 +85,12 @@ function resetActivity() {
   void keepBackendAlive(nearExpiry)
 }
 
+/** Guards against re-entry: locking itself talks to a session that may be dead. */
+let locking = false
+
 async function lock() {
+  if (locking || !app.isLoggedIn) return
+  locking = true
   session.warningSecs = null
   try {
     await vaultApi.lockVault()
@@ -91,6 +98,8 @@ async function lock() {
     // Already locked or no vault open — logging out is still correct.
   }
   app.logout()
+  app.showToast(i18n.t('session-locked', 'Vault locked'))
+  locking = false
 }
 
 async function tick() {
@@ -150,6 +159,12 @@ export function startSessionMonitor() {
   const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const
   events.forEach(e => document.addEventListener(e, resetActivity, { passive: true }))
 
+  // The countdown below cannot be the only way out. Interaction resets the
+  // local clock, so a user who comes back to an already-dead session pushes the
+  // countdown out of the window where it polls the backend at all, and the shell
+  // stays up over a vault that refuses everything. Any refused command locks.
+  setSessionLostHandler(() => void lock())
+
   lastActivity = Date.now()
   lastTouch = Date.now()
   lastPoll = 0
@@ -170,6 +185,7 @@ export function startSessionMonitor() {
 
   return () => {
     stopped = true
+    setSessionLostHandler(null)
     events.forEach(e => document.removeEventListener(e, resetActivity))
     if (timer) {
       clearTimeout(timer)

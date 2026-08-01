@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from './ipc'
 import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../types'
 
 export async function fetchBalance(): Promise<BalanceOverview> {

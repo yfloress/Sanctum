@@ -1192,6 +1192,7 @@ session-warning-title = Vault about to lock
 session-warning-body = Locking in {$seconds}s due to inactivity.
 session-warning-stay = Stay unlocked
 session-warning-lock-now = Lock now
+session-locked = Vault locked
 
 # ==================== Master Password ====================
 settings-change-password = Master Password
