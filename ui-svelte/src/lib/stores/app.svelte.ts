@@ -80,10 +80,24 @@ class AppState {
   logout() {
     this.isLoggedIn = false
     this.activePage = 'dashboard'
+    this.pendingCommand = null
   }
 
   navigate(page: Page) {
     this.activePage = page
+  }
+
+  /**
+   * A palette command whose page was not on screen when it ran. The page
+   * claims it as it mounts and clears it; ids nobody claims are dropped at
+   * logout rather than firing at the next unlock.
+   */
+  pendingCommand = $state<string | null>(null)
+
+  /** Runs a page's command from anywhere, navigating there first. */
+  runPageCommand(page: Page, id: string) {
+    this.navigate(page)
+    this.pendingCommand = id
   }
 
   toggleHideBalances() {

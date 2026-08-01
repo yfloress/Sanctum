@@ -20,7 +20,7 @@
   import { i18n } from '../lib/stores/i18n.svelte'
   import { formatCurrency, mask } from '../lib/currency'
   import { dialog } from '../lib/actions/dialog'
-  import { setPageActions, type PaletteCommand } from '../lib/shortcuts'
+  import { setPageActions, consumePendingCommand } from '../lib/shortcuts'
   import * as cryptoApi from '../lib/api/crypto'
   import { save } from '@tauri-apps/plugin-dialog'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
@@ -860,42 +860,20 @@
     return `/assets/crypto-icons/${normalized}.svg`
   }
 
-  /** Palette entries. Rebuilt with the effect below so they follow the language. */
-  function paletteCommands(): PaletteCommand[] {
-    const group = i18n.t('nav-crypto', 'Crypto')
-    const tabs: [Tab, string, string][] = [
-      ['portfolio', 'crypto-tab-portfolio', 'Portfolio'],
-      ['wallets', 'crypto-tab-wallets', 'Wallets'],
-      ['activity', 'crypto-tab-activity', 'Activity'],
-      ['tax', 'crypto-tab-tax', 'Tax'],
-    ]
-    return [
-      ...tabs.map(([tab, key, fallback]) => ({
-        id: `crypto-tab-${tab}`,
-        label: i18n.t(key, fallback),
-        group,
-        run: () => { activeTab = tab },
-      })),
-      {
-        id: 'crypto-add-wallet',
-        label: i18n.t('crypto-add-wallet', 'Add Wallet'),
-        group,
-        run: () => { showAddWallet = true; walletName = '' },
-      },
-      {
-        id: 'crypto-sync',
-        label: i18n.t('crypto-sync-prices', 'Sync prices'),
-        group,
-        run: () => void syncTickerPrices(),
-      },
-      {
-        id: 'crypto-ticker-config',
-        label: i18n.t('crypto-configure-ticker', 'Configure ticker'),
-        group,
-        run: () => void openTickerConfig(),
-      },
-    ]
+  /** Bodies for the palette commands declared for this page in `lib/commands.ts`. */
+  function commandHandlers(): Record<string, () => void> {
+    return {
+      'crypto-tab-portfolio': () => { activeTab = 'portfolio' },
+      'crypto-tab-wallets': () => { activeTab = 'wallets' },
+      'crypto-tab-activity': () => { activeTab = 'activity' },
+      'crypto-tab-tax': () => { activeTab = 'tax' },
+      'crypto-add-wallet': () => { showAddWallet = true; walletName = '' },
+      'crypto-sync': () => void syncTickerPrices(),
+      'crypto-ticker': () => void openTickerConfig(),
+    }
   }
+
+  $effect(() => consumePendingCommand(commandHandlers()))
 
   $effect(() => {
     app.settings?.preferred_currency
@@ -917,7 +895,7 @@
         activeTab = 'activity'
         requestAnimationFrame(() => txSearchInput?.focus())
       },
-      commands: paletteCommands(),
+      handlers: commandHandlers(),
     })
   )
 </script>

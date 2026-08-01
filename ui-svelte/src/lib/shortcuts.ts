@@ -22,21 +22,15 @@ import { lockNow } from './stores/session.svelte'
 import { isDialogOpen } from './actions/dialog'
 import * as settingsApi from './api/settings'
 
-/** One entry in the command palette. */
-export interface PaletteCommand {
-  id: string
-  /** Already translated: the palette matches on what the user can read. */
-  label: string
-  /** Where it belongs, e.g. "Finances". Shown beside the label and matched too. */
-  group: string
-  run: () => void
-}
-
 export interface PageActions {
   newEntry?: () => void
   focusSearch?: () => void
-  /** Extra entries the palette offers while this page is mounted. */
-  commands?: PaletteCommand[]
+  /**
+   * Bodies for the page's own palette commands, keyed by the id declared in
+   * `lib/commands.ts`. Only exist while the page is mounted, which is why the
+   * names live there and not here.
+   */
+  handlers?: Record<string, () => void>
 }
 
 export interface GlobalActions {
@@ -64,6 +58,20 @@ export function currentPageActions(): PageActions {
   return pageActions
 }
 
+/**
+ * Runs the palette command left waiting for this page, if the id is one of
+ * its own. Call it from an `$effect` so the read of `app.pendingCommand` is
+ * tracked; ids belonging to another page are left alone for it to claim.
+ */
+export function consumePendingCommand(handlers: Record<string, () => void>) {
+  const id = app.pendingCommand
+  if (!id) return
+  const handler = handlers[id]
+  if (!handler) return
+  app.pendingCommand = null
+  handler()
+}
+
 /** The pages the number keys walk through, in that order. */
 export function shortcutPages(): Page[] {
   return PAGES
@@ -84,6 +92,13 @@ export async function toggleSidebar() {
   const next = !app.sidebarCollapsed
   if (app.settings) app.settings.sidebar_collapsed = next
   await settingsApi.setSidebarCollapsed(next)
+}
+
+export async function toggleDarkMode() {
+  if (!app.settings) return
+  const next = !app.settings.dark_mode
+  app.settings.dark_mode = next
+  await settingsApi.setDarkMode(next)
 }
 
 function run(event: KeyboardEvent, action: (() => void) | undefined) {

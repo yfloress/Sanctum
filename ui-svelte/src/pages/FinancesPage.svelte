@@ -25,7 +25,7 @@
   } from '../lib/types'
   import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
   import { mask } from '../lib/currency'
-  import { setPageActions, type PaletteCommand } from '../lib/shortcuts'
+  import { setPageActions, consumePendingCommand } from '../lib/shortcuts'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
@@ -612,35 +612,16 @@
     if (activeTab === 'settings') loadArchivedAccounts()
   })
 
-  /** Palette entries. Rebuilt with the effect below so they follow the language. */
-  function paletteCommands(): PaletteCommand[] {
-    const group = i18n.t('nav-finances', 'Finances')
-    const tabs: [Tab, string, string][] = [
-      ['overview', 'finances-tab-overview', 'Overview'],
-      ['activity', 'finances-tab-activity', 'Activity'],
-      ['accounts', 'finances-tab-accounts', 'Accounts'],
-      ['settings', 'finances-tab-settings', 'Settings'],
-    ]
-    return [
-      ...tabs.map(([tab, key, fallback]) => ({
-        id: `fin-tab-${tab}`,
-        label: i18n.t(key, fallback),
-        group,
-        run: () => { activeTab = tab },
-      })),
-      {
-        id: 'fin-new-account',
-        label: i18n.t('finances-new-account', 'New Account'),
-        group,
-        run: openAddAccount,
-      },
-      {
-        id: 'fin-transfer',
-        label: i18n.t('finances-transfer', 'Transfer'),
-        group,
-        run: openTransfer,
-      },
-    ]
+  /** Bodies for the palette commands declared for this page in `lib/commands.ts`. */
+  function commandHandlers(): Record<string, () => void> {
+    return {
+      'fin-tab-overview': () => { activeTab = 'overview' },
+      'fin-tab-activity': () => { activeTab = 'activity' },
+      'fin-tab-accounts': () => { activeTab = 'accounts' },
+      'fin-tab-settings': () => { activeTab = 'settings' },
+      'fin-new-account': openAddAccount,
+      'fin-transfer': openTransfer,
+    }
   }
 
   $effect(() =>
@@ -650,9 +631,11 @@
         activeTab = 'activity'
         requestAnimationFrame(() => searchInput?.focus())
       },
-      commands: paletteCommands(),
+      handlers: commandHandlers(),
     })
   )
+
+  $effect(() => consumePendingCommand(commandHandlers()))
 </script>
 
 <div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || !!selectedAccount}>

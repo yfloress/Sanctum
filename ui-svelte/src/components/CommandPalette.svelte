@@ -15,13 +15,12 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { app } from '../lib/stores/app.svelte'
+  import { app, type Page } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import { lockNow } from '../lib/stores/session.svelte'
   import { dialog } from '../lib/actions/dialog'
-  import {
-    currentPageActions, shortcutPages, toggleSidebar, type PaletteCommand,
-  } from '../lib/shortcuts'
+  import { currentPageActions, shortcutPages, toggleSidebar, toggleDarkMode } from '../lib/shortcuts'
+  import { PAGE_COMMANDS } from '../lib/commands'
 
   interface Props {
     show: boolean
@@ -32,37 +31,68 @@
 
   let { show = $bindable(false), onclose, onopenhelp }: Props = $props()
 
+  interface Entry {
+    id: string
+    label: string
+    group: string
+    /** Printed on the right. Already resolved to this keyboard's modifier. */
+    keys?: string[]
+    run: () => void
+  }
+
   let query = $state('')
   let activeIndex = $state(0)
   let listEl = $state<HTMLDivElement | undefined>()
+  // Rebuilt on every open rather than derived: what the current page offers is
+  // plain module state, so nothing would tell a derived value it went stale.
+  let commands = $state<Entry[]>([])
 
-  const PAGE_LABELS: Record<string, [string, string]> = {
+  const mod = navigator.userAgent.includes('Mac') ? 'Cmd' : 'Ctrl'
+
+  const PAGE_LABELS: Record<Page, [string, string]> = {
     dashboard: ['nav-dashboard', 'Dashboard'],
     finances: ['nav-finances', 'Finances'],
     crypto: ['nav-crypto', 'Crypto'],
     settings: ['nav-settings', 'Settings'],
   }
 
-  let commands = $derived.by<PaletteCommand[]>(() => {
+  function pageLabel(page: Page): string {
+    const [key, fallback] = PAGE_LABELS[page]
+    return i18n.t(key, fallback)
+  }
+
+  function buildCommands(): Entry[] {
     const navigation = i18n.t('shortcuts-group-navigation', 'Navigation')
     const actions = i18n.t('shortcuts-group-actions', 'Actions')
     const page = currentPageActions()
 
-    const list: PaletteCommand[] = shortcutPages().map(target => {
-      const [key, fallback] = PAGE_LABELS[target] ?? [target, target]
-      return {
-        id: `nav-${target}`,
-        label: i18n.t(key, fallback),
-        group: navigation,
-        run: () => app.navigate(target),
-      }
-    })
+    const list: Entry[] = shortcutPages().map((target, index) => ({
+      id: `nav-${target}`,
+      label: pageLabel(target),
+      group: navigation,
+      keys: [String(index + 1)],
+      run: () => app.navigate(target),
+    }))
 
+    // Every page's own commands, wherever we happen to be standing: the palette
+    // navigates there and the page runs the body once it is on screen.
+    list.push(
+      ...PAGE_COMMANDS.map(spec => ({
+        id: spec.id,
+        label: i18n.t(spec.key, spec.fallback),
+        group: pageLabel(spec.page),
+        run: () => app.runPageCommand(spec.page, spec.id),
+      })),
+    )
+
+    // These two are a capability of whatever is mounted, not a named command,
+    // so they only appear where they mean something.
     if (page.newEntry) {
       list.push({
         id: 'new-entry',
         label: i18n.t('shortcuts-new-entry', 'New entry on the current page'),
         group: actions,
+        keys: [mod, 'N'],
         run: page.newEntry,
       })
     }
@@ -71,37 +101,51 @@
         id: 'focus-search',
         label: i18n.t('shortcuts-search', 'Jump to the search box'),
         group: actions,
+        keys: [mod, 'K'],
         run: page.focusSearch,
       })
     }
-
-    // What the page itself registered goes above the shell-wide entries: on a
-    // page with tabs those are the things actually being looked for.
-    list.push(...(page.commands ?? []))
 
     list.push(
       {
         id: 'toggle-sidebar',
         label: i18n.t('shortcuts-toggle-sidebar', 'Collapse or expand the sidebar'),
         group: actions,
+        keys: [mod, 'B'],
         run: () => void toggleSidebar(),
       },
       {
-        id: 'help',
-        label: i18n.t('shortcuts-help', 'Show this list'),
+        id: 'dark-mode',
+        label: i18n.t('settings-dark-mode', 'Dark Mode'),
         group: actions,
+        run: () => void toggleDarkMode(),
+      },
+      {
+        id: 'hide-balances',
+        label: app.hideBalances
+          ? i18n.t('nav-show-balances', 'Show Balances')
+          : i18n.t('nav-hide-balances', 'Hide Balances'),
+        group: actions,
+        run: () => app.toggleHideBalances(),
+      },
+      {
+        id: 'help',
+        label: i18n.t('shortcuts-title', 'Keyboard Shortcuts'),
+        group: actions,
+        keys: ['?'],
         run: onopenhelp,
       },
       {
         id: 'lock',
         label: i18n.t('shortcuts-lock', 'Lock the vault now'),
         group: actions,
+        keys: [mod, 'L'],
         run: lockNow,
       },
     )
 
     return list
-  })
+  }
 
   /**
    * Folds case and strips accents, so "credito" finds "Crédito". The app runs
@@ -130,6 +174,7 @@
     if (show) {
       query = ''
       activeIndex = 0
+      commands = buildCommands()
     }
   })
 
@@ -143,7 +188,7 @@
     activeIndex = (activeIndex + delta + matches.length) % matches.length
   }
 
-  function runCommand(cmd: PaletteCommand) {
+  function runCommand(cmd: Entry) {
     close()
     // Deferred a frame: closing hands focus back to whatever held it before the
     // palette opened, and that has to land before the command opens anything of
@@ -193,6 +238,14 @@
           >
             <span class="palette-label">{cmd.label}</span>
             <span class="palette-group">{cmd.group}</span>
+            {#if cmd.keys}
+              <span class="palette-keys">
+                {#each cmd.keys as key, position}
+                  {#if position > 0}<span class="palette-plus">+</span>{/if}
+                  <kbd>{key}</kbd>
+                {/each}
+              </span>
+            {/if}
           </button>
         {/each}
         {#if matches.length === 0}
@@ -254,6 +307,25 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     white-space: nowrap;
+  }
+  .palette-keys {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .palette-plus { color: var(--text-tertiary); font-size: 0.65rem; }
+  .palette-keys kbd {
+    display: inline-block;
+    min-width: 18px;
+    padding: 1px 5px;
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    background: var(--glass-active);
+    color: var(--text-tertiary);
+    font-family: inherit;
+    font-size: 0.68rem;
+    text-align: center;
   }
   .palette-empty {
     margin: 0;

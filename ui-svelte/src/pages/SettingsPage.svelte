@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { errorMessage } from '../lib/errors'
+  import { setPageActions, consumePendingCommand } from '../lib/shortcuts'
   import { app, type BackgroundFx } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as settingsApi from '../lib/api/settings'
@@ -416,6 +417,18 @@
   }
 
   $effect(() => { load() })
+
+  /** Bodies for the palette commands declared for this page in `lib/commands.ts`. */
+  function commandHandlers(): Record<string, () => void> {
+    return {
+      'set-export-vault': () => void exportVault(),
+      'set-export-csv': () => void exportTransactionsCsv(),
+    }
+  }
+
+  $effect(() => setPageActions({ handlers: commandHandlers() }))
+
+  $effect(() => consumePendingCommand(commandHandlers()))
 </script>
 
 <div class="page">
