@@ -1026,3 +1026,91 @@ fn changing_the_master_password_rejects_reusing_the_same_one() {
         "reusing the current password must be refused"
     );
 }
+
+// ==================== Auto-lock ====================
+
+/// Builds a vault plus the raw handle, so a test can reach in and age the
+/// session the way the clock would.
+fn setup_with_handle() -> (TestContext, Arc<RwLock<Option<Database>>>) {
+    let base_dir = std::env::temp_dir().join(format!("sanctum-autolock-test-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&base_dir).expect("create test dir");
+    let db: Arc<RwLock<Option<Database>>> = Arc::new(RwLock::new(None));
+    let vault = VaultManager::new(base_dir.clone(), db.clone());
+    let finance = FinanceService::new(db.clone());
+    vault
+        .create_db("test-password-123".to_string(), None)
+        .expect("create vault");
+    (
+        TestContext {
+            vault,
+            finance,
+            test_dir: base_dir,
+        },
+        db,
+    )
+}
+
+fn set_timeout(db: &Arc<RwLock<Option<Database>>>, secs: i64) {
+    db.write()
+        .expect("write lock")
+        .as_mut()
+        .expect("vault open")
+        .set_session_timeout(secs);
+}
+
+#[test]
+fn auto_lock_drops_the_vault_once_the_session_expires() {
+    let (ctx, db) = setup_with_handle();
+    set_timeout(&db, 0);
+
+    // The check compares whole seconds, so the session has to actually age.
+    std::thread::sleep(std::time::Duration::from_millis(1_100));
+
+    assert!(
+        ctx.vault.lock_if_session_expired(),
+        "an expired session must be closed without anyone asking"
+    );
+    assert!(
+        db.read().expect("read lock").is_none(),
+        "the handle must be gone, not merely refusing commands: it is what holds the key"
+    );
+}
+
+#[test]
+fn auto_lock_leaves_a_live_session_alone() {
+    let (ctx, db) = setup_with_handle();
+    set_timeout(&db, 3_600);
+
+    assert!(
+        !ctx.vault.lock_if_session_expired(),
+        "a session with time left must survive"
+    );
+    assert!(db.read().expect("read lock").is_some(), "vault still open");
+}
+
+#[test]
+fn auto_lock_honours_a_disabled_timeout() {
+    let (ctx, db) = setup_with_handle();
+    // Negative means the user turned auto-lock off; the watchdog must not
+    // override that with a lock of its own.
+    set_timeout(&db, -1);
+    std::thread::sleep(std::time::Duration::from_millis(1_100));
+
+    assert!(
+        !ctx.vault.lock_if_session_expired(),
+        "a disabled timeout must never expire"
+    );
+    assert!(db.read().expect("read lock").is_some(), "vault still open");
+}
+
+#[test]
+fn auto_lock_on_a_closed_vault_is_a_no_op() {
+    let (ctx, db) = setup_with_handle();
+    ctx.vault.close_db().expect("close");
+
+    assert!(
+        !ctx.vault.lock_if_session_expired(),
+        "nothing to close, and nothing to report"
+    );
+    assert!(db.read().expect("read lock").is_none(), "still closed");
+}

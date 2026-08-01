@@ -43,6 +43,7 @@ use std::fs::{self, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
 // ==================== Error Types ====================
 
@@ -646,6 +647,64 @@ impl VaultManager {
         log_security_event(SecurityEvent::VaultClosed, None);
 
         Ok("Vault closed successfully".to_string())
+    }
+
+    /// Drops the vault if its session has run out. Returns whether it did.
+    ///
+    /// The expiry check alone only makes commands fail; it leaves the open
+    /// SQLCipher connections, and so the derived key, resident in this process.
+    /// Waiting for the frontend to ask for a lock means an app nobody comes back
+    /// to never releases it, which is the case auto-lock exists for.
+    ///
+    /// Check and close happen under one write lock. Splitting them would leave a
+    /// gap in which a command refreshes the session and then has its vault pulled
+    /// out from under it.
+    pub fn lock_if_session_expired(&self) -> bool {
+        Self::lock_expired(&self.db)
+    }
+
+    /// Runs [`Self::lock_if_session_expired`] on a bare handle, so the watchdog
+    /// thread can own a clone of it rather than the whole manager.
+    fn lock_expired(db: &Arc<RwLock<Option<Database>>>) -> bool {
+        let Ok(mut db_lock) = db.write() else {
+            // A poisoned lock means a thread panicked mid-write. The handle is
+            // unreachable from here, and forcing it would race that unwind.
+            return false;
+        };
+
+        let Some(db) = db_lock.as_ref() else {
+            return false;
+        };
+
+        // Matched rather than `is_err`: only an expiry may drop the vault. Any
+        // other failure has to leave it alone instead of guessing.
+        if !matches!(
+            db.check_session_timeout_readonly(),
+            Err(DbError::SessionExpired)
+        ) {
+            return false;
+        }
+
+        *db_lock = None;
+        log_security_event(SecurityEvent::VaultClosed, Some("session_expired"));
+        true
+    }
+
+    /// Starts the watchdog that closes an idle vault without being asked.
+    ///
+    /// `interval` is the granularity of how long the key can outlive the
+    /// session, so it is the only thing this trades: shorter holds the write
+    /// lock more often, longer keeps the key resident for longer. The thread is
+    /// detached and runs for the life of the process, which is the life of the
+    /// data it is protecting.
+    pub fn start_auto_lock(&self, interval: Duration) {
+        let db = Arc::clone(&self.db);
+        std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(interval);
+                Self::lock_expired(&db);
+            }
+        });
     }
 
     /// Changes the vault's master password, re-encrypting the database.

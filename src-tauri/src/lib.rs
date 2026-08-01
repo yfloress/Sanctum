@@ -24,10 +24,18 @@ use sanctum::features::ingestion::IngestionService;
 use sanctum::features::settings::SettingsService;
 use sanctum::vault_manager::VaultManager;
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use tauri::Manager;
 
 #[cfg(not(target_os = "android"))]
 use directories::ProjectDirs;
+
+/// How often the watchdog asks whether the vault should have closed already.
+///
+/// This is the granularity of how long the key may outlive the session, not the
+/// timeout itself: the vault still expires exactly when the user's setting says,
+/// and this only bounds how late the process finds out.
+const AUTO_LOCK_POLL: Duration = Duration::from_secs(15);
 
 /// Returns the platform-appropriate application data directory (desktop only).
 #[cfg(not(target_os = "android"))]
@@ -75,7 +83,12 @@ pub fn run() {
             app.manage(CryptoService::new(db.clone()));
             app.manage(IngestionService::new(db.clone()));
             app.manage(SettingsService::new(db.clone()));
-            app.manage(VaultManager::new(app_data_dir, db));
+            // Auto-lock runs here rather than in the UI: an expired session only
+            // makes commands fail, and a window nobody comes back to would never
+            // ask for the lock that releases the key.
+            let vault = VaultManager::new(app_data_dir, db);
+            vault.start_auto_lock(AUTO_LOCK_POLL);
+            app.manage(vault);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
