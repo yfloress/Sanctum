@@ -932,18 +932,21 @@
       {#if transactions.length === 0}
         <p class="empty">{hasActiveFilters ? i18n.t('finances-no-matching', 'No matching transactions') : i18n.t('finances-no-transactions-yet', 'No transactions yet')}</p>
       {:else}
-        <div class="tx-list" class:selecting={selectedIds.length > 0}>
+        <div class="tx-list">
           {#each transactions as tx, index}
-            <div class="tx-row" class:selected={selectedSet.has(tx.id)} role="button" tabindex="0"
-              onclick={() => openEditTransaction(tx)}
-              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
-              <input
-                type="checkbox"
-                class="tx-select"
-                checked={selectedSet.has(tx.id)}
-                aria-label={i18n.t('finances-select-row', 'Select transaction')}
-                onclick={(e: MouseEvent) => { e.stopPropagation(); toggleSelection(tx, index, e.shiftKey) }}
-              />
+            <!-- Clicking the row selects it; editing is the pencil. The other
+                 way round punished a near miss by opening a modal. -->
+            <div class="tx-row" class:selected={selectedSet.has(tx.id)}
+              role="button" tabindex="0"
+              aria-pressed={selectedSet.has(tx.id)}
+              aria-label={i18n.t('finances-select-row', 'Select transaction')}
+              onclick={(e: MouseEvent) => toggleSelection(tx, index, e.shiftKey)}
+              onkeydown={(e: KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggleSelection(tx, index, e.shiftKey)
+                }
+              }}>
               <span class="tx-type-dot" class:expense={tx.is_expense} class:transfer={tx.is_transfer}></span>
               <div class="tx-main">
                 <span class="tx-desc">{tx.description || tx.category}</span>
@@ -958,6 +961,9 @@
                 </div>
               </div>
               <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{mask(tx.amount)}</span>
+              <button class="row-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); openEditTransaction(tx) }} aria-label={i18n.t('action-edit', 'Edit')} title={i18n.t('action-edit', 'Edit')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              </button>
               {#if !tx.is_transfer}
                 <button class="row-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); openDuplicateTransaction(tx) }} aria-label={i18n.t('finances-duplicate', 'Duplicate')} title={i18n.t('finances-duplicate', 'Duplicate')}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h8"/></svg>
@@ -1306,24 +1312,6 @@
   /* Transaction list */
   .tx-list { display: flex; flex-direction: column; }
 
-  /* Out of the way until the row is reachable, so a ledger nobody is editing
-     reads as a ledger and not as a form. Pointers only: without hover there is
-     no way to make it appear. */
-  .tx-select {
-    flex-shrink: 0;
-    margin: 0;
-    cursor: pointer;
-    accent-color: var(--accent);
-    opacity: 0;
-    transition: opacity 0.15s;
-  }
-  .tx-row:hover .tx-select,
-  .tx-row:focus-within .tx-select,
-  .tx-list.selecting .tx-select { opacity: 1; }
-  @media (hover: none) {
-    .tx-select { opacity: 1; }
-  }
-
   .tx-row {
     display: flex;
     align-items: center;
@@ -1336,7 +1324,13 @@
   }
   .tx-row:last-child { border-bottom: none; }
   .tx-row:hover { background: var(--glass-hover); }
-  .tx-row.selected { background: var(--accent-glow); }
+  /* The accent edge does the work: on a long list a tinted background alone is
+     easy to lose, and it has to survive the hover tint sitting on top of it. */
+  .tx-row.selected,
+  .tx-row.selected:hover {
+    background: var(--accent-glow);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
 
   .tx-type-dot {
     width: 8px;
