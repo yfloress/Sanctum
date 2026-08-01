@@ -111,6 +111,7 @@ updates:
           - patch
     labels:
       - maintenance
+      - web
     commit-message:
       prefix: chore
       include: scope
@@ -130,6 +131,7 @@ updates:
           - "*"
     labels:
       - maintenance
+      - web
     commit-message:
       prefix: chore
       include: scope
