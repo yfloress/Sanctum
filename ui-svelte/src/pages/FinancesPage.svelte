@@ -794,7 +794,9 @@
                 <div class="tx-main">
                   <span class="tx-desc">{tx.description || tx.category}</span>
                   <div class="tx-meta">
-                    <span class="tx-cat-badge">{tx.category}</span>
+                    {#if tx.description}
+                      <span class="tx-cat-badge">{tx.category}</span>
+                    {/if}
                     <span class="tx-acc">{tx.account_name}</span>
                     <span class="tx-date">{tx.date}</span>
                   </div>
@@ -946,7 +948,11 @@
               <div class="tx-main">
                 <span class="tx-desc">{tx.description || tx.category}</span>
                 <div class="tx-meta">
-                  <span class="tx-cat-badge">{tx.category}</span>
+                  <!-- Only when the title is not already the category: an entry
+                       with no description would otherwise say it twice. -->
+                  {#if tx.description}
+                    <span class="tx-cat-badge">{tx.category}</span>
+                  {/if}
                   <span class="tx-acc">{tx.account_name}</span>
                   <span class="tx-date">{tx.date}</span>
                 </div>
