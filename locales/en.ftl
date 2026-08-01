@@ -408,6 +408,7 @@ crypto-ticker-no-selected = No tickers selected yet.
 crypto-ticker-add-coins = Add coins
 crypto-ticker-search = Search coins...
 crypto-ticker-save = Save
+crypto-fx-stale = Rate is out of date — sync to refresh it
 
 # -- Coin catalog --
 crypto-custom-coin = Add Custom Coin

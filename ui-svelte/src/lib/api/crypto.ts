@@ -23,7 +23,8 @@ import type {
   CryptoTransferInput, CryptoSwapInput,
   CryptoTransactionUpdateInput, CryptoTransactionEditData,
   CoinCatalogDto, CryptoAssetPriceDto,
-  TaxSettingsDto, TaxReportDto, TaxSummaryDto, IpcSummaryDto
+  TaxSettingsDto, TaxReportDto, TaxSummaryDto, IpcSummaryDto,
+  ExchangeRateDto
 } from '../types'
 
 export async function fetchPortfolio(): Promise<PortfolioResponse> {
@@ -200,8 +201,8 @@ export async function saveExchangeRate(pair: string, rate: number): Promise<void
   return invoke('save_exchange_rate', { pair, rate })
 }
 
-export async function loadExchangeRate(pair: string): Promise<[number, string] | null> {
-  return invoke<[number, string] | null>('load_exchange_rate', { pair })
+export async function loadExchangeRate(pair: string): Promise<ExchangeRateDto | null> {
+  return invoke<ExchangeRateDto | null>('load_exchange_rate', { pair })
 }
 
 export async function syncCryptoData(): Promise<string> {

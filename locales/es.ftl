@@ -408,6 +408,7 @@ crypto-ticker-no-selected = Sin tickers seleccionados.
 crypto-ticker-add-coins = Agregar monedas
 crypto-ticker-search = Buscar monedas...
 crypto-ticker-save = Guardar
+crypto-fx-stale = Tasa desactualizada — sincroniza para refrescarla
 
 # -- Coin catalog --
 crypto-custom-coin = Agregar Moneda Personalizada

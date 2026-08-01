@@ -220,6 +220,9 @@
   // Ticker bar
   let tickerPrices = $state<CryptoAssetPriceDto[]>([])
   let fxRate = $state<number | null>(null)
+  /** Whether the shown rate is still within its cache lifetime. The backend
+      decides this; offline the last known rate is kept, but marked. */
+  let fxStale = $state(false)
   let tickerSyncing = $state(false)
 
   /** What one dollar buys, in the currency every figure on this page is shown
@@ -343,13 +346,15 @@
     } catch (_) { /* silently fail on initial load */ }
     if (!showFxBadge) {
       fxRate = null
+      fxStale = false
       return
     }
     try {
       // Storage key, not a display label: the pair is written as units of the
       // currency per USD. "USD/CLP" is only how the badge reads it out.
       const result = await cryptoApi.loadExchangeRate(`${fxCurrency}_USD`)
-      fxRate = result ? result[0] : null
+      fxRate = result ? result.rate : null
+      fxStale = result ? !result.is_live : false
     } catch (_) { /* ignore */ }
   }
 
@@ -904,9 +909,17 @@
   <!-- Ticker Bar -->
   <div class="ticker-bar">
     {#if showFxBadge}
-      <div class="ticker-fx">
+      <div class="ticker-fx" class:stale={fxStale && fxRate != null}
+        title={fxStale && fxRate != null ? i18n.t('crypto-fx-stale', 'Rate is out of date — sync to refresh it') : null}>
         <span class="ticker-fx-pair">USD/{fxCurrency}</span>
         <span class="ticker-fx-rate">{fxRate != null ? formatCurrency(fxRate, fxCurrency) : '--'}</span>
+        {#if fxStale && fxRate != null}
+          <svg class="ticker-fx-stale-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            aria-label={i18n.t('crypto-fx-stale', 'Rate is out of date — sync to refresh it')} role="img">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+        {/if}
       </div>
     {/if}
     <div class="ticker-prices">
@@ -1786,6 +1799,11 @@
   }
   .ticker-fx-pair { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
   .ticker-fx-rate { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
+  /* Muted rather than alarming: the rate is still the best one known, it just
+     stopped being current. The clock icon carries the meaning for anyone who
+     cannot tell the two shades apart. */
+  .ticker-fx.stale .ticker-fx-rate { color: var(--text-tertiary); }
+  .ticker-fx-stale-icon { width: 13px; height: 13px; color: var(--text-tertiary); flex-shrink: 0; }
   .ticker-prices {
     display: flex; align-items: center; gap: 0;
     flex: 1; overflow-x: auto; scrollbar-width: none;

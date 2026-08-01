@@ -32,9 +32,9 @@ use sanctum::ui::dto::crypto::{
     CoinCatalogDto, CryptoAssetPriceDto, CryptoSwapInput, CryptoTransactionDto,
     CryptoTransactionEditData, CryptoTransactionInput, CryptoTransactionListResponse,
     CryptoTransactionUpdateInput, CryptoTransferInput, CryptoTxFilterInput, DistributionItem,
-    FxRateDto, IpcSummaryDto, PortfolioAssetDto, PortfolioResponse, PortfolioTrendData,
-    TaxReportDto, TaxSettingsDto, TaxSummaryDto, WalletDetailResponse, WalletDto, WalletHoldingDto,
-    WalletSimpleDto, WalletsResponse,
+    ExchangeRateDto, FxRateDto, IpcSummaryDto, PortfolioAssetDto, PortfolioResponse,
+    PortfolioTrendData, TaxReportDto, TaxSettingsDto, TaxSummaryDto, WalletDetailResponse,
+    WalletDto, WalletHoldingDto, WalletSimpleDto, WalletsResponse,
 };
 use std::collections::HashMap;
 use tauri::State;
@@ -941,10 +941,14 @@ pub fn save_exchange_rate(
 pub fn load_exchange_rate(
     finance: State<'_, FinanceService>,
     pair: String,
-) -> Result<Option<(f64, String)>, AppError> {
-    finance
-        .load_exchange_rate_allow_stale(pair)
-        .map_err(AppError::from)
+) -> Result<Option<ExchangeRateDto>, AppError> {
+    Ok(finance
+        .load_exchange_rate_checked(pair)?
+        .map(|(rate, updated_at, is_live)| ExchangeRateDto {
+            rate,
+            updated_at,
+            is_live,
+        }))
 }
 
 // ==================== Helpers ====================
@@ -1002,14 +1006,14 @@ fn build_fx_rate_badge(settings: &SettingsService, finance: &FinanceService) -> 
     };
     let pair = format!("{}_USD", target);
     finance
-        .load_exchange_rate_allow_stale(pair)
+        .load_exchange_rate_checked(pair)
         .ok()
         .flatten()
-        .filter(|(rate, _)| *rate > 0.0)
-        .map(|(rate, _)| FxRateDto {
+        .filter(|(rate, _, _)| *rate > 0.0)
+        .map(|(rate, _, is_live)| FxRateDto {
             pair: format!("USD/{}", target),
             rate: format!("{:.2}", rate),
-            is_live: true,
+            is_live,
         })
 }
 

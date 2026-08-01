@@ -620,37 +620,48 @@ impl FinanceService {
         })
     }
 
-    pub fn load_exchange_rate_allow_stale(
+    /// Cached rate for `pair`, paired with whether it is still within its TTL.
+    ///
+    /// The freshness rule lives here alone so a caller that shows a rate and one
+    /// that converts with it cannot drift into disagreeing on what counts as
+    /// current. An unparseable timestamp counts as stale.
+    pub fn load_exchange_rate_checked(
         &self,
         pair: String,
-    ) -> Result<Option<(f64, String)>, FinanceError> {
-        self.with_db(|db| {
-            FinanceRepository::load_exchange_rate(db, &pair).map_err(FinanceError::Database)
-        })
-    }
-
-    pub fn load_exchange_rate(&self, pair: String) -> Result<Option<(f64, String)>, FinanceError> {
+    ) -> Result<Option<(f64, String, bool)>, FinanceError> {
         self.with_db(|db| {
             let cached =
                 FinanceRepository::load_exchange_rate(db, &pair).map_err(FinanceError::Database)?;
 
-            if let Some((rate, updated_at)) = cached {
-                let is_fresh = chrono::DateTime::parse_from_rfc3339(&updated_at)
-                    .map(|dt| {
-                        let age = Utc::now().signed_duration_since(dt.with_timezone(&Utc));
-                        age.num_seconds() <= EXCHANGE_RATE_TTL_SECS
-                    })
-                    .unwrap_or(false);
+            let Some((rate, updated_at)) = cached else {
+                return Ok(None);
+            };
 
-                if !is_fresh {
-                    return Ok(None);
-                }
+            let is_fresh = chrono::DateTime::parse_from_rfc3339(&updated_at)
+                .map(|dt| {
+                    let age = Utc::now().signed_duration_since(dt.with_timezone(&Utc));
+                    age.num_seconds() <= EXCHANGE_RATE_TTL_SECS
+                })
+                .unwrap_or(false);
 
-                return Ok(Some((rate, updated_at)));
-            }
-
-            Ok(None)
+            Ok(Some((rate, updated_at, is_fresh)))
         })
+    }
+
+    pub fn load_exchange_rate_allow_stale(
+        &self,
+        pair: String,
+    ) -> Result<Option<(f64, String)>, FinanceError> {
+        Ok(self
+            .load_exchange_rate_checked(pair)?
+            .map(|(rate, updated_at, _)| (rate, updated_at)))
+    }
+
+    pub fn load_exchange_rate(&self, pair: String) -> Result<Option<(f64, String)>, FinanceError> {
+        Ok(self
+            .load_exchange_rate_checked(pair)?
+            .filter(|(_, _, is_fresh)| *is_fresh)
+            .map(|(rate, updated_at, _)| (rate, updated_at)))
     }
 
     // ==================== Analytics Operations ====================

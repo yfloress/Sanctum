@@ -98,6 +98,18 @@ pub struct FxRateDto {
     pub is_live: bool,
 }
 
+/// A cached rate as the ticker needs it: the raw number to format, and whether
+/// it is recent enough to be shown without a caveat.
+///
+/// `is_live` travels with the rate rather than being decided by the reader, so
+/// a rate hours old cannot be displayed as if it had just arrived.
+#[derive(Debug, Clone, Serialize)]
+pub struct ExchangeRateDto {
+    pub rate: f64,
+    pub updated_at: String,
+    pub is_live: bool,
+}
+
 // ==================== Wallets ====================
 
 /// Wallet as seen by the frontend.

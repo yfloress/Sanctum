@@ -55,6 +55,12 @@ export interface FxRateDto {
   is_live: boolean
 }
 
+export interface ExchangeRateDto {
+  rate: number
+  updated_at: string
+  is_live: boolean
+}
+
 export interface WalletDto {
   id: string
   name: string
