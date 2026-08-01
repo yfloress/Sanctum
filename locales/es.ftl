@@ -383,7 +383,6 @@ crypto-tax-no-wallets = No hay billeteras para excluir.
 crypto-tax-excluded-suffix = billetera(s) excluida(s)
 crypto-tax-saved = Guardado
 crypto-tax-report-stale = Cambiaste ajustes desde que se generó este reporte. Regenéralo para aplicarlos.
-crypto-tax-regenerate = Regenerar
 crypto-tax-no-disposals = No hay enajenaciones gravables en este período. Los ingresos, transferencias y tenencias sin vender no generan ganancia hasta que vendas o hagas swap.
 crypto-tax-export-title = Exportar CSV de impuestos
 crypto-tax-taxable-income = Renta Gravable

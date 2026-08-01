@@ -383,7 +383,6 @@ crypto-tax-no-wallets = No wallets to exclude.
 crypto-tax-excluded-suffix = wallet(s) excluded
 crypto-tax-saved = Saved
 crypto-tax-report-stale = Settings changed since this report was generated. Regenerate to apply them.
-crypto-tax-regenerate = Regenerate
 crypto-tax-no-disposals = No taxable disposals in this period. Income, transfers and unsold holdings do not produce a gain until sold or swapped.
 crypto-tax-export-title = Export Tax CSV
 crypto-tax-taxable-income = Taxable Income
