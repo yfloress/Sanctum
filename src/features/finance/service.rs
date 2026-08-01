@@ -311,15 +311,6 @@ impl FinanceService {
     }
 
     pub fn update_transaction(&self, cmd: UpdateTransaction) -> Result<(), FinanceError> {
-        let UpdateTransaction {
-            id,
-            account_id,
-            amount_cents,
-            category,
-            description,
-            date,
-            is_expense,
-        } = cmd;
         let db_arc = self.db.clone();
         TransactionOps::update_transaction(
             |f| {
@@ -333,13 +324,7 @@ impl FinanceService {
                 db.touch_session().map_err(FinanceError::Database)?;
                 Ok(())
             },
-            id,
-            account_id,
-            amount_cents,
-            category,
-            description,
-            date,
-            is_expense,
+            cmd,
         )
     }
 
