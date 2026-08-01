@@ -384,11 +384,24 @@
     } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
-  async function deleteCustomCoinAction(id: string) {
+  async function deleteCustomCoinAction(coin: CoinCatalogDto) {
     try {
-      await cryptoApi.deleteCustomCoin(id)
+      await cryptoApi.deleteCustomCoin(coin.id)
       coinCatalog = await cryptoApi.getCoinCatalog()
-      app.showToast(i18n.t('crypto-toast-custom-deleted', 'Custom coin deleted'))
+      app.showToast(
+        i18n.t('crypto-toast-custom-deleted', 'Custom coin deleted'),
+        false,
+        6000,
+        { label: i18n.t('action-undo', 'Undo'), handler: () => undoDeleteCustomCoin(coin) },
+      )
+    } catch (e) { app.showToast(errorMessage(e), true) }
+  }
+
+  async function undoDeleteCustomCoin(coin: CoinCatalogDto) {
+    try {
+      await cryptoApi.addCustomCoin(coin.id, coin.name, coin.symbol)
+      coinCatalog = await cryptoApi.getCoinCatalog()
+      app.showToast(i18n.t('crypto-toast-custom-restored', 'Custom coin restored'))
     } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
@@ -575,11 +588,32 @@
   }
 
   async function deleteWallet(id: string) {
+    // Taken before the panel closes. Only an empty wallet can be deleted here
+    // (force is false), so its name, category and icon are the whole of it and
+    // rebuilding one is a faithful restore rather than an approximation.
+    const snapshot = selectedWallet?.id === id ? selectedWallet : null
     try {
       await cryptoApi.deleteWallet(id, false)
       selectedWallet = null
       await loadWallets()
-      app.showToast(i18n.t('crypto-toast-wallet-deleted', 'Wallet deleted'))
+      app.showToast(
+        i18n.t('crypto-toast-wallet-deleted', 'Wallet deleted'),
+        false,
+        6000,
+        snapshot
+          ? { label: i18n.t('action-undo', 'Undo'), handler: () => undoDeleteWallet(snapshot) }
+          : null,
+      )
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
+  async function undoDeleteWallet(wallet: WalletDetailResponse) {
+    try {
+      await cryptoApi.addWallet(wallet.name, wallet.category, wallet.icon_path ?? undefined)
+      await loadWallets()
+      app.showToast(i18n.t('crypto-toast-wallet-restored', 'Wallet restored'))
     } catch (e) {
       app.showToast(errorMessage(e), true)
     }
@@ -1650,7 +1684,7 @@
               <span class="catalog-sym">{coin.symbol}</span>
               <span class="catalog-name">{coin.name}</span>
               {#if coin.is_custom}
-                <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin.id)} aria-label="Delete">
+                <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin)} aria-label="Delete">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
               {/if}
