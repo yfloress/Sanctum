@@ -21,6 +21,8 @@
   import { dialog } from '../lib/actions/dialog'
   import { currentPageActions, shortcutPages, toggleSidebar, toggleDarkMode } from '../lib/shortcuts'
   import { PAGE_COMMANDS } from '../lib/commands'
+  import * as searchApi from '../lib/api/search'
+  import type { SearchHit, SearchHitKind } from '../lib/types'
 
   interface Props {
     show: boolean
@@ -35,10 +37,19 @@
     id: string
     label: string
     group: string
+    /** Second line, when the row needs context to be told apart. */
+    detail?: string
     /** Printed on the right. Already resolved to this keyboard's modifier. */
     keys?: string[]
     run: () => void
   }
+
+  /** Below this a query matches too much to be worth asking the backend. */
+  const MIN_SEARCH_LENGTH = 2
+  /** Pause after the last keystroke before the search runs. */
+  const SEARCH_DEBOUNCE_MS = 160
+  /** Data rows offered at once. The commands need room above them. */
+  const SEARCH_LIMIT = 12
 
   let query = $state('')
   let activeIndex = $state(0)
@@ -46,6 +57,17 @@
   // Rebuilt on every open rather than derived: what the current page offers is
   // plain module state, so nothing would tell a derived value it went stale.
   let commands = $state<Entry[]>([])
+  let results = $state<SearchHit[]>([])
+  /** Rises on every request; a reply from an older one is thrown away. */
+  let searchSeq = 0
+
+  const HIT_LABELS: Record<SearchHitKind, [string, string]> = {
+    account: ['search-kind-account', 'Account'],
+    category: ['search-kind-category', 'Category'],
+    coin: ['search-kind-coin', 'Coin'],
+    transaction: ['search-kind-transaction', 'Transaction'],
+    wallet: ['search-kind-wallet', 'Wallet'],
+  }
 
   const mod = navigator.userAgent.includes('Mac') ? 'Cmd' : 'Ctrl'
 
@@ -156,13 +178,59 @@
     return value.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
   }
 
-  let matches = $derived.by(() => {
+  let commandMatches = $derived.by(() => {
     const terms = normalize(query).split(/\s+/).filter(Boolean)
     if (terms.length === 0) return commands
     return commands.filter(cmd => {
       const haystack = normalize(`${cmd.label} ${cmd.group}`)
       return terms.every(term => haystack.includes(term))
     })
+  })
+
+  // Already ranked by the backend, so these are not filtered again here.
+  let resultEntries = $derived(
+    results.map((hit): Entry => {
+      const [key, fallback] = HIT_LABELS[hit.kind]
+      return {
+        id: `hit-${hit.kind}-${hit.id}`,
+        label: hit.title,
+        group: i18n.t(key, fallback),
+        detail: hit.subtitle,
+        run: () => app.openSearchHit(hit),
+      }
+    }),
+  )
+
+  // Commands first: they are an exact answer to what was typed, while a data
+  // hit is a guess. One flat list so the arrow keys need no special cases.
+  let matches = $derived([...commandMatches, ...resultEntries])
+
+  /** Asks the backend for data rows matching `term`, debounced. */
+  function runSearch(term: string) {
+    const trimmed = term.trim()
+    if (trimmed.length < MIN_SEARCH_LENGTH) {
+      results = []
+      searchSeq += 1
+      return
+    }
+    const seq = ++searchSeq
+    void searchApi
+      .globalSearch(trimmed, SEARCH_LIMIT)
+      .then(hits => {
+        if (seq === searchSeq) results = hits
+      })
+      .catch(() => {
+        // A search that fails leaves the commands usable; surfacing a toast
+        // from behind an open palette would only cover the list.
+        if (seq === searchSeq) results = []
+      })
+  }
+
+  $effect(() => {
+    const term = query
+    if (!show) return
+    const timer = setTimeout(() => runSearch(term), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
   })
 
   // A filtered list can be shorter than where the cursor was.
@@ -175,6 +243,10 @@
       query = ''
       activeIndex = 0
       commands = buildCommands()
+      // Dropped on open so a reopened palette never shows the last search's
+      // hits under an empty box.
+      results = []
+      searchSeq += 1
     }
   })
 
@@ -236,7 +308,10 @@
             onclick={() => runCommand(cmd)}
             onmousemove={() => activeIndex = index}
           >
-            <span class="palette-label">{cmd.label}</span>
+            <span class="palette-text">
+              <span class="palette-label">{cmd.label}</span>
+              {#if cmd.detail}<span class="palette-detail">{cmd.detail}</span>{/if}
+            </span>
             <span class="palette-group">{cmd.group}</span>
             {#if cmd.keys}
               <span class="palette-keys">
@@ -300,7 +375,17 @@
     font-size: 0.85rem;
   }
   .palette-item.active { background: var(--glass-active); }
-  .palette-label { flex: 1; color: var(--text-primary); }
+  /* min-width:0 so a long description ellipsises instead of pushing the group
+     label and the shortcut off the row. */
+  .palette-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .palette-label { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .palette-detail {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .palette-group {
     font-size: 0.7rem;
     color: var(--text-tertiary);

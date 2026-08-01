@@ -202,6 +202,8 @@ pub fn run() {
             commands::crypto::save_exchange_rate,
             commands::crypto::load_exchange_rate,
             commands::crypto::sync_crypto_data,
+            // Cross-domain
+            commands::search::global_search,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

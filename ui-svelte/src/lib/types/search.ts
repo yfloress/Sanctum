@@ -15,6 +15,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-pub mod i18n;
-pub mod search;
-pub mod vault;
+export type SearchHitKind = 'account' | 'category' | 'coin' | 'transaction' | 'wallet'
+
+export interface SearchHit {
+  kind: SearchHitKind
+  id: string
+  title: string
+  subtitle: string
+  account_id?: string
+}

@@ -15,9 +15,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-import type { AppSettings } from '../types'
+import type { AppSettings, SearchHit, SearchHitKind } from '../types'
 
 export type Page = 'dashboard' | 'finances' | 'crypto' | 'settings'
+
+/** Which page owns each kind of search hit. */
+const HIT_PAGES: Record<SearchHitKind, Page> = {
+  account: 'finances',
+  category: 'finances',
+  transaction: 'finances',
+  coin: 'crypto',
+  wallet: 'crypto',
+}
 
 export type BackgroundFx = 'dots' | 'stars' | 'aurora' | 'diamonds' | 'dragon'
 
@@ -81,6 +90,7 @@ class AppState {
     this.isLoggedIn = false
     this.activePage = 'dashboard'
     this.pendingCommand = null
+    this.pendingTarget = null
   }
 
   navigate(page: Page) {
@@ -98,6 +108,19 @@ class AppState {
   runPageCommand(page: Page, id: string) {
     this.navigate(page)
     this.pendingCommand = id
+  }
+
+  /**
+   * A search hit whose page was not on screen when it was picked. Handed over
+   * on the same terms as {@link pendingCommand}: the owning page claims it,
+   * clears it, and anything unclaimed is dropped at logout.
+   */
+  pendingTarget = $state<SearchHit | null>(null)
+
+  /** Opens a search hit, navigating to whichever page owns that kind. */
+  openSearchHit(hit: SearchHit) {
+    this.navigate(HIT_PAGES[hit.kind])
+    this.pendingTarget = hit
   }
 
   toggleHideBalances() {

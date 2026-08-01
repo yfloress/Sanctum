@@ -21,11 +21,11 @@
   import * as financeApi from '../lib/api/finance'
   import type {
     TransactionDto, TransactionSort, CategoriesResponse, CategoryDto,
-    AccountsResponse, AccountDetailResponse, AccountDto
+    AccountsResponse, AccountDetailResponse, AccountDto, SearchHit
   } from '../lib/types'
   import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
   import { mask } from '../lib/currency'
-  import { setPageActions, consumePendingCommand } from '../lib/shortcuts'
+  import { setPageActions, consumePendingCommand, consumePendingTarget } from '../lib/shortcuts'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
@@ -338,13 +338,18 @@
     }
   }
 
-  function clearFilters() {
+  /** Puts every filter back to its default without reloading. */
+  function resetFilters() {
     filterQuery = ''
     filterAccountId = ''
     filterCategory = ''
     filterDateRange = 'all'
     filterDateFrom = ''
     filterDateTo = ''
+  }
+
+  function clearFilters() {
+    resetFilters()
     loadTransactions()
   }
 
@@ -636,6 +641,54 @@
   )
 
   $effect(() => consumePendingCommand(commandHandlers()))
+
+  /**
+   * Opens a global-search hit that belongs to this page.
+   *
+   * Every route clears the filters first: arriving with a leftover date range
+   * or account narrowed down is the one way the row the user just picked can
+   * fail to be on screen when they get here.
+   */
+  function openSearchHit(hit: SearchHit) {
+    if (hit.kind === 'account') {
+      activeTab = 'accounts'
+      void openAccountDetail(hit.id)
+      return
+    }
+    resetFilters()
+    if (hit.kind === 'category') {
+      filterCategory = hit.id
+    } else {
+      // The description alone can repeat across accounts, so the account it
+      // belongs to narrows it; the row is then marked rather than opened,
+      // because a search is a question about where something is.
+      filterAccountId = hit.account_id ?? ''
+      filterQuery = hit.title
+      highlightedTxId = hit.id
+    }
+    activeTab = 'activity'
+    void loadTransactions()
+  }
+
+  $effect(() => consumePendingTarget(['account', 'category', 'transaction'], openSearchHit))
+
+  /** Row the search sent us to. Cleared on a timer so it does not linger. */
+  let highlightedTxId = $state<string | null>(null)
+  let highlightTimer = 0
+
+  $effect(() => {
+    const id = highlightedTxId
+    if (!id) return
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`tx-${id}`)?.scrollIntoView({ block: 'center' })
+    })
+    clearTimeout(highlightTimer)
+    highlightTimer = window.setTimeout(() => { highlightedTxId = null }, 2400)
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(highlightTimer)
+    }
+  })
 </script>
 
 <div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || !!selectedAccount}>
@@ -920,6 +973,8 @@
             <!-- Clicking the row selects it; editing is the pencil. The other
                  way round punished a near miss by opening a modal. -->
             <div class="tx-row" class:selected={selectedSet.has(tx.id)}
+              class:highlight={highlightedTxId === tx.id}
+              id="tx-{tx.id}"
               role="button" tabindex="0"
               aria-pressed={selectedSet.has(tx.id)}
               aria-label={i18n.t('finances-select-row', 'Select transaction')}
@@ -1313,6 +1368,21 @@
   .tx-row.selected:hover {
     background: var(--accent-glow);
     box-shadow: inset 3px 0 0 var(--accent);
+  }
+  /* Outlined rather than tinted so it reads as "here it is" without being
+     mistaken for the selection the row click makes. */
+  .tx-row.highlight {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: var(--radius-sm);
+    animation: tx-flash 2.4s ease-out;
+  }
+  @keyframes tx-flash {
+    0%, 40% { background: var(--accent-glow); }
+    100% { background: transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tx-row.highlight { animation: none; }
   }
 
   .tx-type-dot {

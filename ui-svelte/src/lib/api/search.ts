@@ -15,6 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-pub mod i18n;
-pub mod search;
-pub mod vault;
+import { invoke } from './ipc'
+import type { SearchHit } from '../types'
+
+export async function globalSearch(query: string, limit?: number): Promise<SearchHit[]> {
+  return invoke<SearchHit[]>('global_search', { input: { query, limit: limit ?? null } })
+}

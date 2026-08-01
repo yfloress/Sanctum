@@ -18,6 +18,7 @@
 // they never fight a form. Page-specific ones are registered by the page.
 
 import { app, type Page } from './stores/app.svelte'
+import type { SearchHit, SearchHitKind } from './types'
 import { lockNow } from './stores/session.svelte'
 import { isDialogOpen } from './actions/dialog'
 import * as settingsApi from './api/settings'
@@ -70,6 +71,22 @@ export function consumePendingCommand(handlers: Record<string, () => void>) {
   if (!handler) return
   app.pendingCommand = null
   handler()
+}
+
+/**
+ * Opens the search hit left waiting for this page, if it is one of `kinds`.
+ *
+ * Same contract as {@link consumePendingCommand}: call it from an `$effect`,
+ * and leave a hit belonging elsewhere alone rather than swallowing it.
+ */
+export function consumePendingTarget(
+  kinds: SearchHitKind[],
+  open: (hit: SearchHit) => void,
+) {
+  const hit = app.pendingTarget
+  if (!hit || !kinds.includes(hit.kind)) return
+  app.pendingTarget = null
+  open(hit)
 }
 
 /** The pages the number keys walk through, in that order. */

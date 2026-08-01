@@ -20,7 +20,7 @@
   import { i18n } from '../lib/stores/i18n.svelte'
   import { formatCurrency, mask } from '../lib/currency'
   import { dialog } from '../lib/actions/dialog'
-  import { setPageActions, consumePendingCommand } from '../lib/shortcuts'
+  import { setPageActions, consumePendingCommand, consumePendingTarget } from '../lib/shortcuts'
   import * as cryptoApi from '../lib/api/crypto'
   import { save } from '@tauri-apps/plugin-dialog'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
@@ -36,7 +36,7 @@
     WalletsResponse, WalletDetailResponse,
     CryptoTransactionDto, CryptoTransactionEditData, CoinCatalogDto,
     CryptoAssetPriceDto, IpcSummaryDto,
-    TaxReportDto, TaxSettingsDto, TaxSummaryDto
+    TaxReportDto, TaxSettingsDto, TaxSummaryDto, SearchHit
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'activity' | 'tax'
@@ -879,6 +879,19 @@
   }
 
   $effect(() => consumePendingCommand(commandHandlers()))
+
+  /** Opens a global-search hit that belongs to this page. */
+  function openSearchHit(hit: SearchHit) {
+    if (hit.kind === 'wallet') {
+      activeTab = 'wallets'
+      void openWalletDetail(hit.id)
+    } else {
+      activeTab = 'portfolio'
+      void openAssetDetail(hit.id)
+    }
+  }
+
+  $effect(() => consumePendingTarget(['wallet', 'coin'], openSearchHit))
 
   $effect(() => {
     app.settings?.preferred_currency

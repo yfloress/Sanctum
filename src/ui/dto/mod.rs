@@ -26,5 +26,6 @@ pub mod crypto;
 pub mod dashboard;
 pub mod finance;
 pub mod ingestion;
+pub mod search;
 pub mod settings;
 pub mod vault;

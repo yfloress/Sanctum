@@ -1277,8 +1277,13 @@ confirm-delete-transactions = Delete {$count} transactions?
 
 # ==================== Command Palette ====================
 palette-title = Command palette
-palette-placeholder = Type a command...
-palette-no-results = No matching command
+palette-placeholder = Type a command, or search your data...
+palette-no-results = Nothing found
+search-kind-account = Account
+search-kind-category = Category
+search-kind-coin = Coin
+search-kind-transaction = Transaction
+search-kind-wallet = Wallet
 
 # ==================== Keyboard Shortcuts ====================
 shortcuts-title = Keyboard Shortcuts
