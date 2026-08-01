@@ -124,6 +124,8 @@ pub fn run() {
             commands::finance::add_transaction,
             commands::finance::update_transaction,
             commands::finance::delete_transaction,
+            commands::finance::delete_transactions,
+            commands::finance::recategorize_transactions,
             commands::finance::load_categories,
             commands::finance::add_category,
             commands::finance::update_category,

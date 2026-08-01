@@ -1260,6 +1260,17 @@ finances-sort-amount-asc = Monto menor
 finances-date-today = Hoy
 finances-date-yesterday = Ayer
 
+# ==================== Bulk Actions ====================
+finances-select-row = Seleccionar transacción
+finances-bulk-selected = {$count} seleccionadas
+finances-bulk-move = Mover a categoría
+finances-bulk-deleted = {$count} transacciones eliminadas
+finances-bulk-moved = {$count} transacciones movidas
+finances-bulk-move-undone = Categorías restauradas
+finances-bulk-restored = {$count} transacciones restauradas
+finances-bulk-restored-partial = Se restauraron {$count} de {$total} transacciones
+confirm-delete-transactions = ¿Eliminar {$count} transacciones?
+
 # ==================== Keyboard Shortcuts ====================
 shortcuts-title = Atajos de Teclado
 shortcuts-group-navigation = Navegación

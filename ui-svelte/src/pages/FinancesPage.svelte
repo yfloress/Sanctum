@@ -125,6 +125,148 @@
   let editingTransfer = $state<TransactionDto | null>(null)
   let pendingDeleteTx = $state<TransactionDto | null>(null)
 
+  // ── Bulk selection ─────────────────────────────────────────────────────────
+
+  /** Rows ticked in the activity list. Dropped on every refetch: acting on a
+      row that has left the result set is never what the tick meant. */
+  let selectedIds = $state<string[]>([])
+  let bulkCategory = $state('')
+  let pendingBulkDelete = $state(false)
+  /** Anchor for shift-click ranges. Plain, not state: it never renders. */
+  let lastTouchedIndex = -1
+
+  let selectedSet = $derived(new Set(selectedIds))
+  let selectedTransactions = $derived(transactions.filter(tx => selectedSet.has(tx.id)))
+  let allVisibleSelected = $derived(
+    transactions.length > 0 && selectedIds.length === transactions.length
+  )
+
+  function toggleSelection(tx: TransactionDto, index: number, extend: boolean) {
+    if (extend && lastTouchedIndex >= 0) {
+      const [from, to] = lastTouchedIndex < index
+        ? [lastTouchedIndex, index]
+        : [index, lastTouchedIndex]
+      const range = transactions.slice(from, to + 1).map(t => t.id)
+      // The row that was clicked decides the direction for the whole range.
+      selectedIds = selectedSet.has(tx.id)
+        ? selectedIds.filter(id => !range.includes(id))
+        : [...new Set([...selectedIds, ...range])]
+    } else {
+      selectedIds = selectedSet.has(tx.id)
+        ? selectedIds.filter(id => id !== tx.id)
+        : [...selectedIds, tx.id]
+    }
+    lastTouchedIndex = index
+  }
+
+  function toggleSelectAll() {
+    selectedIds = allVisibleSelected ? [] : transactions.map(tx => tx.id)
+    lastTouchedIndex = -1
+  }
+
+  function clearSelection() {
+    selectedIds = []
+    bulkCategory = ''
+    lastTouchedIndex = -1
+  }
+
+  /** The category as stored rather than as shown: `category_raw` is uppercased
+      for grouping, and writing that back would rename "Food" to "FOOD". */
+  function storedCategory(tx: TransactionDto): string {
+    return allCategories.find(c => c.name.toUpperCase() === tx.category_raw)?.name ?? tx.category_raw
+  }
+
+  async function bulkDelete() {
+    const victims = selectedTransactions
+    try {
+      const removed = await financeApi.deleteTransactions(victims.map(tx => tx.id))
+      clearSelection()
+      ledgerRevision += 1
+      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
+      app.showToast(
+        i18n.tArgs('finances-bulk-deleted', { count: removed }, `${removed} transactions deleted`),
+        false,
+        8000,
+        { label: i18n.t('action-undo', 'Undo'), handler: () => restoreTransactions(victims) },
+      )
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
+  async function bulkRecategorize(category: string) {
+    // Transfers carry no user category and the backend skips them, so they are
+    // left out of the snapshot too: nothing to put back.
+    const before = selectedTransactions
+      .filter(tx => !tx.is_transfer)
+      .map(tx => ({ id: tx.id, category: storedCategory(tx) }))
+    if (before.length === 0) {
+      bulkCategory = ''
+      return
+    }
+    try {
+      const changed = await financeApi.recategorizeTransactions(before.map(b => b.id), category)
+      clearSelection()
+      ledgerRevision += 1
+      await Promise.all([loadTransactions(), loadChartTransactions()])
+      app.showToast(
+        i18n.tArgs('finances-bulk-moved', { count: changed }, `${changed} transactions moved`),
+        false,
+        8000,
+        { label: i18n.t('action-undo', 'Undo'), handler: () => restoreCategories(before) },
+      )
+    } catch (e) {
+      bulkCategory = ''
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
+  /** Puts every row back under the category it had, one call per distinct one. */
+  async function restoreCategories(snapshot: { id: string; category: string }[]) {
+    const byCategory = new Map<string, string[]>()
+    for (const row of snapshot) {
+      const ids = byCategory.get(row.category)
+      if (ids) ids.push(row.id)
+      else byCategory.set(row.category, [row.id])
+    }
+    try {
+      for (const [category, ids] of byCategory) {
+        await financeApi.recategorizeTransactions(ids, category)
+      }
+      ledgerRevision += 1
+      await Promise.all([loadTransactions(), loadChartTransactions()])
+      app.showToast(i18n.t('finances-bulk-move-undone', 'Categories restored'))
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
+  /** Rebuilds deleted rows one at a time. They come back under new ids, which
+      is all a restore can promise: the ledger reads the same, the rows are new. */
+  async function restoreTransactions(txs: TransactionDto[]) {
+    let restored = 0
+    for (const tx of txs) {
+      try {
+        await recreateTransaction(tx)
+        restored += 1
+      } catch (_) {
+        // Keep going: one account gone should not strand the rest.
+      }
+    }
+    ledgerRevision += 1
+    await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
+    app.showToast(
+      restored === txs.length
+        ? i18n.tArgs('finances-bulk-restored', { count: restored }, `${restored} transactions restored`)
+        : i18n.tArgs(
+            'finances-bulk-restored-partial',
+            { count: restored, total: txs.length },
+            `Restored ${restored} of ${txs.length} transactions`,
+          ),
+      restored !== txs.length,
+    )
+  }
+
   async function loadAll() {
     loading = true
     try {
@@ -165,6 +307,7 @@
       })
       transactions = res.transactions
       hasMore = res.has_more
+      clearSelection()
     } catch (e) {
       app.showToast(errorMessage(e), true)
     }
@@ -255,24 +398,29 @@
     }
   }
 
+  /** Re-adds one deleted row, as a transfer or as a plain entry. */
+  async function recreateTransaction(tx: TransactionDto) {
+    if (tx.is_transfer && tx.transfer_account_id) {
+      const fromId = tx.is_expense ? tx.account_id : tx.transfer_account_id
+      const toId = tx.is_expense ? tx.transfer_account_id : tx.account_id
+      await financeApi.transferFunds({
+        from_account_id: fromId,
+        to_account_id: toId,
+        amount: tx.amount_raw,
+        description: tx.description_raw,
+        date: tx.date,
+      })
+    } else {
+      await financeApi.addTransaction(
+        tx.account_id, tx.amount_raw, storedCategory(tx),
+        tx.description_raw, tx.date, tx.is_expense,
+      )
+    }
+  }
+
   async function undoDeleteTransaction(tx: TransactionDto) {
     try {
-      if (tx.is_transfer && tx.transfer_account_id) {
-        const fromId = tx.is_expense ? tx.account_id : tx.transfer_account_id
-        const toId = tx.is_expense ? tx.transfer_account_id : tx.account_id
-        await financeApi.transferFunds({
-          from_account_id: fromId,
-          to_account_id: toId,
-          amount: tx.amount_raw,
-          description: tx.description_raw,
-          date: tx.date,
-        })
-      } else {
-        await financeApi.addTransaction(
-          tx.account_id, tx.amount_raw, tx.category_raw,
-          tx.description_raw, tx.date, tx.is_expense,
-        )
-      }
+      await recreateTransaction(tx)
       ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
       app.showToast(i18n.t('finances-tx-restored', 'Transaction restored'))
     } catch (e) {
@@ -712,14 +860,56 @@
         </button>
       </div>
 
+      {#if selectedIds.length > 0}
+        <div class="bulk-bar">
+          <label class="bulk-all">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onchange={toggleSelectAll}
+            />
+            {i18n.tArgs('finances-bulk-selected', { count: selectedIds.length }, `${selectedIds.length} selected`)}
+          </label>
+          <select
+            bind:value={bulkCategory}
+            aria-label={i18n.t('finances-bulk-move', 'Move to category')}
+            onchange={() => { if (bulkCategory) bulkRecategorize(bulkCategory) }}
+          >
+            <option value="">{i18n.t('finances-bulk-move', 'Move to category')}</option>
+            {#each allCategories as cat}
+              <option value={cat.name}>{cat.label}</option>
+            {/each}
+          </select>
+          <button class="bulk-delete-btn" onclick={() => pendingBulkDelete = true}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px">
+              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            {i18n.t('confirm-delete-button', 'Delete')}
+          </button>
+          <button class="clear-btn" onclick={clearSelection}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            {i18n.t('finances-clear', 'Clear')}
+          </button>
+        </div>
+      {/if}
+
       {#if transactions.length === 0}
         <p class="empty">{hasActiveFilters ? i18n.t('finances-no-matching', 'No matching transactions') : i18n.t('finances-no-transactions-yet', 'No transactions yet')}</p>
       {:else}
-        <div class="tx-list">
-          {#each transactions as tx}
-            <div class="tx-row" role="button" tabindex="0"
+        <div class="tx-list" class:selecting={selectedIds.length > 0}>
+          {#each transactions as tx, index}
+            <div class="tx-row" class:selected={selectedSet.has(tx.id)} role="button" tabindex="0"
               onclick={() => openEditTransaction(tx)}
               onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
+              <input
+                type="checkbox"
+                class="tx-select"
+                checked={selectedSet.has(tx.id)}
+                aria-label={i18n.t('finances-select-row', 'Select transaction')}
+                onclick={(e: MouseEvent) => { e.stopPropagation(); toggleSelection(tx, index, e.shiftKey) }}
+              />
               <span class="tx-type-dot" class:expense={tx.is_expense} class:transfer={tx.is_transfer}></span>
               <div class="tx-main">
                 <span class="tx-desc">{tx.description || tx.category}</span>
@@ -878,6 +1068,24 @@
   onclose={() => pendingDeleteTx = null}
 />
 
+<!-- Bulk Delete Confirm -->
+<ConfirmDialog
+  show={pendingBulkDelete}
+  message={i18n.tArgs(
+    'confirm-delete-transactions',
+    { count: selectedIds.length },
+    `Delete ${selectedIds.length} transactions?`,
+  )}
+  danger
+  onconfirm={async () => {
+    // Closed first: the count in the message is read from the live selection,
+    // which the delete clears, and nobody should watch it tick down to zero.
+    pendingBulkDelete = false
+    await bulkDelete()
+  }}
+  onclose={() => pendingBulkDelete = false}
+/>
+
 <style>
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
@@ -1005,8 +1213,79 @@
     flex-shrink: 0;
   }
 
+  /* Bulk selection bar */
+  .bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--accent-glow);
+  }
+  .bulk-all {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .bulk-bar select {
+    padding: 6px 10px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+  }
+  .bulk-bar select:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .bulk-delete-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 12px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .bulk-delete-btn:hover { background: var(--danger); color: #fff; }
+  /* Pushes Clear to the far end so it never sits next to the destructive one. */
+  .bulk-bar .clear-btn { margin-left: auto; }
+
   /* Transaction list */
   .tx-list { display: flex; flex-direction: column; }
+
+  /* Out of the way until the row is reachable, so a ledger nobody is editing
+     reads as a ledger and not as a form. Pointers only: without hover there is
+     no way to make it appear. */
+  .tx-select {
+    flex-shrink: 0;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .tx-row:hover .tx-select,
+  .tx-row:focus-within .tx-select,
+  .tx-list.selecting .tx-select { opacity: 1; }
+  @media (hover: none) {
+    .tx-select { opacity: 1; }
+  }
+
   .tx-row {
     display: flex;
     align-items: center;
@@ -1019,6 +1298,7 @@
   }
   .tx-row:last-child { border-bottom: none; }
   .tx-row:hover { background: var(--glass-hover); }
+  .tx-row.selected { background: var(--accent-glow); }
 
   .tx-type-dot {
     width: 8px;

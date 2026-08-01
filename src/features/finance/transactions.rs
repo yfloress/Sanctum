@@ -29,9 +29,30 @@ use super::FinanceError;
 use super::commands::{NewTransaction, UpdateTransaction};
 use super::repository::FinanceRepository;
 use super::validation::{
-    MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH, sanitize_string, validate_category_id,
-    validate_date, validate_field_length, validate_uuid,
+    MAX_BULK_TRANSACTIONS, MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH, sanitize_string,
+    validate_category_id, validate_date, validate_field_length, validate_uuid,
 };
+
+/// Checks a bulk selection and hands back the validated ids.
+///
+/// Rejecting the whole batch on one bad id is deliberate: a bulk action is one
+/// decision, and silently skipping part of it would leave the user believing
+/// something happened that did not.
+fn validate_bulk_ids(ids: &[String]) -> Result<Vec<String>, FinanceError> {
+    if ids.is_empty() {
+        return Err(FinanceError::Validation(
+            "No transactions selected".to_string(),
+        ));
+    }
+    if ids.len() > MAX_BULK_TRANSACTIONS {
+        return Err(FinanceError::Validation(format!(
+            "Cannot act on more than {MAX_BULK_TRANSACTIONS} transactions at once"
+        )));
+    }
+    ids.iter()
+        .map(|id| validate_uuid(id).map_err(FinanceError::from))
+        .collect()
+}
 
 /// Transaction operations for FinanceService
 pub struct TransactionOps;
@@ -140,6 +161,41 @@ impl TransactionOps {
             log_security_event(SecurityEvent::TransactionDeleted, None);
             Ok(())
         })
+    }
+
+    /// Deletes every transaction in `ids`. Returns how many were removed.
+    pub fn delete_transactions(db: &Database, ids: &[String]) -> Result<usize, FinanceError> {
+        let ids = validate_bulk_ids(ids)?;
+        let deleted = FinanceRepository::delete_transactions(db, &ids)?;
+        log_security_event(
+            SecurityEvent::TransactionDeleted,
+            Some(&format!("bulk:{deleted}")),
+        );
+        Ok(deleted)
+    }
+
+    /// Moves every transaction in `ids` to `category`. Returns how many changed.
+    ///
+    /// The count can be lower than `ids.len()`: transfers carry no user category
+    /// and are left as they are.
+    pub fn recategorize_transactions(
+        db: &Database,
+        ids: &[String],
+        category: &str,
+    ) -> Result<usize, FinanceError> {
+        let ids = validate_bulk_ids(ids)?;
+        let category = validate_field_length(category, MAX_CATEGORY_LENGTH, "Category")?;
+        let category = sanitize_string(&category);
+
+        if category.is_empty() {
+            return Err(FinanceError::Validation(
+                "Category cannot be empty".to_string(),
+            ));
+        }
+
+        Ok(FinanceRepository::recategorize_transactions(
+            db, &ids, &category,
+        )?)
     }
 
     pub fn transfer_funds<F>(

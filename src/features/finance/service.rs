@@ -315,6 +315,21 @@ impl FinanceService {
         )
     }
 
+    /// Deletes a whole selection at once. Returns how many rows went.
+    pub fn delete_transactions(&self, ids: Vec<String>) -> Result<usize, FinanceError> {
+        self.with_db(|db| TransactionOps::delete_transactions(db, &ids))
+    }
+
+    /// Moves a whole selection to one category. Returns how many rows changed,
+    /// which is fewer than requested when the selection included transfers.
+    pub fn recategorize_transactions(
+        &self,
+        ids: Vec<String>,
+        category: String,
+    ) -> Result<usize, FinanceError> {
+        self.with_db(|db| TransactionOps::recategorize_transactions(db, &ids, &category))
+    }
+
     // ==================== Category Budgets ====================
 
     /// Sets (or replaces) the monthly limit for a category.

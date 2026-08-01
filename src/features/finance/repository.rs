@@ -89,6 +89,18 @@ impl FinanceRepository {
         db.delete_transaction(id)
     }
 
+    pub fn delete_transactions(db: &Database, ids: &[String]) -> Result<usize, DbError> {
+        db.delete_transactions(ids)
+    }
+
+    pub fn recategorize_transactions(
+        db: &Database,
+        ids: &[String],
+        category: &str,
+    ) -> Result<usize, DbError> {
+        db.recategorize_transactions(ids, category)
+    }
+
     pub fn create_transfer(
         db: &Database,
         from_id: &str,

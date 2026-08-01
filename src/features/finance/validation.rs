@@ -33,6 +33,12 @@ pub const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 pub const MAX_CURRENCY_LENGTH: usize = 8;
 pub const MAX_ICON_LENGTH: usize = 256;
 pub const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60;
+/// Ceiling on the ids a single bulk transaction action may carry.
+///
+/// The activity list pages a hundred rows at a time, so this sits far above any
+/// selection a user can actually make. It is here so a malformed call cannot
+/// hold the write lock for an unbounded number of statements.
+pub const MAX_BULK_TRANSACTIONS: usize = 1000;
 
 pub fn validate_category_id(id: &str) -> Result<String, String> {
     let trimmed = id.trim();

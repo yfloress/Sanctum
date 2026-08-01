@@ -102,6 +102,19 @@ export async function deleteTransaction(id: string): Promise<void> {
   return invoke('delete_transaction', { id })
 }
 
+/** Deletes a whole selection atomically. Resolves to how many rows went. */
+export async function deleteTransactions(ids: string[]): Promise<number> {
+  return invoke<number>('delete_transactions', { ids })
+}
+
+/**
+ * Moves a whole selection to one category. Resolves to how many rows changed,
+ * which is fewer than `ids.length` when the selection included transfers.
+ */
+export async function recategorizeTransactions(ids: string[], category: string): Promise<number> {
+  return invoke<number>('recategorize_transactions', { ids, category })
+}
+
 export async function loadCategories(): Promise<CategoriesResponse> {
   return invoke<CategoriesResponse>('load_categories')
 }

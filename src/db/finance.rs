@@ -521,6 +521,45 @@ impl Database {
         })
     }
 
+    /// Deletes several transactions at once. Returns how many rows went.
+    ///
+    /// All or nothing: the user confirms a bulk action as a single decision, so
+    /// a failure halfway through must not leave the ledger partly changed with
+    /// no record of where it stopped. Ids that match nothing are simply counted
+    /// as zero rather than failing the batch.
+    pub fn delete_transactions(&self, ids: &[String]) -> Result<usize, DbError> {
+        self.with_transaction(|conn| {
+            let mut stmt = conn.prepare("DELETE FROM transactions WHERE id = ?1")?;
+            let mut deleted = 0;
+            for id in ids {
+                deleted += stmt.execute(params![id])?;
+            }
+            Ok(deleted)
+        })
+    }
+
+    /// Moves several transactions to `category`. Returns how many rows changed.
+    ///
+    /// Transfers are skipped in SQL rather than rejected: their category is
+    /// structural, and a selection that happens to include one should still
+    /// recategorise everything else instead of failing whole.
+    pub fn recategorize_transactions(
+        &self,
+        ids: &[String],
+        category: &str,
+    ) -> Result<usize, DbError> {
+        self.with_transaction(|conn| {
+            let mut stmt = conn.prepare(
+                "UPDATE transactions SET category = ?2 WHERE id = ?1 AND type != 'transfer'",
+            )?;
+            let mut updated = 0;
+            for id in ids {
+                updated += stmt.execute(params![id, category])?;
+            }
+            Ok(updated)
+        })
+    }
+
     // ==================== Transaction Categories CRUD ====================
 
     /// Gets all categories of a specific type (expense or income)

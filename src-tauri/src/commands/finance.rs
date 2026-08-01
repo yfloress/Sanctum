@@ -362,6 +362,28 @@ pub fn delete_transaction(finance: State<'_, FinanceService>, id: String) -> Res
     finance.delete_transaction(id).map_err(AppError::from)
 }
 
+/// Delete a whole selection. Returns how many rows went.
+#[tauri::command]
+pub fn delete_transactions(
+    finance: State<'_, FinanceService>,
+    ids: Vec<String>,
+) -> Result<usize, AppError> {
+    finance.delete_transactions(ids).map_err(AppError::from)
+}
+
+/// Move a whole selection to one category. Returns how many rows changed:
+/// transfers in the selection keep their structural category and are not counted.
+#[tauri::command]
+pub fn recategorize_transactions(
+    finance: State<'_, FinanceService>,
+    ids: Vec<String>,
+    category: String,
+) -> Result<usize, AppError> {
+    finance
+        .recategorize_transactions(ids, category)
+        .map_err(AppError::from)
+}
+
 // ==================== Categories ====================
 
 /// Load all expense and income categories.
