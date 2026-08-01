@@ -26,7 +26,7 @@ use rusqlite::Error as RusqliteError;
 use uuid::Uuid;
 
 use super::FinanceError;
-use super::commands::UpdateTransaction;
+use super::commands::{NewTransaction, UpdateTransaction};
 use super::repository::FinanceRepository;
 use super::validation::{
     MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH, sanitize_string, validate_category_id,
@@ -37,23 +37,15 @@ use super::validation::{
 pub struct TransactionOps;
 
 impl TransactionOps {
-    pub fn add_transaction<F>(
-        with_db: F,
-        account_id: String,
-        amount: i64,
-        category: String,
-        description: String,
-        date: String,
-        is_expense: bool,
-    ) -> Result<String, FinanceError>
+    pub fn add_transaction<F>(with_db: F, cmd: NewTransaction) -> Result<String, FinanceError>
     where
         F: FnOnce(
             &dyn Fn(&Database) -> Result<String, FinanceError>,
         ) -> Result<String, FinanceError>,
     {
         with_db(&|db| {
-            let account_id = validate_uuid(&account_id)?;
-            let category = validate_field_length(&category, MAX_CATEGORY_LENGTH, "Category")?;
+            let account_id = validate_uuid(&cmd.account_id)?;
+            let category = validate_field_length(&cmd.category, MAX_CATEGORY_LENGTH, "Category")?;
             let category = sanitize_string(&category);
 
             if category.is_empty() {
@@ -63,23 +55,23 @@ impl TransactionOps {
             }
 
             let description =
-                validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
+                validate_field_length(&cmd.description, MAX_DESCRIPTION_LENGTH, "Description")?;
             let description = sanitize_string(&description);
-            let date = validate_date(&date)?;
+            let date = validate_date(&cmd.date)?;
 
-            if amount <= 0 {
+            if cmd.amount_cents <= 0 {
                 return Err(FinanceError::Validation(
                     "Amount must be greater than zero".to_string(),
                 ));
             }
 
             let id = Uuid::new_v4().to_string();
-            let transaction_type = if is_expense { "expense" } else { "income" };
+            let transaction_type = if cmd.is_expense { "expense" } else { "income" };
 
             let transaction = Transaction::new(
                 id.clone(),
                 account_id,
-                amount,
+                cmd.amount_cents,
                 category,
                 description,
                 date,

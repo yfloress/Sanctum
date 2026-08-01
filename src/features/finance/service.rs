@@ -280,14 +280,6 @@ impl FinanceService {
     // ==================== Transaction Operations ====================
 
     pub fn add_transaction(&self, cmd: NewTransaction) -> Result<String, FinanceError> {
-        let NewTransaction {
-            account_id,
-            amount_cents,
-            category,
-            description,
-            date,
-            is_expense,
-        } = cmd;
         let db_arc = self.db.clone();
         TransactionOps::add_transaction(
             |f| {
@@ -301,12 +293,7 @@ impl FinanceService {
                 db.touch_session().map_err(FinanceError::Database)?;
                 Ok(result)
             },
-            account_id,
-            amount_cents,
-            category,
-            description,
-            date,
-            is_expense,
+            cmd,
         )
     }
 
