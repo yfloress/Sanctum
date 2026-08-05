@@ -32,7 +32,7 @@ jobs:
       # Pinned to match the version the deploy workflow uses; the branch has no
       # packageManager field to infer it from.
       - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v6.0.9
         with:
           version: 11
 
