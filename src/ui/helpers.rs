@@ -160,6 +160,34 @@ pub fn format_category_label(name: &str) -> String {
     format_category_title_case(trimmed)
 }
 
+/// The text a transaction should be findable by, folded for comparison.
+///
+/// The category goes in twice, as stored and as shown: a seeded category lives
+/// as a code (`FOOD`) but is printed translated ("Comida"), and the printed
+/// word is the one the user will type. Matching only the code makes a row
+/// unfindable by the very label on it.
+pub fn transaction_search_text(
+    description: &str,
+    category: &str,
+    date: &str,
+    account_name: &str,
+    transfer_account_name: Option<&str>,
+) -> String {
+    let mut text = format!(
+        "{} {} {} {} {}",
+        description,
+        category,
+        format_category_label(category),
+        date,
+        account_name
+    );
+    if let Some(name) = transfer_account_name {
+        text.push(' ');
+        text.push_str(name);
+    }
+    crate::services::search::normalize(&text)
+}
+
 /// Title-cases an uppercase code as a last resort when it has no translation.
 fn format_category_title_case(trimmed: &str) -> String {
     if trimmed.is_empty() {
@@ -552,6 +580,43 @@ mod tests {
     #[test]
     fn test_format_category_label_trimmed() {
         assert_eq!(format_category_label("  SALARY  "), "Salary");
+    }
+
+    // ==================== Transaction Search Text ====================
+
+    #[test]
+    fn search_text_covers_the_category_as_shown_not_only_as_stored() {
+        let text = transaction_search_text("", "SALARY", "2026-08-01", "Prueba", None);
+        // The stored code and the label the row actually prints.
+        assert!(text.contains("salary"));
+        assert!(text.contains("prueba"));
+    }
+
+    #[test]
+    fn search_text_includes_the_description_and_date() {
+        let text = transaction_search_text("Almuerzo", "FOOD", "2026-08-01", "Prueba", None);
+        assert!(text.contains("almuerzo"));
+        assert!(text.contains("2026-08-01"));
+    }
+
+    #[test]
+    fn search_text_is_folded_for_accents_and_case() {
+        let text = transaction_search_text("Café Ñuñoa", "OTHER", "2026-08-01", "Crédito", None);
+        assert!(text.contains("cafe nunoa"));
+        assert!(text.contains("credito"));
+    }
+
+    #[test]
+    fn search_text_adds_the_other_side_of_a_transfer() {
+        let text = transaction_search_text("", "TRANSFER", "2026-08-01", "Prueba", Some("Ahorros"));
+        assert!(text.contains("ahorros"));
+    }
+
+    #[test]
+    fn search_text_leaves_a_user_typed_category_alone() {
+        // Mixed case means the user wrote it, so it is not a translatable code.
+        let text = transaction_search_text("", "Mascotas", "2026-08-01", "Prueba", None);
+        assert!(text.contains("mascotas"));
     }
 
     // ==================== Fee Display ====================

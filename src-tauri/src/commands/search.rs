@@ -132,10 +132,12 @@ fn push_transactions(
             .cloned()
             .unwrap_or_else(|| ("USD".to_string(), String::new()));
 
+        let category_label = format_category_label(&tx.category);
+
         // A row with no description is known by its category; showing an empty
         // title and the category underneath would say the same thing twice.
         let title = if tx.description.trim().is_empty() {
-            format_category_label(&tx.category)
+            category_label.clone()
         } else {
             tx.description.clone()
         };
@@ -152,7 +154,10 @@ fn push_transactions(
             id: tx.id.clone(),
             title,
             subtitle,
-            keywords: format!("{} {}", tx.category, account_name),
+            // The label as well as the code: a seeded category is stored as
+            // `FOOD` but printed as "Comida", and the printed word is the one
+            // the user will type.
+            keywords: format!("{} {} {}", tx.category, category_label, account_name),
             recency: date_rank(&tx.date),
             amount_cents: Some(tx.amount),
             account_id: Some(tx.account_id.clone()),

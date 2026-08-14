@@ -23,6 +23,7 @@
 use sanctum::error::AppError;
 use sanctum::features::finance::FinanceService;
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
+use sanctum::services::search::normalize;
 use sanctum::ui::dto::finance::{
     AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, BudgetDto, BudgetInput,
     CategoriesResponse, CategoryDto, RecurringDto, RecurringInput, TransactionDto,
@@ -30,6 +31,7 @@ use sanctum::ui::dto::finance::{
 };
 use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
+    transaction_search_text,
 };
 use std::collections::HashMap;
 use tauri::State;
@@ -254,7 +256,8 @@ pub fn fetch_transactions(
 
     let transactions = finance.get_transactions().map_err(AppError::from)?;
 
-    let query_lower = query.unwrap_or_default().trim().to_lowercase();
+    // Folded the same way the haystack is, so "credito" finds "Crédito".
+    let query_lower = normalize(&query.unwrap_or_default());
     let account_filter = account_id.unwrap_or_default();
     let category_filter = category.unwrap_or_default();
     let category_filter_upper = category_filter.to_uppercase();
@@ -299,18 +302,21 @@ pub fn fetch_transactions(
                     .get(&tx.account_id)
                     .cloned()
                     .unwrap_or_else(|| ("USD".to_string(), "Unknown".to_string()));
-                let mut haystack = format!(
-                    "{} {} {} {}",
-                    tx.description, tx.category, tx.date, from_name
-                )
-                .to_lowercase();
-                if is_transfer
-                    && let Some(ref tid) = tx.transfer_account_id
-                    && let Some((_, tname)) = account_lookup.get(tid)
-                {
-                    haystack.push(' ');
-                    haystack.push_str(&tname.to_lowercase());
-                }
+                let transfer_name = if is_transfer {
+                    tx.transfer_account_id
+                        .as_ref()
+                        .and_then(|tid| account_lookup.get(tid))
+                        .map(|(_, name)| name.as_str())
+                } else {
+                    None
+                };
+                let haystack = transaction_search_text(
+                    &tx.description,
+                    &tx.category,
+                    &tx.date,
+                    &from_name,
+                    transfer_name,
+                );
                 if !haystack.contains(&query_lower) {
                     return false;
                 }
