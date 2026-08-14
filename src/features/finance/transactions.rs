@@ -23,14 +23,15 @@ use crate::db::{Database, DbError};
 use crate::models::{Transaction, TransactionCategory};
 use crate::security_log::{SecurityEvent, log_security_event};
 use rusqlite::Error as RusqliteError;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::FinanceError;
 use super::commands::{NewTransaction, UpdateTransaction};
 use super::repository::FinanceRepository;
 use super::validation::{
-    MAX_BULK_TRANSACTIONS, MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH, sanitize_string,
-    validate_category_id, validate_date, validate_field_length, validate_uuid,
+    MAX_BULK_TRANSACTIONS, MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH, normalize_tags,
+    sanitize_string, validate_category_id, validate_date, validate_field_length, validate_uuid,
 };
 
 /// Checks a bulk selection and hands back the validated ids.
@@ -196,6 +197,79 @@ impl TransactionOps {
         Ok(FinanceRepository::recategorize_transactions(
             db, &ids, &category,
         )?)
+    }
+
+    /// Replaces the tags on one transaction.
+    pub fn set_transaction_tags(
+        db: &Database,
+        id: &str,
+        tags: &[String],
+    ) -> Result<(), FinanceError> {
+        let id = validate_uuid(id)?;
+        let tags = normalize_tags(tags).map_err(FinanceError::Validation)?;
+        FinanceRepository::set_transaction_tags(db, &id, &tags)?;
+        Ok(())
+    }
+
+    /// Tags of every transaction, keyed by transaction id.
+    pub fn get_all_transaction_tags(
+        db: &Database,
+    ) -> Result<HashMap<String, Vec<String>>, FinanceError> {
+        Ok(FinanceRepository::get_all_transaction_tags(db)?)
+    }
+
+    /// Tags in use, most used first.
+    pub fn get_tag_catalog(db: &Database) -> Result<Vec<String>, FinanceError> {
+        Ok(FinanceRepository::get_tag_catalog(db)?)
+    }
+
+    /// Puts one tag on a whole selection. Returns how many rows gained it.
+    ///
+    /// The count can be lower than `ids.len()`: a row that already carried the
+    /// tag is left alone rather than counted twice.
+    pub fn tag_transactions(
+        db: &Database,
+        ids: &[String],
+        tag: &str,
+    ) -> Result<usize, FinanceError> {
+        let ids = validate_bulk_ids(ids)?;
+        let tags = normalize_tags(&[tag.to_string()]).map_err(FinanceError::Validation)?;
+        let tag = tags
+            .first()
+            .ok_or_else(|| FinanceError::Validation("Tag cannot be empty".to_string()))?;
+        Ok(FinanceRepository::tag_transactions(db, &ids, tag)?)
+    }
+
+    /// The account's balance counting only rows the user has confirmed.
+    pub fn reconciled_balance(db: &Database, account_id: &str) -> Result<i64, FinanceError> {
+        let account_id = validate_uuid(account_id)?;
+        Ok(FinanceRepository::reconciled_balance(db, &account_id)?)
+    }
+
+    /// Rows of `account_id` still waiting to be checked off, oldest first.
+    pub fn unreconciled_transactions(
+        db: &Database,
+        account_id: &str,
+    ) -> Result<Vec<Transaction>, FinanceError> {
+        let account_id = validate_uuid(account_id)?;
+        Ok(FinanceRepository::unreconciled_transactions(
+            db,
+            &account_id,
+        )?)
+    }
+
+    /// Confirms `ids` against the statement of `account_id`.
+    ///
+    /// The count can exceed `ids.len()`: a transfer between two of the user's
+    /// own accounts is one row that both sides may confirm.
+    pub fn confirm_reconciliation(
+        db: &Database,
+        account_id: &str,
+        ids: &[String],
+    ) -> Result<usize, FinanceError> {
+        let account_id = validate_uuid(account_id)?;
+        let ids = validate_bulk_ids(ids)?;
+        Ok(FinanceRepository::set_reconciled(db, &account_id, &ids)?)
     }
 
     pub fn transfer_funds<F>(

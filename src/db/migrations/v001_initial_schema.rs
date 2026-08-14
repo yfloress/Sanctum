@@ -30,6 +30,7 @@ pub fn up(conn: &Connection) -> Result<(), DbError> {
     // === FIAT Finance System ===
     create_accounts_table(conn)?;
     create_transactions_table(conn)?;
+    create_transaction_tags_table(conn)?;
     create_transaction_categories_table(conn)?;
     initialize_default_categories(conn)?;
     create_recurring_transactions_table(conn)?;
@@ -83,6 +84,12 @@ fn create_transactions_table(conn: &Connection) -> Result<(), DbError> {
             date TEXT NOT NULL,
             type TEXT NOT NULL,
             transfer_account_id TEXT,
+            -- Confirmed against the statement of `account_id`.
+            reconciled INTEGER NOT NULL DEFAULT 0,
+            -- Confirmed against the statement of `transfer_account_id`. Two
+            -- flags because a transfer is one row seen by two accounts, and
+            -- each side clears its bank on its own schedule.
+            transfer_reconciled INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
             FOREIGN KEY (transfer_account_id) REFERENCES accounts(id) ON DELETE RESTRICT
         )",
@@ -103,6 +110,42 @@ fn create_transactions_table(conn: &Connection) -> Result<(), DbError> {
     )?;
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)",
+        [],
+    )?;
+    // The reconcile screen always asks for one account's unconfirmed rows.
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_transactions_reconciled
+         ON transactions(account_id, reconciled)",
+        [],
+    )?;
+
+    Ok(())
+}
+
+/// Free-form labels on a transaction, alongside its category.
+///
+/// A second axis rather than a finer first one: the category answers "which
+/// budget does this come out of" and there can only be one, while a tag carries
+/// whatever else is worth remembering and there can be several. Splitting them
+/// is what stops a category list from growing a branch per nuance.
+///
+/// Tags are stored as plain text with no registry of their own. There is
+/// nothing to rename or delete when the last transaction using one goes; the
+/// set of tags that exists is whatever the rows say it is.
+fn create_transaction_tags_table(conn: &Connection) -> Result<(), DbError> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS transaction_tags (
+            transaction_id TEXT NOT NULL,
+            tag TEXT NOT NULL,
+            PRIMARY KEY (transaction_id, tag),
+            FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    // Filtering the activity list by a tag reads this the other way round.
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag ON transaction_tags(tag)",
         [],
     )?;
 

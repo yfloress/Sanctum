@@ -29,10 +29,11 @@
     onedit: (detail: AccountDetailResponse) => void
     onrefresh: () => Promise<void>
     oniconchange: (icon: string) => Promise<void>
+    onreconcile: (id: string) => void
     onclose: () => void
   }
 
-  let { show = $bindable(false), account, ondelete, onedit, onrefresh, oniconchange, onclose }: Props = $props()
+  let { show = $bindable(false), account, ondelete, onedit, onrefresh, oniconchange, onreconcile, onclose }: Props = $props()
 
   let showIconPicker = $state(false)
   let pendingDelete = $state(false)
@@ -99,6 +100,7 @@
     {/if}
     <div class="panel-actions">
       <button class="primary-btn" onclick={() => onedit(account)}>{i18n.t('finances-edit-account', 'Edit Account')}</button>
+      <button class="secondary-btn" onclick={() => onreconcile(account.id)}>{i18n.t('finances-reconcile', 'Reconcile')}</button>
       <button class="danger-btn" onclick={() => pendingDelete = true}>{i18n.t('finances-delete-account', 'Delete Account')}</button>
     </div>
   </aside>

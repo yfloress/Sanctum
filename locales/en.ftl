@@ -131,6 +131,25 @@ finances-currency = Currency
 finances-balance = Balance
 finances-edit-account = Edit Account
 finances-delete-account = Delete Account
+finances-reconcile = Reconcile
+finances-tags = Tags
+finances-tags-placeholder = snack, work...
+finances-tag-remove = Remove {$tag}
+finances-all-tags = All Tags
+finances-bulk-tag = Add tag
+finances-bulk-tagged = {$count} tagged
+
+# Reconciliation
+reconcile-title = Reconcile {$account}
+reconcile-hint = Enter the balance your bank shows, then tick the rows that appear on your statement.
+reconcile-statement = Balance according to your bank
+reconcile-marked = Marked in Sanctum
+reconcile-difference = Difference
+reconcile-balanced = Everything matches.
+reconcile-nothing-pending = Nothing left to confirm on this account.
+reconcile-confirm = Confirm {$count}
+reconcile-done = {$count} confirmed
+reconcile-confirmed = Confirmed against your bank
 
 # Transaction modal
 finances-edit-transaction = Edit Transaction

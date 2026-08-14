@@ -29,6 +29,7 @@ use crate::models::{
     RecurringTransaction, Transaction, TransactionCategory,
 };
 use rusqlite::{Connection, Error as RusqliteError, Row, params};
+use std::collections::HashMap;
 
 impl Database {
     // ==================== FIAT Accounts CRUD ====================
@@ -299,6 +300,222 @@ impl Database {
         })
     }
 
+    // ==================== Reconciliation ====================
+
+    /// Balance of `account_id` counting only what the user has confirmed.
+    ///
+    /// The account's opening balance is included unconditionally: it is the
+    /// figure the user declared the account started at, so it is confirmed by
+    /// definition and the difference is meant to be measured from there.
+    pub fn reconciled_balance(&self, account_id: &str) -> Result<i64, DbError> {
+        self.read(|conn| Self::reconciled_balance_on(conn, account_id))
+    }
+
+    fn reconciled_balance_on(conn: &Connection, account_id: &str) -> Result<i64, DbError> {
+        let account = Self::get_account_on(conn, account_id)?;
+
+        let sum = |sql: &str| -> i64 {
+            conn.query_row(sql, params![account_id], |row| row.get(0))
+                .unwrap_or(0)
+        };
+
+        // Each half of a transfer carries its own flag, so the incoming side
+        // reads `transfer_reconciled` and the outgoing side reads `reconciled`.
+        let income = sum("SELECT COALESCE(SUM(amount), 0) FROM transactions
+             WHERE account_id = ?1 AND type = 'income' AND reconciled = 1");
+        let transfers_in = sum("SELECT COALESCE(SUM(amount), 0) FROM transactions
+             WHERE transfer_account_id = ?1 AND type = 'transfer' AND transfer_reconciled = 1");
+        let expense = sum("SELECT COALESCE(SUM(amount), 0) FROM transactions
+             WHERE account_id = ?1 AND type = 'expense' AND reconciled = 1");
+        let transfers_out = sum("SELECT COALESCE(SUM(amount), 0) FROM transactions
+             WHERE account_id = ?1 AND type = 'transfer' AND reconciled = 1");
+
+        Ok(account.initial_balance + income + transfers_in - expense - transfers_out)
+    }
+
+    /// Rows of `account_id` the user has not confirmed yet, oldest first.
+    ///
+    /// Oldest first because that is the order a statement lists them in, and
+    /// ticking down a list in the same order as the paper is the whole point.
+    pub fn unreconciled_transactions(&self, account_id: &str) -> Result<Vec<Transaction>, DbError> {
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT id, account_id, amount, category, description, date, type, transfer_account_id,
+                        reconciled, transfer_reconciled
+                 FROM transactions
+                 WHERE (account_id = ?1 AND reconciled = 0)
+                    OR (transfer_account_id = ?1 AND type = 'transfer' AND transfer_reconciled = 0)
+                 ORDER BY date ASC, rowid ASC",
+            )?;
+
+            let transactions = stmt
+                .query_map(params![account_id], |row| {
+                    Ok(Transaction {
+                        id: row.get(0)?,
+                        account_id: row.get(1)?,
+                        amount: row.get(2)?,
+                        category: row.get(3)?,
+                        description: row.get(4)?,
+                        date: row.get(5)?,
+                        transaction_type: row.get(6)?,
+                        transfer_account_id: row.get(7)?,
+                        reconciled: row.get(8)?,
+                        transfer_reconciled: row.get(9)?,
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(transactions)
+        })
+    }
+
+    /// Marks `ids` confirmed for `account_id`. Returns how many rows changed.
+    ///
+    /// Which flag moves depends on the side `account_id` sits on, so confirming
+    /// a transfer against one statement leaves the other account untouched.
+    /// All or nothing: a reconciliation is one act, and a half-applied one
+    /// would leave a difference the user cannot explain.
+    pub fn set_reconciled(&self, account_id: &str, ids: &[String]) -> Result<usize, DbError> {
+        self.with_transaction(|conn| {
+            let mut outgoing = conn.prepare(
+                "UPDATE transactions SET reconciled = 1
+                 WHERE id = ?1 AND account_id = ?2",
+            )?;
+            let mut incoming = conn.prepare(
+                "UPDATE transactions SET transfer_reconciled = 1
+                 WHERE id = ?1 AND transfer_account_id = ?2 AND type = 'transfer'",
+            )?;
+
+            let mut changed = 0;
+            for id in ids {
+                changed += outgoing.execute(params![id, account_id])?;
+                changed += incoming.execute(params![id, account_id])?;
+            }
+            Ok(changed)
+        })
+    }
+
+    // ==================== Tags ====================
+
+    /// Replaces the tags on a transaction with `tags`.
+    ///
+    /// Delete-then-insert rather than a diff: the caller sends the whole set it
+    /// wants, and a handful of rows is not worth the bookkeeping of working out
+    /// which ones changed.
+    pub fn set_transaction_tags(
+        &self,
+        transaction_id: &str,
+        tags: &[String],
+    ) -> Result<(), DbError> {
+        self.with_transaction(|conn| Self::set_tags_on(conn, transaction_id, tags))
+    }
+
+    fn set_tags_on(
+        conn: &Connection,
+        transaction_id: &str,
+        tags: &[String],
+    ) -> Result<(), DbError> {
+        conn.execute(
+            "DELETE FROM transaction_tags WHERE transaction_id = ?1",
+            params![transaction_id],
+        )?;
+        let mut stmt = conn.prepare(
+            "INSERT OR IGNORE INTO transaction_tags (transaction_id, tag) VALUES (?1, ?2)",
+        )?;
+        for tag in tags {
+            stmt.execute(params![transaction_id, tag])?;
+        }
+        Ok(())
+    }
+
+    /// Every tag on every transaction, keyed by transaction id.
+    ///
+    /// Fetched in one pass because the activity list needs the tags of a whole
+    /// page at once, and asking per row would be a query per transaction.
+    pub fn get_all_transaction_tags(&self) -> Result<HashMap<String, Vec<String>>, DbError> {
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT transaction_id, tag FROM transaction_tags ORDER BY transaction_id, tag",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?;
+
+            let mut map: HashMap<String, Vec<String>> = HashMap::new();
+            for row in rows {
+                let (id, tag) = row?;
+                map.entry(id).or_default().push(tag);
+            }
+            Ok(map)
+        })
+    }
+
+    /// Distinct tags in use, most used first, for offering as suggestions.
+    pub fn get_tag_catalog(&self) -> Result<Vec<String>, DbError> {
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT tag FROM transaction_tags
+                 GROUP BY tag
+                 ORDER BY COUNT(*) DESC, tag ASC",
+            )?;
+            let tags = stmt
+                .query_map([], |row| row.get(0))?
+                .collect::<Result<Vec<String>, _>>()?;
+            Ok(tags)
+        })
+    }
+
+    /// Adds `tag` to every transaction in `ids`. Returns how many rows gained it.
+    pub fn tag_transactions(&self, ids: &[String], tag: &str) -> Result<usize, DbError> {
+        self.with_transaction(|conn| {
+            let mut stmt = conn.prepare(
+                "INSERT OR IGNORE INTO transaction_tags (transaction_id, tag) VALUES (?1, ?2)",
+            )?;
+            let mut added = 0;
+            for id in ids {
+                added += stmt.execute(params![id, tag])?;
+            }
+            Ok(added)
+        })
+    }
+
+    /// Whether an edit leaves everything a bank statement could show untouched.
+    ///
+    /// A confirmation says "this row matched my statement". Only the figures
+    /// the bank itself reports can invalidate that — the amount, the date and
+    /// which accounts moved. The category and the description are the user's
+    /// own labels; renaming one must not force a whole account to be
+    /// reconciled again.
+    ///
+    /// A row that has vanished counts as changed, so a lost id can never be
+    /// mistaken for "nothing moved".
+    fn bank_visible_unchanged(
+        conn: &Connection,
+        id: &str,
+        amount: i64,
+        date: &str,
+        account_id: &str,
+        transfer_account_id: Option<&str>,
+    ) -> Result<bool, DbError> {
+        let stored: Option<(i64, String, String, Option<String>)> = conn
+            .query_row(
+                "SELECT amount, date, account_id, transfer_account_id
+                 FROM transactions WHERE id = ?1",
+                params![id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .ok();
+
+        let Some((old_amount, old_date, old_account, old_transfer)) = stored else {
+            return Ok(false);
+        };
+
+        Ok(old_amount == amount
+            && old_date == date
+            && old_account == account_id
+            && old_transfer.as_deref() == transfer_account_id)
+    }
+
     // ==================== Financial Transactions CRUD ====================
 
     /// Creates a new transaction in the database
@@ -355,9 +572,20 @@ impl Database {
                 Self::get_account_on(conn, transfer_id)?;
             }
 
+            let keeps_confirmation = Self::bank_visible_unchanged(
+                conn,
+                &transaction.id,
+                transaction.amount,
+                &transaction.date,
+                &transaction.account_id,
+                transaction.transfer_account_id.as_deref(),
+            )?;
+
             conn.execute(
                 "UPDATE transactions
-                 SET account_id = ?2, amount = ?3, category = ?4, description = ?5, date = ?6, type = ?7, transfer_account_id = ?8
+                 SET account_id = ?2, amount = ?3, category = ?4, description = ?5, date = ?6, type = ?7, transfer_account_id = ?8,
+                     reconciled = reconciled AND ?9,
+                     transfer_reconciled = transfer_reconciled AND ?9
                  WHERE id = ?1",
                 params![
                     &transaction.id,
@@ -368,6 +596,7 @@ impl Database {
                     &transaction.date,
                     &transaction.transaction_type,
                     &transaction.transfer_account_id,
+                    keeps_confirmation,
                 ],
             )?;
 
@@ -431,9 +660,20 @@ impl Database {
             Self::get_account_on(conn, from_account_id)?;
             Self::get_account_on(conn, to_account_id)?;
 
+            let keeps_confirmation = Self::bank_visible_unchanged(
+                conn,
+                id,
+                amount,
+                date,
+                from_account_id,
+                Some(to_account_id),
+            )?;
+
             let changed = conn.execute(
                 "UPDATE transactions
-                 SET account_id = ?2, amount = ?3, description = ?4, date = ?5, transfer_account_id = ?6
+                 SET account_id = ?2, amount = ?3, description = ?4, date = ?5, transfer_account_id = ?6,
+                     reconciled = reconciled AND ?7,
+                     transfer_reconciled = transfer_reconciled AND ?7
                  WHERE id = ?1 AND type = 'transfer'",
                 params![
                     id,
@@ -441,7 +681,8 @@ impl Database {
                     amount,
                     description,
                     date,
-                    to_account_id
+                    to_account_id,
+                    keeps_confirmation
                 ],
             )?;
 
@@ -457,7 +698,8 @@ impl Database {
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, DbError> {
         self.read(|conn| {
             let mut stmt = conn.prepare(
-                "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
+                "SELECT id, account_id, amount, category, description, date, type, transfer_account_id,
+                        reconciled, transfer_reconciled
                  FROM transactions
                  ORDER BY date DESC, rowid DESC",
             )?;
@@ -473,6 +715,8 @@ impl Database {
                         date: row.get(5)?,
                         transaction_type: row.get(6)?,
                         transfer_account_id: row.get(7)?,
+                        reconciled: row.get(8)?,
+                        transfer_reconciled: row.get(9)?,
                     })
                 })?
                 .collect::<Result<Vec<_>, _>>()?;
@@ -488,7 +732,8 @@ impl Database {
     ) -> Result<Vec<Transaction>, DbError> {
         self.read(|conn| {
             let mut stmt = conn.prepare(
-                "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
+                "SELECT id, account_id, amount, category, description, date, type, transfer_account_id,
+                        reconciled, transfer_reconciled
                  FROM transactions
                  WHERE account_id = ?1 OR transfer_account_id = ?1
                  ORDER BY date DESC, rowid DESC",
@@ -505,6 +750,8 @@ impl Database {
                         date: row.get(5)?,
                         transaction_type: row.get(6)?,
                         transfer_account_id: row.get(7)?,
+                        reconciled: row.get(8)?,
+                        transfer_reconciled: row.get(9)?,
                     })
                 })?
                 .collect::<Result<Vec<_>, _>>()?;

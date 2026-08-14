@@ -797,6 +797,8 @@ mod tests {
                         date: "2024-06-15".to_string(),
                         transaction_type: "income".to_string(),
                         transfer_account_id: None,
+                        reconciled: false,
+                        transfer_reconciled: false,
                     };
                     db.create_transaction(&tx).expect("concurrent write");
                 }

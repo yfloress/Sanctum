@@ -26,8 +26,9 @@ use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::services::search::normalize;
 use sanctum::ui::dto::finance::{
     AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, BudgetDto, BudgetInput,
-    CategoriesResponse, CategoryDto, RecurringDto, RecurringInput, TransactionDto,
-    TransactionFilter, TransactionInput, TransactionsResponse, TransferInput,
+    CategoriesResponse, CategoryDto, ReconcileRowDto, ReconciliationResponse, RecurringDto,
+    RecurringInput, TransactionDto, TransactionFilter, TransactionInput, TransactionsResponse,
+    TransferInput,
 };
 use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
@@ -101,13 +102,15 @@ pub fn fetch_account_details(
         .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
         .collect();
 
+    let tags = finance.get_all_transaction_tags().unwrap_or_default();
+
     let mapped: Vec<TransactionDto> = transactions
         .into_iter()
         .filter(|tx| {
             tx.account_id == account_id
                 || tx.transfer_account_id.as_deref() == Some(account_id.as_str())
         })
-        .map(|tx| build_transaction_dto(&tx, &account_lookup))
+        .map(|tx| build_transaction_dto(&tx, &account_lookup, &tags))
         .collect();
 
     Ok(AccountDetailResponse {
@@ -242,11 +245,15 @@ pub fn fetch_transactions(
         query,
         account_id,
         category,
+        tag,
         date_from,
         date_to,
         limit,
         sort,
     } = filter;
+
+    let tags = finance.get_all_transaction_tags().unwrap_or_default();
+    let tag_filter = tag.unwrap_or_default().trim().to_lowercase();
 
     let accounts = finance.get_accounts().map_err(AppError::from)?;
     let account_lookup: HashMap<String, (String, String)> = accounts
@@ -284,6 +291,15 @@ pub fn fetch_transactions(
                     || (!is_transfer
                         && (category_filter_upper == "TRANSFER"
                             || !tx.category.eq_ignore_ascii_case(&category_filter))))
+            {
+                return false;
+            }
+
+            // Tag filter
+            if !tag_filter.is_empty()
+                && !tags
+                    .get(&tx.id)
+                    .is_some_and(|list| list.iter().any(|t| t == &tag_filter))
             {
                 return false;
             }
@@ -334,7 +350,7 @@ pub fn fetch_transactions(
     let mapped: Vec<TransactionDto> = matched
         .iter()
         .take(display_limit)
-        .map(|tx| build_transaction_dto(tx, &account_lookup))
+        .map(|tx| build_transaction_dto(tx, &account_lookup, &tags))
         .collect();
 
     Ok(TransactionsResponse {
@@ -349,7 +365,11 @@ pub fn add_transaction(
     finance: State<'_, FinanceService>,
     input: TransactionInput,
 ) -> Result<(), AppError> {
-    finance.add_transaction(input.into_new()?)?;
+    let tags = input.tags.clone();
+    let id = finance.add_transaction(input.into_new()?)?;
+    if let Some(tags) = tags {
+        finance.set_transaction_tags(id, tags)?;
+    }
     Ok(())
 }
 
@@ -359,7 +379,31 @@ pub fn update_transaction(
     finance: State<'_, FinanceService>,
     input: TransactionInput,
 ) -> Result<(), AppError> {
-    Ok(finance.update_transaction(input.into_update()?)?)
+    let tags = input.tags.clone();
+    let id = input.id.clone();
+    finance.update_transaction(input.into_update()?)?;
+    // Tags live in their own table, so they are written after the row itself
+    // and only when the caller actually sent a set.
+    if let (Some(id), Some(tags)) = (id, tags) {
+        finance.set_transaction_tags(id, tags)?;
+    }
+    Ok(())
+}
+
+/// Tags in use, most used first, for offering as suggestions.
+#[tauri::command]
+pub fn fetch_tags(finance: State<'_, FinanceService>) -> Result<Vec<String>, AppError> {
+    finance.get_tag_catalog().map_err(AppError::from)
+}
+
+/// Put one tag on a whole selection. Returns how many rows gained it.
+#[tauri::command]
+pub fn tag_transactions(
+    finance: State<'_, FinanceService>,
+    ids: Vec<String>,
+    tag: String,
+) -> Result<usize, AppError> {
+    finance.tag_transactions(ids, tag).map_err(AppError::from)
 }
 
 /// Delete a transaction.
@@ -387,6 +431,81 @@ pub fn recategorize_transactions(
 ) -> Result<usize, AppError> {
     finance
         .recategorize_transactions(ids, category)
+        .map_err(AppError::from)
+}
+
+// ==================== Reconciliation ====================
+
+/// Everything the reconcile screen needs for one account.
+#[tauri::command]
+pub fn fetch_reconciliation(
+    finance: State<'_, FinanceService>,
+    account_id: String,
+) -> Result<ReconciliationResponse, AppError> {
+    let accounts = finance.get_accounts().map_err(AppError::from)?;
+    let account = accounts
+        .iter()
+        .find(|a| a.id == account_id)
+        .ok_or_else(|| AppError::not_found("Account not found"))?;
+
+    let confirmed_cents = finance
+        .reconciled_balance(account_id.clone())
+        .map_err(AppError::from)?;
+    let current_cents = finance
+        .get_account_balances()
+        .map_err(AppError::from)?
+        .iter()
+        .find(|b| b.account_id == account_id)
+        .map(|b| b.current_balance)
+        .unwrap_or(0);
+
+    let pending = finance
+        .unreconciled_transactions(account_id.clone())
+        .map_err(AppError::from)?
+        .iter()
+        .map(|tx| {
+            // Signed from this account's point of view. The same transfer row
+            // is money out for its owner and money in for the other side, so
+            // the sign follows which side is being reconciled.
+            let incoming = tx.transaction_type == "income"
+                || (tx.transaction_type == "transfer" && tx.account_id != account_id);
+            let amount_cents = if incoming {
+                tx.amount.abs()
+            } else {
+                -tx.amount.abs()
+            };
+            ReconcileRowDto {
+                id: tx.id.clone(),
+                date: tx.date.clone(),
+                description: if tx.description.trim().is_empty() {
+                    format_category_label(&tx.category)
+                } else {
+                    tx.description.clone()
+                },
+                amount_cents,
+            }
+        })
+        .collect();
+
+    Ok(ReconciliationResponse {
+        account_id,
+        account_name: account.name.clone(),
+        currency: account.currency.clone(),
+        confirmed_cents,
+        current_cents,
+        pending,
+    })
+}
+
+/// Confirm a selection against one account's statement. Returns rows changed.
+#[tauri::command]
+pub fn confirm_reconciliation(
+    finance: State<'_, FinanceService>,
+    account_id: String,
+    ids: Vec<String>,
+) -> Result<usize, AppError> {
+    finance
+        .confirm_reconciliation(account_id, ids)
         .map_err(AppError::from)
 }
 
@@ -477,6 +596,7 @@ fn sort_transactions(transactions: &mut [sanctum::models::Transaction], sort: Op
 fn build_transaction_dto(
     tx: &sanctum::models::Transaction,
     account_lookup: &HashMap<String, (String, String)>,
+    tags: &HashMap<String, Vec<String>>,
 ) -> TransactionDto {
     let (currency, from_name) = account_lookup
         .get(&tx.account_id)
@@ -520,6 +640,16 @@ fn build_transaction_dto(
         category_raw,
         amount: format_money(tx.amount.abs(), &currency),
         amount_raw: format_decimal_from_cents(tx.amount),
+        // A transfer is one row that two statements have to show, so it only
+        // counts as verified once both sides have confirmed it. Marking it on
+        // the first would claim the money had been checked into an account
+        // whose bank has not reported it yet.
+        reconciled: if is_transfer {
+            tx.reconciled && tx.transfer_reconciled
+        } else {
+            tx.reconciled
+        },
+        tags: tags.get(&tx.id).cloned().unwrap_or_default(),
         is_expense,
         is_transfer,
         transfer_account_id: tx.transfer_account_id.clone(),

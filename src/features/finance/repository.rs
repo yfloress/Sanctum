@@ -101,6 +101,43 @@ impl FinanceRepository {
         db.recategorize_transactions(ids, category)
     }
 
+    pub fn set_transaction_tags(db: &Database, id: &str, tags: &[String]) -> Result<(), DbError> {
+        db.set_transaction_tags(id, tags)
+    }
+
+    pub fn get_all_transaction_tags(
+        db: &Database,
+    ) -> Result<std::collections::HashMap<String, Vec<String>>, DbError> {
+        db.get_all_transaction_tags()
+    }
+
+    pub fn get_tag_catalog(db: &Database) -> Result<Vec<String>, DbError> {
+        db.get_tag_catalog()
+    }
+
+    pub fn tag_transactions(db: &Database, ids: &[String], tag: &str) -> Result<usize, DbError> {
+        db.tag_transactions(ids, tag)
+    }
+
+    pub fn reconciled_balance(db: &Database, account_id: &str) -> Result<i64, DbError> {
+        db.reconciled_balance(account_id)
+    }
+
+    pub fn unreconciled_transactions(
+        db: &Database,
+        account_id: &str,
+    ) -> Result<Vec<Transaction>, DbError> {
+        db.unreconciled_transactions(account_id)
+    }
+
+    pub fn set_reconciled(
+        db: &Database,
+        account_id: &str,
+        ids: &[String],
+    ) -> Result<usize, DbError> {
+        db.set_reconciled(account_id, ids)
+    }
+
     pub fn create_transfer(
         db: &Database,
         from_id: &str,

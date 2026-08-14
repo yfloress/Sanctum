@@ -252,7 +252,9 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 .tx-type { color: var(--text-secondary); text-transform: capitalize; }
 .tx-amount { color: var(--text-secondary); text-align: right; }
 
-.panel-actions { margin-top: 20px; }
+/* Wraps rather than squeezing: a detail panel is narrow, and buttons that fall
+   to a second line need the gap as much as the ones sharing a line. */
+.panel-actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 8px; }
 
 .panel-tx-actions { display: flex; gap: 4px; align-items: center; }
 .icon-btn-mini {

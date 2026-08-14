@@ -124,6 +124,11 @@ pub struct TransactionDto {
     pub is_transfer: bool,
     pub transfer_account_id: Option<String>,
     pub transfer_account_name: Option<String>,
+    /// Fully confirmed against a statement. A transfer needs both of its
+    /// accounts to have confirmed it, since one row shows up on two statements.
+    pub reconciled: bool,
+    /// Free-form labels, already normalized. Empty for most rows.
+    pub tags: Vec<String>,
 }
 
 /// Paginated transaction list.
@@ -143,6 +148,10 @@ pub struct TransactionInput {
     pub description: String,
     pub date: String,
     pub is_expense: bool,
+    /// Absent means "leave the tags alone", which is what an older caller or a
+    /// form that does not offer them wants.
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 /// Filtering, ordering and paging for a transaction query.
@@ -155,12 +164,45 @@ pub struct TransactionFilter {
     pub query: Option<String>,
     pub account_id: Option<String>,
     pub category: Option<String>,
+    /// Narrows to rows carrying this tag.
+    pub tag: Option<String>,
     /// Inclusive ISO `YYYY-MM-DD` bounds.
     pub date_from: Option<String>,
     pub date_to: Option<String>,
     pub limit: Option<usize>,
     /// One of `date-desc`, `date-asc`, `amount-desc`, `amount-asc`.
     pub sort: Option<String>,
+}
+
+// ==================== Reconciliation ====================
+
+/// One row awaiting confirmation, as the reconcile screen needs it.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReconcileRowDto {
+    pub id: String,
+    pub date: String,
+    pub description: String,
+    /// Signed as this account sees it: negative means money left. A transfer
+    /// flips sign depending on which side is being reconciled.
+    ///
+    /// Raw rather than formatted: the screen adds up ticked rows as the user
+    /// goes, so it has to format arbitrary sums anyway and a preformatted
+    /// string here would only let the two disagree.
+    pub amount_cents: i64,
+}
+
+/// Everything the reconcile screen needs for one account.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReconciliationResponse {
+    pub account_id: String,
+    pub account_name: String,
+    pub currency: String,
+    /// Balance of what is already confirmed, in cents so the frontend can do
+    /// the arithmetic of the difference without parsing a formatted string.
+    pub confirmed_cents: i64,
+    /// Balance of everything, confirmed or not.
+    pub current_cents: i64,
+    pub pending: Vec<ReconcileRowDto>,
 }
 
 // ==================== Transfers ====================
@@ -315,6 +357,7 @@ mod tests {
             description: String::new(),
             date: "2026-01-01".to_string(),
             is_expense: true,
+            tags: None,
         };
         let err = input.into_new().unwrap_err();
         assert_eq!(err.kind, ErrorKind::Validation);

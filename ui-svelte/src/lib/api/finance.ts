@@ -19,7 +19,7 @@ import { invoke } from './ipc'
 import type {
   AccountsResponse, AccountDetailResponse,
   TransactionsResponse, TransactionFilter, TransferInput, CategoriesResponse,
-  RecurringDto, RecurringInput, BudgetDto
+  RecurringDto, RecurringInput, BudgetDto, ReconciliationResponse
 } from '../types'
 
 export async function fetchAccounts(): Promise<AccountsResponse> {
@@ -82,19 +82,19 @@ export async function fetchTransactions(
 
 export async function addTransaction(
   account_id: string, amount: string, category: string,
-  description: string, date: string, is_expense: boolean
+  description: string, date: string, is_expense: boolean, tags?: string[]
 ): Promise<void> {
   return invoke('add_transaction', {
-    input: { account_id, amount, category, description, date, is_expense },
+    input: { account_id, amount, category, description, date, is_expense, tags: tags ?? null },
   })
 }
 
 export async function updateTransaction(
   id: string, account_id: string, amount: string, category: string,
-  description: string, date: string, is_expense: boolean
+  description: string, date: string, is_expense: boolean, tags?: string[]
 ): Promise<void> {
   return invoke('update_transaction', {
-    input: { id, account_id, amount, category, description, date, is_expense },
+    input: { id, account_id, amount, category, description, date, is_expense, tags: tags ?? null },
   })
 }
 
@@ -113,6 +113,25 @@ export async function deleteTransactions(ids: string[]): Promise<number> {
  */
 export async function recategorizeTransactions(ids: string[], category: string): Promise<number> {
   return invoke<number>('recategorize_transactions', { ids, category })
+}
+
+/** Tags in use, most used first. */
+export async function fetchTags(): Promise<string[]> {
+  return invoke<string[]>('fetch_tags')
+}
+
+/** Puts one tag on a whole selection. Resolves to how many rows gained it. */
+export async function tagTransactions(ids: string[], tag: string): Promise<number> {
+  return invoke<number>('tag_transactions', { ids, tag })
+}
+
+export async function fetchReconciliation(accountId: string): Promise<ReconciliationResponse> {
+  return invoke<ReconciliationResponse>('fetch_reconciliation', { accountId })
+}
+
+/** Confirms a selection against one account's statement. Resolves to rows changed. */
+export async function confirmReconciliation(accountId: string, ids: string[]): Promise<number> {
+  return invoke<number>('confirm_reconciliation', { accountId, ids })
 }
 
 export async function loadCategories(): Promise<CategoriesResponse> {

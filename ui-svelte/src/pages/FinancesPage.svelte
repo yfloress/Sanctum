@@ -21,7 +21,7 @@
   import * as financeApi from '../lib/api/finance'
   import type {
     TransactionDto, TransactionSort, CategoriesResponse, CategoryDto,
-    AccountsResponse, AccountDetailResponse, AccountDto, SearchHit
+    AccountsResponse, AccountDetailResponse, AccountDto, SearchHit, ReconciliationResponse
   } from '../lib/types'
   import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
   import { mask } from '../lib/currency'
@@ -34,6 +34,7 @@
   import FinanceAccountModal from '../components/finance/FinanceAccountModal.svelte'
   import FinanceTransferModal from '../components/finance/FinanceTransferModal.svelte'
   import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
+  import ReconcilePanel from '../components/finance/ReconcilePanel.svelte'
   import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
   import FinanceRecurringPanel from '../components/finance/FinanceRecurringPanel.svelte'
   import FinanceBudgetPanel from '../components/finance/FinanceBudgetPanel.svelte'
@@ -52,6 +53,15 @@
   let filterQuery = $state('')
   let filterAccountId = $state('')
   let filterCategory = $state('')
+  let filterTag = $state('')
+  let tagCatalog = $state<string[]>([])
+
+  /** Jumps to everything carrying `tag`, from a click on a row's tag. */
+  function filterByTag(tag: string) {
+    filterTag = tag
+    activeTab = 'activity'
+    void loadTransactions()
+  }
   type DateRange = 'all' | 'this-month' | 'last-30' | 'last-90' | 'this-year' | 'custom'
   let filterDateRange = $state<DateRange>('all')
   let filterDateFrom = $state('')
@@ -89,7 +99,7 @@
   }
 
   let hasActiveFilters = $derived(
-    !!filterQuery || !!filterAccountId || !!filterCategory ||
+    !!filterQuery || !!filterAccountId || !!filterCategory || !!filterTag ||
     filterDateRange !== 'all'
   )
 
@@ -131,6 +141,7 @@
       row that has left the result set is never what the tick meant. */
   let selectedIds = $state<string[]>([])
   let bulkCategory = $state('')
+  let bulkTag = $state('')
   let pendingBulkDelete = $state(false)
   /** Anchor for shift-click ranges. Plain, not state: it never renders. */
   let lastTouchedIndex = -1
@@ -167,7 +178,23 @@
   function clearSelection() {
     selectedIds = []
     bulkCategory = ''
+    bulkTag = ''
     lastTouchedIndex = -1
+  }
+
+  /** Puts one tag on the whole selection. Adds only; nothing is replaced. */
+  async function bulkAddTag() {
+    const tag = bulkTag.trim()
+    if (!tag || selectedIds.length === 0) return
+    try {
+      const changed = await financeApi.tagTransactions(selectedIds, tag)
+      clearSelection()
+      ledgerRevision += 1
+      await Promise.all([loadTransactions(), loadTagCatalog()])
+      app.showToast(i18n.tArgs('finances-bulk-tagged', { count: changed }, `${changed} tagged`))
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
   }
 
   /** The category as stored rather than as shown: `category_raw` is uppercased
@@ -276,11 +303,22 @@
       ])
       accountsData = acc
       categories = cats
-      await Promise.all([loadTransactions(), loadChartTransactions()])
+      await Promise.all([loadTransactions(), loadChartTransactions(), loadTagCatalog()])
     } catch (e) {
       app.showToast(errorMessage(e), true)
     } finally {
       loading = false
+    }
+  }
+
+  async function loadTagCatalog() {
+    try {
+      tagCatalog = await financeApi.fetchTags()
+      // A tag can disappear when its last transaction is edited or deleted;
+      // leaving it selected would filter to nothing with no way back.
+      if (filterTag && !tagCatalog.includes(filterTag)) filterTag = ''
+    } catch {
+      tagCatalog = []
     }
   }
 
@@ -300,6 +338,7 @@
         query: filterQuery || undefined,
         account_id: filterAccountId || undefined,
         category: filterCategory || undefined,
+        tag: filterTag || undefined,
         date_from: from,
         date_to: to,
         limit: 100,
@@ -326,6 +365,7 @@
         query: filterQuery || undefined,
         account_id: filterAccountId || undefined,
         category: filterCategory || undefined,
+        tag: filterTag || undefined,
         date_from: from,
         date_to: to,
         limit: transactions.length + 100,
@@ -343,6 +383,7 @@
     filterQuery = ''
     filterAccountId = ''
     filterCategory = ''
+    filterTag = ''
     filterDateRange = 'all'
     filterDateFrom = ''
     filterDateTo = ''
@@ -351,6 +392,36 @@
   function clearFilters() {
     resetFilters()
     loadTransactions()
+  }
+
+  // ── Reconciliation ────────────────────────────────────────────────────────
+
+  let reconciliation = $state<ReconciliationResponse | null>(null)
+
+  async function openReconcile(accountId: string) {
+    try {
+      reconciliation = await financeApi.fetchReconciliation(accountId)
+      // The account panel sits behind it; leaving both open stacks two
+      // overlays over each other.
+      selectedAccount = null
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
+  }
+
+  async function confirmReconcile(ids: string[]) {
+    const accountId = reconciliation?.account_id
+    if (!accountId) return
+    try {
+      const count = await financeApi.confirmReconciliation(accountId, ids)
+      reconciliation = null
+      app.showToast(i18n.tArgs('reconcile-done', { count }, `${count} confirmed`))
+      // Both lists carry the confirmation mark, so refreshing only the activity
+      // one leaves the overview showing rows as still pending.
+      await Promise.all([loadTransactions(), loadChartTransactions()])
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
   }
 
   async function openAccountDetail(id: string) {
@@ -830,6 +901,12 @@
                 <div class="tx-main">
                   <span class="tx-desc">{tx.description || tx.category}</span>
                   <div class="tx-meta">
+                    {#if tx.reconciled}
+                      <svg class="tx-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        role="img" aria-label={i18n.t('reconcile-confirmed', 'Confirmed against your bank')}>
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                    {/if}
                     {#if tx.description}
                       <span class="tx-cat-badge">{tx.category}</span>
                     {/if}
@@ -875,6 +952,16 @@
               <option value={cat.name}>{cat.label}</option>
             {/each}
           </select>
+          <!-- Hidden while nothing is tagged: an empty dropdown is a dead
+               control that only makes the toolbar wider. -->
+          {#if tagCatalog.length > 0}
+            <select bind:value={filterTag} aria-label={i18n.t('finances-tags', 'Tags')} onchange={() => loadTransactions()}>
+              <option value="">{i18n.t('finances-all-tags', 'All Tags')}</option>
+              {#each tagCatalog as tag}
+                <option value={tag}>#{tag}</option>
+              {/each}
+            </select>
+          {/if}
           <select
             bind:value={filterDateRange}
             aria-label={i18n.t('finances-date-range', 'Date range')}
@@ -950,6 +1037,14 @@
               <option value={cat.name}>{cat.label}</option>
             {/each}
           </select>
+          <input
+            class="bulk-tag-input"
+            type="text"
+            bind:value={bulkTag}
+            onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); bulkAddTag() } }}
+            aria-label={i18n.t('finances-bulk-tag', 'Add tag')}
+            placeholder={i18n.t('finances-bulk-tag', 'Add tag')}
+          />
           <button class="bulk-delete-btn" onclick={() => pendingBulkDelete = true}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:13px;height:13px">
               <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -989,11 +1084,20 @@
               <div class="tx-main">
                 <span class="tx-desc">{tx.description || tx.category}</span>
                 <div class="tx-meta">
+                  {#if tx.reconciled}
+                    <svg class="tx-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                      role="img" aria-label={i18n.t('reconcile-confirmed', 'Confirmed against your bank')}>
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  {/if}
                   <!-- Only when the title is not already the category: an entry
                        with no description would otherwise say it twice. -->
                   {#if tx.description}
                     <span class="tx-cat-badge">{tx.category}</span>
                   {/if}
+                  {#each tx.tags as tag}
+                    <button class="tx-tag" onclick={(e: MouseEvent) => { e.stopPropagation(); filterByTag(tag) }}>#{tag}</button>
+                  {/each}
                   <span class="tx-acc">{tx.account_name}</span>
                   <span class="tx-date">{tx.date}</span>
                 </div>
@@ -1099,7 +1203,16 @@
   onedit={openEditAccount}
   onrefresh={async () => { if (selectedAccount) selectedAccount = await financeApi.fetchAccountDetails(selectedAccount.id); await refreshAccounts() }}
   oniconchange={handleAccountIconChange}
+  onreconcile={openReconcile}
   onclose={() => selectedAccount = null}
+/>
+
+<!-- Reconciliation panel -->
+<ReconcilePanel
+  show={reconciliation !== null}
+  data={reconciliation}
+  onconfirm={confirmReconcile}
+  onclose={() => reconciliation = null}
 />
 
 <!-- Add/Edit Transaction Modal -->
@@ -1110,7 +1223,7 @@
   accounts={accountsData?.accounts ?? []}
   categories={categories ?? { expense: [], income: [] }}
   {descriptionHistory}
-  onsubmit={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+  onsubmit={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions(), loadTagCatalog()]) }}
   onclose={() => { showAddTransaction = false; duplicatingTransaction = null }}
 />
 
@@ -1329,6 +1442,18 @@
     border-color: var(--accent);
     outline: none;
   }
+  .bulk-tag-input {
+    width: 120px;
+    padding: 7px 10px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass-active);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.78rem;
+  }
+  .bulk-tag-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
+
   .bulk-delete-btn {
     display: flex;
     align-items: center;
@@ -1416,6 +1541,25 @@
     gap: 8px;
     flex-wrap: wrap;
   }
+  /* Quiet on purpose: confirmed is the resting state a ledger should reach,
+     so it marks the row without competing with what the row says. */
+  .tx-check { width: 12px; height: 12px; color: var(--success, #4ade80); flex-shrink: 0; }
+
+  /* Clickable because a tag on a row is the fastest way to ask "what else did
+     I file under this". */
+  .tx-tag {
+    padding: 1px 7px;
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    background: none;
+    color: var(--text-tertiary);
+    font-family: inherit;
+    font-size: 0.67rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tx-tag:hover { border-color: var(--accent); color: var(--text-primary); }
+
   .tx-cat-badge {
     font-size: 0.67rem;
     padding: 1px 7px;

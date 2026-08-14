@@ -425,6 +425,8 @@ mod tests {
             date: date.to_string(),
             transaction_type: tx_type.to_string(),
             transfer_account_id: None,
+            reconciled: false,
+            transfer_reconciled: false,
         }
     }
 

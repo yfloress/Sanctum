@@ -115,6 +115,8 @@ mod tests {
             date: "2026-07-29".to_string(),
             transaction_type: "expense".to_string(),
             transfer_account_id: None,
+            reconciled: false,
+            transfer_reconciled: false,
         }
     }
 

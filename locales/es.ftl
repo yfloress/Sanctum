@@ -131,6 +131,25 @@ finances-currency = Moneda
 finances-balance = Saldo
 finances-edit-account = Editar Cuenta
 finances-delete-account = Eliminar Cuenta
+finances-reconcile = Conciliar
+finances-tags = Etiquetas
+finances-tags-placeholder = chatarra, trabajo...
+finances-tag-remove = Quitar {$tag}
+finances-all-tags = Todas las Etiquetas
+finances-bulk-tag = Agregar etiqueta
+finances-bulk-tagged = {$count} etiquetadas
+
+# Reconciliation
+reconcile-title = Conciliar {$account}
+reconcile-hint = Escribe el saldo que muestra tu banco y marca las filas que aparecen en tu cartola.
+reconcile-statement = Saldo según tu banco
+reconcile-marked = Marcado en Sanctum
+reconcile-difference = Diferencia
+reconcile-balanced = Todo calza.
+reconcile-nothing-pending = No queda nada por confirmar en esta cuenta.
+reconcile-confirm = Confirmar {$count}
+reconcile-done = {$count} confirmadas
+reconcile-confirmed = Confirmada contra tu banco
 
 # Transaction modal
 finances-edit-transaction = Editar Transacción

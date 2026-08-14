@@ -170,6 +170,13 @@ pub struct Transaction {
     #[serde(rename = "type")]
     pub transaction_type: String,
     pub transfer_account_id: Option<String>,
+    /// Confirmed against the statement of `account_id`.
+    #[serde(default)]
+    pub reconciled: bool,
+    /// Confirmed against the statement of `transfer_account_id`. A transfer is
+    /// one row seen by two accounts, and each side clears its bank separately.
+    #[serde(default)]
+    pub transfer_reconciled: bool,
 }
 
 /// How often a recurring rule fires.
@@ -300,6 +307,10 @@ impl Transaction {
             date,
             transaction_type,
             transfer_account_id,
+            // Nothing is confirmed the moment it is written down; confirming is
+            // what the user does against a statement afterwards.
+            reconciled: false,
+            transfer_reconciled: false,
         }
     }
 

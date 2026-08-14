@@ -39,6 +39,47 @@ pub const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60;
 /// selection a user can actually make. It is here so a malformed call cannot
 /// hold the write lock for an unbounded number of statements.
 pub const MAX_BULK_TRANSACTIONS: usize = 1000;
+pub const MAX_TAG_LENGTH: usize = 32;
+/// Ceiling on the tags one transaction may carry.
+///
+/// Tags are meant to add a note of nuance, not to become a second ledger. The
+/// limit exists so a malformed call cannot write an unbounded number of rows.
+pub const MAX_TAGS_PER_TRANSACTION: usize = 10;
+
+/// Cleans a set of tags: trimmed, lowercased, deduplicated, order preserved.
+///
+/// Lowercased because "Trabajo" and "trabajo" are the same label to the person
+/// typing them, and letting both exist would split every filter in two.
+///
+/// Filtered with the Unicode-aware `is_alphanumeric` rather than the shared
+/// `sanitize_string`, which is ASCII-only and would turn "niños" into "nios".
+pub fn normalize_tags(tags: &[String]) -> Result<Vec<String>, String> {
+    let mut out: Vec<String> = Vec::new();
+    for tag in tags {
+        let clean: String = tag
+            .trim()
+            .chars()
+            .filter(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_'))
+            .collect::<String>()
+            .trim()
+            .to_lowercase();
+        if clean.is_empty() {
+            continue;
+        }
+        if clean.chars().count() > MAX_TAG_LENGTH {
+            return Err(format!("Tags cannot exceed {MAX_TAG_LENGTH} characters"));
+        }
+        if !out.contains(&clean) {
+            out.push(clean);
+        }
+    }
+    if out.len() > MAX_TAGS_PER_TRANSACTION {
+        return Err(format!(
+            "Cannot put more than {MAX_TAGS_PER_TRANSACTION} tags on one transaction"
+        ));
+    }
+    Ok(out)
+}
 
 pub fn validate_category_id(id: &str) -> Result<String, String> {
     let trimmed = id.trim();

@@ -60,6 +60,24 @@ export interface TransactionDto {
   is_transfer: boolean
   transfer_account_id: string | null
   transfer_account_name: string | null
+  reconciled: boolean
+  tags: string[]
+}
+
+export interface ReconcileRowDto {
+  id: string
+  date: string
+  description: string
+  amount_cents: number
+}
+
+export interface ReconciliationResponse {
+  account_id: string
+  account_name: string
+  currency: string
+  confirmed_cents: number
+  current_cents: number
+  pending: ReconcileRowDto[]
 }
 
 export interface TransactionsResponse {
@@ -75,6 +93,8 @@ export interface TransactionInput {
   description: string
   date: string
   is_expense: boolean
+  /** Omit to leave the existing tags alone. */
+  tags?: string[]
 }
 
 /** Ordering keys the backend understands; anything else keeps newest first. */
@@ -89,6 +109,7 @@ export interface TransactionFilter {
   query?: string
   account_id?: string
   category?: string
+  tag?: string
   /** Inclusive ISO `YYYY-MM-DD` bounds. */
   date_from?: string
   date_to?: string

@@ -330,6 +330,54 @@ impl FinanceService {
         self.with_db(|db| TransactionOps::recategorize_transactions(db, &ids, &category))
     }
 
+    // ==================== Tags ====================
+
+    /// Replaces the tags on one transaction.
+    pub fn set_transaction_tags(&self, id: String, tags: Vec<String>) -> Result<(), FinanceError> {
+        self.with_db(|db| TransactionOps::set_transaction_tags(db, &id, &tags))
+    }
+
+    /// Tags of every transaction, keyed by transaction id.
+    pub fn get_all_transaction_tags(
+        &self,
+    ) -> Result<std::collections::HashMap<String, Vec<String>>, FinanceError> {
+        self.with_db(TransactionOps::get_all_transaction_tags)
+    }
+
+    /// Tags in use, most used first.
+    pub fn get_tag_catalog(&self) -> Result<Vec<String>, FinanceError> {
+        self.with_db(TransactionOps::get_tag_catalog)
+    }
+
+    /// Puts one tag on a whole selection. Returns how many rows gained it.
+    pub fn tag_transactions(&self, ids: Vec<String>, tag: String) -> Result<usize, FinanceError> {
+        self.with_db(|db| TransactionOps::tag_transactions(db, &ids, &tag))
+    }
+
+    // ==================== Reconciliation ====================
+
+    /// The account's balance counting only rows confirmed against a statement.
+    pub fn reconciled_balance(&self, account_id: String) -> Result<i64, FinanceError> {
+        self.with_db(|db| TransactionOps::reconciled_balance(db, &account_id))
+    }
+
+    /// Rows of the account still waiting to be checked off, oldest first.
+    pub fn unreconciled_transactions(
+        &self,
+        account_id: String,
+    ) -> Result<Vec<Transaction>, FinanceError> {
+        self.with_db(|db| TransactionOps::unreconciled_transactions(db, &account_id))
+    }
+
+    /// Confirms a whole selection against one account's statement.
+    pub fn confirm_reconciliation(
+        &self,
+        account_id: String,
+        ids: Vec<String>,
+    ) -> Result<usize, FinanceError> {
+        self.with_db(|db| TransactionOps::confirm_reconciliation(db, &account_id, &ids))
+    }
+
     // ==================== Category Budgets ====================
 
     /// Sets (or replaces) the monthly limit for a category.

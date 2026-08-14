@@ -843,3 +843,361 @@ fn deleting_an_unused_category_still_works() {
             .any(|c| c.id == id)
     );
 }
+
+// ==================== Tags ====================
+
+#[test]
+fn tags_are_lowercased_and_deduplicated() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+
+    h.service
+        .set_transaction_tags(
+            tx.clone(),
+            vec!["Snack".into(), "SNACK".into(), "work".into()],
+        )
+        .expect("set tags");
+
+    let tags = h.service.get_all_transaction_tags().expect("read tags");
+    assert_eq!(tags.get(&tx).map(Vec::len), Some(2));
+    assert!(tags[&tx].contains(&"snack".to_string()));
+    assert!(tags[&tx].contains(&"work".to_string()));
+}
+
+#[test]
+fn tags_keep_accents_and_enye() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+
+    h.service
+        .set_transaction_tags(tx.clone(), vec!["Niños".into(), "Educación".into()])
+        .expect("set tags");
+
+    let tags = h.service.get_all_transaction_tags().expect("read tags");
+    assert!(tags[&tx].contains(&"niños".to_string()));
+    assert!(tags[&tx].contains(&"educación".to_string()));
+}
+
+#[test]
+fn setting_tags_replaces_the_previous_set() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+
+    h.service
+        .set_transaction_tags(tx.clone(), vec!["one".into()])
+        .expect("first set");
+    h.service
+        .set_transaction_tags(tx.clone(), vec!["two".into()])
+        .expect("second set");
+
+    let tags = h.service.get_all_transaction_tags().expect("read tags");
+    assert_eq!(tags[&tx], vec!["two".to_string()]);
+}
+
+#[test]
+fn deleting_a_transaction_takes_its_tags_with_it() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+    h.service
+        .set_transaction_tags(tx.clone(), vec!["orphan".into()])
+        .expect("set tags");
+
+    h.service
+        .delete_transaction(tx)
+        .expect("delete transaction");
+
+    assert!(
+        h.service.get_tag_catalog().expect("catalog").is_empty(),
+        "the cascade should have removed the tag rows"
+    );
+}
+
+#[test]
+fn the_tag_catalog_puts_the_most_used_first() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    for _ in 0..3 {
+        let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+        h.service
+            .set_transaction_tags(tx, vec!["common".into()])
+            .expect("set tags");
+    }
+    let rare = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+    h.service
+        .set_transaction_tags(rare, vec!["rare".into()])
+        .expect("set tags");
+
+    let catalog = h.service.get_tag_catalog().expect("catalog");
+    assert_eq!(catalog, vec!["common".to_string(), "rare".to_string()]);
+}
+
+#[test]
+fn a_tag_beyond_the_length_limit_is_rejected() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+
+    let result = h.service.set_transaction_tags(tx, vec!["x".repeat(33)]);
+    assert!(result.is_err());
+}
+
+#[test]
+fn tagging_in_bulk_skips_rows_that_already_carry_it() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let first = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+    let second = create_test_transaction(&h.service, &account, 2000, "FOOD", true);
+    h.service
+        .set_transaction_tags(first.clone(), vec!["shared".into()])
+        .expect("set tags");
+
+    let added = h
+        .service
+        .tag_transactions(vec![first, second], "shared".to_string())
+        .expect("bulk tag");
+    assert_eq!(added, 1, "only the untagged row should count");
+}
+
+// ==================== Reconciliation ====================
+
+#[test]
+fn a_fresh_account_reconciles_to_its_opening_balance() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 50_000);
+    create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+
+    let confirmed = h
+        .service
+        .reconciled_balance(account.clone())
+        .expect("reconciled balance");
+    assert_eq!(
+        confirmed, 50_000,
+        "the opening balance counts, the unconfirmed expense does not"
+    );
+}
+
+#[test]
+fn confirming_a_row_moves_the_reconciled_balance() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 50_000);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+
+    h.service
+        .confirm_reconciliation(account.clone(), vec![tx])
+        .expect("confirm");
+
+    let confirmed = h
+        .service
+        .reconciled_balance(account)
+        .expect("reconciled balance");
+    assert_eq!(confirmed, 49_000);
+}
+
+#[test]
+fn confirming_a_transfer_on_one_side_leaves_the_other_pending() {
+    let h = new_test_service();
+    let from = create_test_account(&h.service, "Checking", "USD", 100_000);
+    let to = create_test_account(&h.service, "Savings", "USD", 0);
+    let tx = h
+        .service
+        .transfer_funds(NewTransfer {
+            from_account_id: from.clone(),
+            to_account_id: to.clone(),
+            amount_cents: 30_000,
+            description: "move".to_string(),
+            date: "2024-06-15".to_string(),
+        })
+        .expect("transfer");
+
+    h.service
+        .confirm_reconciliation(from.clone(), vec![tx])
+        .expect("confirm the outgoing side");
+
+    assert_eq!(
+        h.service.reconciled_balance(from).expect("from balance"),
+        70_000,
+        "the source has seen the money leave"
+    );
+    assert_eq!(
+        h.service
+            .reconciled_balance(to.clone())
+            .expect("to balance"),
+        0,
+        "the destination has not confirmed it yet"
+    );
+    assert_eq!(
+        h.service
+            .unreconciled_transactions(to)
+            .expect("pending")
+            .len(),
+        1,
+        "the same row is still waiting on the destination"
+    );
+}
+
+#[test]
+fn editing_a_transaction_withdraws_its_confirmation() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 50_000);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+    h.service
+        .confirm_reconciliation(account.clone(), vec![tx.clone()])
+        .expect("confirm");
+
+    h.service
+        .update_transaction(UpdateTransaction {
+            id: tx,
+            account_id: account.clone(),
+            amount_cents: 2000,
+            category: "FOOD".to_string(),
+            description: "changed".to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: true,
+        })
+        .expect("update");
+
+    assert_eq!(
+        h.service
+            .reconciled_balance(account.clone())
+            .expect("balance"),
+        50_000,
+        "a changed row is no longer proven by the old statement"
+    );
+    assert_eq!(
+        h.service
+            .unreconciled_transactions(account)
+            .expect("pending")
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn a_confirmed_row_drops_out_of_the_pending_list() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+    assert_eq!(
+        h.service
+            .unreconciled_transactions(account.clone())
+            .expect("pending")
+            .len(),
+        1
+    );
+
+    h.service
+        .confirm_reconciliation(account.clone(), vec![tx])
+        .expect("confirm");
+
+    assert!(
+        h.service
+            .unreconciled_transactions(account)
+            .expect("pending")
+            .is_empty()
+    );
+}
+
+#[test]
+fn renaming_a_transaction_keeps_its_confirmation() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 50_000);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+    h.service
+        .confirm_reconciliation(account.clone(), vec![tx.clone()])
+        .expect("confirm");
+
+    // Same money, same day, same account: the statement still matches.
+    h.service
+        .update_transaction(UpdateTransaction {
+            id: tx,
+            account_id: account.clone(),
+            amount_cents: 1000,
+            category: "SHOPPING".to_string(),
+            description: "renamed".to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: true,
+        })
+        .expect("update");
+
+    assert_eq!(
+        h.service.reconciled_balance(account).expect("balance"),
+        49_000,
+        "a relabelled row is still the one the bank showed"
+    );
+}
+
+#[test]
+fn editing_a_transfer_amount_withdraws_both_confirmations() {
+    let h = new_test_service();
+    let from = create_test_account(&h.service, "Checking", "USD", 100_000);
+    let to = create_test_account(&h.service, "Savings", "USD", 0);
+    let tx = h
+        .service
+        .transfer_funds(NewTransfer {
+            from_account_id: from.clone(),
+            to_account_id: to.clone(),
+            amount_cents: 30_000,
+            description: "move".to_string(),
+            date: "2024-06-15".to_string(),
+        })
+        .expect("transfer");
+    h.service
+        .confirm_reconciliation(from.clone(), vec![tx.clone()])
+        .expect("confirm source");
+    h.service
+        .confirm_reconciliation(to.clone(), vec![tx.clone()])
+        .expect("confirm destination");
+
+    h.service
+        .update_transfer(UpdateTransfer {
+            id: tx,
+            from_account_id: from.clone(),
+            to_account_id: to.clone(),
+            amount_cents: 45_000,
+            description: "move".to_string(),
+            date: "2024-06-15".to_string(),
+        })
+        .expect("update transfer");
+
+    assert_eq!(
+        h.service.reconciled_balance(from).expect("from balance"),
+        100_000,
+        "the source confirmation no longer holds"
+    );
+    assert_eq!(
+        h.service.reconciled_balance(to).expect("to balance"),
+        0,
+        "nor does the destination one"
+    );
+}
+
+#[test]
+fn moving_a_transaction_to_another_day_withdraws_its_confirmation() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 50_000);
+    let tx = create_test_transaction(&h.service, &account, 1000, "FOOD", true);
+    h.service
+        .confirm_reconciliation(account.clone(), vec![tx.clone()])
+        .expect("confirm");
+
+    h.service
+        .update_transaction(UpdateTransaction {
+            id: tx,
+            account_id: account.clone(),
+            amount_cents: 1000,
+            category: "FOOD".to_string(),
+            description: "test transaction".to_string(),
+            date: "2024-07-01".to_string(),
+            is_expense: true,
+        })
+        .expect("update");
+
+    assert_eq!(
+        h.service.reconciled_balance(account).expect("balance"),
+        50_000
+    );
+}
