@@ -35,6 +35,8 @@ pub fn up(conn: &Connection) -> Result<(), DbError> {
     initialize_default_categories(conn)?;
     create_recurring_transactions_table(conn)?;
     create_category_budgets_table(conn)?;
+    create_credits_table(conn)?;
+    create_credit_installments_table(conn)?;
 
     // === Crypto Ledger System ===
     create_crypto_tables(conn)?;
@@ -220,6 +222,99 @@ fn create_category_budgets_table(conn: &Connection) -> Result<(), DbError> {
             amount INTEGER NOT NULL,
             created_at TEXT NOT NULL
         )",
+        [],
+    )?;
+
+    Ok(())
+}
+
+/// A debt repaid over a fixed number of dated payments.
+///
+/// Two `kind`s, because a borrower is told one of two things and never both:
+/// - `installments`: the payment itself ("12 x 25.000"). The rate is inside it
+///   and is nobody's business. Covers card and retail plans, buy-now-pay-later
+///   and flat-rate lending wherever it is sold.
+/// - `loan`: a principal and a rate, from which the payment is computed. Covers
+///   ordinary amortising lending.
+///
+/// Nothing here is particular to one country: no tax, insurance or late-fee
+/// rule is encoded, and the rate is held as a plain monthly figure rather than
+/// any jurisdiction's disclosed headline number.
+fn create_credits_table(conn: &Connection) -> Result<(), DbError> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS credits (
+            id TEXT PRIMARY KEY NOT NULL,
+            account_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'installments'
+                CHECK(kind IN ('installments', 'loan')),
+            -- Paid up front, before the schedule starts. Its own row in
+            -- `credit_installments`, so it is paid and undone like the rest.
+            down_payment INTEGER NOT NULL DEFAULT 0,
+            -- The nominal payment: as quoted for `installments`, as computed
+            -- (and possibly corrected against the contract) for `loan`.
+            installment_amount INTEGER NOT NULL,
+            installment_count INTEGER NOT NULL,
+            first_due_date TEXT NOT NULL,
+            -- `installments` only: what it would have cost paid outright.
+            cash_price INTEGER,
+            -- `loan` only: the amount actually financed, and the monthly rate
+            -- in millionths (a monthly 1.5% is 15000). An integer rather than a
+            -- float because the rest of this schema counts in integers too, and
+            -- millionths rather than basis points because an annual rate
+            -- divided by twelve needs the room: 1.5% a year is 0.125% a month,
+            -- which basis points cannot hold.
+            principal INTEGER,
+            monthly_rate_ppm INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
+    Ok(())
+}
+
+/// One row per dated payment, written when the credit is created.
+///
+/// Materialised instead of derived from a count and a fixed amount, which is
+/// what lets a schedule be irregular: a down payment, a grace period, a balloon
+/// final payment, a plan whose payments simply differ. Each row carries its own
+/// amount and date and can be corrected on its own.
+///
+/// A row is paid exactly when `transaction_id` is set: the payment is the
+/// transaction, and the date it carries is the date it was paid. Keeping a
+/// second copy here would let the two drift, and deleting the transaction from
+/// the ledger clears this reference, which is what puts the row back to pending
+/// rather than leaving the credit claiming money that never moved.
+fn create_credit_installments_table(conn: &Connection) -> Result<(), DbError> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS credit_installments (
+            id TEXT PRIMARY KEY NOT NULL,
+            credit_id TEXT NOT NULL,
+            -- 'down_payment' | 'installment' | 'charge'. A charge is a fee the
+            -- lender added later; it is payable like the rest but is not part
+            -- of the plan, so it never moves the plan's own progress.
+            kind TEXT NOT NULL DEFAULT 'installment'
+                CHECK(kind IN ('down_payment', 'installment', 'charge')),
+            number INTEGER NOT NULL,
+            amount INTEGER NOT NULL,
+            due_date TEXT NOT NULL,
+            -- Why a charge was made, in the user's own words. Only charges have
+            -- one; an installment is explained by its position in the plan.
+            note TEXT,
+            transaction_id TEXT,
+            UNIQUE (credit_id, kind, number),
+            FOREIGN KEY (credit_id) REFERENCES credits(id) ON DELETE CASCADE,
+            FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_credit_installments_credit
+         ON credit_installments(credit_id, due_date, number)",
         [],
     )?;
 

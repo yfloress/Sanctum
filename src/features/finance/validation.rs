@@ -21,8 +21,8 @@
 
 // Re-export shared validation functions
 pub use crate::core::validation::{
-    format_money_display, sanitize_string, validate_color, validate_date, validate_field_length,
-    validate_uuid,
+    format_money_display, sanitize_string, sanitize_text, validate_color, validate_date,
+    validate_field_length, validate_uuid,
 };
 use uuid::Uuid;
 
@@ -39,6 +39,17 @@ pub const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60;
 /// selection a user can actually make. It is here so a malformed call cannot
 /// hold the write lock for an unbounded number of statements.
 pub const MAX_BULK_TRANSACTIONS: usize = 1000;
+pub const MAX_CREDIT_NAME_LENGTH: usize = 64;
+/// Ceiling on how many installments one credit may be split into.
+///
+/// Ten years of monthly payments, which no consumer plan reaches. It is here so
+/// a mistyped count cannot write an unbounded schedule.
+pub const MAX_INSTALLMENTS: i32 = 120;
+/// Ceiling on a credit's monthly rate, in millionths.
+///
+/// 100% a month, far above anything any market allows, so it rejects a typo
+/// without taking a position on what any particular country caps rates at.
+pub const MAX_MONTHLY_RATE_PPM: i64 = 1_000_000;
 pub const MAX_TAG_LENGTH: usize = 32;
 /// Ceiling on the tags one transaction may carry.
 ///

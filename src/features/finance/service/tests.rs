@@ -18,7 +18,9 @@
 use super::*;
 use crate::db::Database;
 use crate::features::finance::{
-    NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
+    CreditStatus, NewAccount, NewCharge, NewCredit, NewTransaction, NewTransfer, UpdateAccount,
+    UpdateInstallment, UpdateTransaction, UpdateTransfer, amortization, credit_interest,
+    credit_progress, credit_totals, french_installment,
 };
 use secrecy::SecretString;
 use std::path::PathBuf;
@@ -1200,4 +1202,595 @@ fn moving_a_transaction_to_another_day_withdraws_its_confirmation() {
         h.service.reconciled_balance(account).expect("balance"),
         50_000
     );
+}
+
+// ==================== Credits ====================
+
+fn create_test_credit(
+    svc: &FinanceService,
+    account_id: &str,
+    name: &str,
+    installment_amount: i64,
+    count: i32,
+    first_due: &str,
+) -> String {
+    svc.create_credit(NewCredit {
+        account_id: account_id.to_string(),
+        name: name.to_string(),
+        category: "SHOPPING".to_string(),
+        kind: "installments".to_string(),
+        down_payment_cents: 0,
+        down_payment_date: None,
+        installment_amount_cents: installment_amount,
+        installment_count: count,
+        first_due_date: first_due.to_string(),
+        cash_price_cents: None,
+        principal_cents: None,
+        monthly_rate_ppm: None,
+    })
+    .expect("create credit")
+}
+
+fn installments_of(svc: &FinanceService, credit_id: &str) -> Vec<crate::models::CreditInstallment> {
+    svc.get_credit_installments()
+        .expect("installments")
+        .remove(credit_id)
+        .unwrap_or_default()
+}
+
+#[test]
+fn creating_a_credit_writes_its_whole_schedule() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 500_000);
+    let credit = create_test_credit(&h.service, &account, "Fridge", 25_000, 12, "2026-03-15");
+
+    let schedule = installments_of(&h.service, &credit);
+    assert_eq!(schedule.len(), 12);
+    assert_eq!(schedule[0].due_date, "2026-03-15");
+    assert_eq!(schedule[11].due_date, "2027-02-15");
+    assert!(
+        schedule.iter().all(|i| !i.is_paid()),
+        "a new plan owes everything"
+    );
+}
+
+#[test]
+fn a_schedule_anchored_on_the_31st_returns_to_the_31st_after_february() {
+    let first = chrono::NaiveDate::from_ymd_opt(2026, 1, 31).expect("date");
+    let dates: Vec<String> = crate::features::finance::credits::schedule_dates(first, 4)
+        .into_iter()
+        .map(|d| d.format("%Y-%m-%d").to_string())
+        .collect();
+
+    // Offsets are taken from the first date, so February borrowing a shorter
+    // month does not shift every date after it.
+    assert_eq!(
+        dates,
+        vec!["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]
+    );
+}
+
+#[test]
+fn a_credit_needs_at_least_one_installment() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+
+    let err = h
+        .service
+        .create_credit(NewCredit {
+            account_id: account,
+            name: "Nothing".to_string(),
+            category: "SHOPPING".to_string(),
+            kind: "installments".to_string(),
+            down_payment_cents: 0,
+            down_payment_date: None,
+            installment_amount_cents: 1000,
+            installment_count: 0,
+            first_due_date: "2026-03-15".to_string(),
+            cash_price_cents: None,
+            principal_cents: None,
+            monthly_rate_ppm: None,
+        })
+        .expect_err("a plan with no installments is not a plan");
+    assert!(matches!(err, FinanceError::Validation(_)));
+}
+
+#[test]
+fn a_credit_name_keeps_its_accents() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+    let credit = create_test_credit(&h.service, &account, "Colchón niño", 1000, 3, "2026-03-15");
+
+    let stored = h
+        .service
+        .get_credits()
+        .expect("credits")
+        .into_iter()
+        .find(|c| c.id == credit)
+        .expect("the credit");
+    assert_eq!(stored.name, "Colchón niño");
+}
+
+#[test]
+fn paying_an_installment_writes_the_expense_it_stands_for() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 500_000);
+    let credit = create_test_credit(&h.service, &account, "Fridge", 25_000, 12, "2026-03-15");
+    let first = installments_of(&h.service, &credit).remove(0);
+
+    h.service
+        .pay_installment(first.id.clone(), Some("2026-03-14".to_string()))
+        .expect("pay");
+
+    let payment = h
+        .service
+        .get_transactions()
+        .expect("transactions")
+        .into_iter()
+        .find(|tx| tx.description == "Fridge 1/12")
+        .expect("the payment landed in the ledger");
+    assert_eq!(payment.account_id, account);
+    assert_eq!(payment.amount, 25_000);
+    assert_eq!(payment.transaction_type, "expense");
+    assert_eq!(payment.date, "2026-03-14");
+
+    let balance = h
+        .service
+        .get_account_balances()
+        .expect("balances")
+        .into_iter()
+        .find(|b| b.account_id == account)
+        .expect("the account")
+        .current_balance;
+    assert_eq!(balance, 475_000, "the money left the account");
+}
+
+#[test]
+fn an_installment_cannot_be_paid_twice() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 500_000);
+    let credit = create_test_credit(&h.service, &account, "Fridge", 25_000, 12, "2026-03-15");
+    let first = installments_of(&h.service, &credit).remove(0);
+
+    h.service
+        .pay_installment(first.id.clone(), None)
+        .expect("pay");
+    let err = h
+        .service
+        .pay_installment(first.id, None)
+        .expect_err("a second click must not write a second expense");
+    assert!(matches!(err, FinanceError::Validation(_)));
+
+    assert_eq!(
+        h.service.get_transactions().expect("transactions").len(),
+        1,
+        "and the ledger still holds exactly one payment"
+    );
+}
+
+#[test]
+fn undoing_a_payment_takes_its_expense_with_it() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 500_000);
+    let credit = create_test_credit(&h.service, &account, "Fridge", 25_000, 12, "2026-03-15");
+    let first = installments_of(&h.service, &credit).remove(0);
+
+    h.service
+        .pay_installment(first.id.clone(), None)
+        .expect("pay");
+    h.service.unpay_installment(first.id).expect("undo");
+
+    assert!(
+        h.service
+            .get_transactions()
+            .expect("transactions")
+            .is_empty(),
+        "an undone payment is not a payment"
+    );
+    assert!(
+        installments_of(&h.service, &credit)
+            .iter()
+            .all(|i| !i.is_paid())
+    );
+}
+
+#[test]
+fn deleting_the_payment_from_the_ledger_puts_its_installment_back_to_pending() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 500_000);
+    let credit = create_test_credit(&h.service, &account, "Fridge", 25_000, 12, "2026-03-15");
+    let first = installments_of(&h.service, &credit).remove(0);
+
+    let payment = h
+        .service
+        .pay_installment(first.id.clone(), None)
+        .expect("pay");
+
+    // The ledger is the place a user deletes things from, and the credit has to
+    // follow: otherwise it claims money that no longer moved.
+    h.service.delete_transaction(payment).expect("delete");
+
+    let schedule = installments_of(&h.service, &credit);
+    assert!(!schedule[0].is_paid());
+    assert!(schedule[0].paid_date.is_none());
+}
+
+#[test]
+fn deleting_a_credit_keeps_the_payments_already_made() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 500_000);
+    let credit = create_test_credit(&h.service, &account, "Fridge", 25_000, 12, "2026-03-15");
+    let first = installments_of(&h.service, &credit).remove(0);
+    h.service.pay_installment(first.id, None).expect("pay");
+
+    h.service.delete_credit(credit.clone()).expect("delete");
+
+    assert!(h.service.get_credits().expect("credits").is_empty());
+    assert!(
+        installments_of(&h.service, &credit).is_empty(),
+        "the schedule goes with the credit"
+    );
+    assert_eq!(
+        h.service.get_transactions().expect("transactions").len(),
+        1,
+        "but the money did leave the account, so the expense stays"
+    );
+}
+
+#[test]
+fn an_unpaid_installment_past_its_date_is_overdue() {
+    let schedule = vec![
+        test_installment(1, "2026-01-15", false),
+        test_installment(2, "2026-02-15", false),
+    ];
+    let progress = credit_progress(&schedule, "2026-02-20");
+
+    assert_eq!(progress.overdue_count, 2);
+    assert_eq!(progress.status, CreditStatus::Overdue);
+    assert_eq!(progress.next_due_date.as_deref(), Some("2026-01-15"));
+}
+
+#[test]
+fn paying_further_than_the_calendar_asks_reads_as_ahead() {
+    let schedule = vec![
+        test_installment(1, "2026-01-15", true),
+        test_installment(2, "2026-02-15", true),
+        test_installment(3, "2026-03-15", false),
+    ];
+
+    assert_eq!(
+        credit_progress(&schedule, "2026-01-20").status,
+        CreditStatus::Ahead
+    );
+    // On the day the second one falls due it is simply paid on time.
+    assert_eq!(
+        credit_progress(&schedule, "2026-02-15").status,
+        CreditStatus::OnTrack
+    );
+}
+
+#[test]
+fn a_fully_paid_credit_is_done() {
+    let schedule = vec![
+        test_installment(1, "2026-01-15", true),
+        test_installment(2, "2026-02-15", true),
+    ];
+    let progress = credit_progress(&schedule, "2026-06-01");
+
+    assert_eq!(progress.status, CreditStatus::Done);
+    assert_eq!(progress.paid_count, 2);
+    assert!(progress.next_due_date.is_none());
+}
+
+#[test]
+fn interest_is_what_the_plan_costs_over_the_cash_price() {
+    let mut credit = test_credit(25_000, 12);
+    let schedule: Vec<crate::models::CreditInstallment> = (1..=12)
+        .map(|n| test_installment(n, "2026-01-15", false))
+        .collect();
+
+    credit.cash_price = Some(250_000);
+    assert_eq!(credit_interest(&credit, &schedule), Some(50_000));
+
+    credit.cash_price = None;
+    assert_eq!(
+        credit_interest(&credit, &schedule),
+        None,
+        "not knowing the cash price is not the same as paying no interest"
+    );
+}
+
+fn test_installment(number: i32, due_date: &str, paid: bool) -> crate::models::CreditInstallment {
+    test_row("installment", number, 25_000, due_date, paid)
+}
+
+fn test_row(
+    kind: &str,
+    number: i32,
+    amount: i64,
+    due_date: &str,
+    paid: bool,
+) -> crate::models::CreditInstallment {
+    crate::models::CreditInstallment {
+        id: format!("{kind}-{number}"),
+        credit_id: "credit".to_string(),
+        kind: kind.to_string(),
+        number,
+        amount,
+        due_date: due_date.to_string(),
+        note: None,
+        transaction_id: paid.then(|| format!("tx-{kind}-{number}")),
+        paid_date: paid.then(|| due_date.to_string()),
+    }
+}
+
+fn test_credit(installment_amount: i64, installment_count: i32) -> crate::models::Credit {
+    crate::models::Credit {
+        id: "credit".to_string(),
+        account_id: "account".to_string(),
+        name: "Fridge".to_string(),
+        category: "SHOPPING".to_string(),
+        kind: "installments".to_string(),
+        down_payment: 0,
+        installment_amount,
+        installment_count,
+        first_due_date: "2026-01-15".to_string(),
+        cash_price: None,
+        principal: None,
+        monthly_rate_ppm: None,
+        created_at: "2026-01-01T00:00:00Z".to_string(),
+    }
+}
+
+// ==================== Credits: down payment, loans, corrections ====================
+
+#[test]
+fn a_down_payment_becomes_the_first_row_of_the_schedule() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 1_000_000);
+
+    let credit = h
+        .service
+        .create_credit(NewCredit {
+            account_id: account.clone(),
+            name: "Car".to_string(),
+            category: "TRANSPORT".to_string(),
+            kind: "installments".to_string(),
+            down_payment_cents: 200_000,
+            down_payment_date: Some("2026-02-01".to_string()),
+            installment_amount_cents: 50_000,
+            installment_count: 6,
+            first_due_date: "2026-03-01".to_string(),
+            cash_price_cents: None,
+            principal_cents: None,
+            monthly_rate_ppm: None,
+        })
+        .expect("create credit");
+
+    let schedule = installments_of(&h.service, &credit);
+    assert_eq!(schedule.len(), 7, "the down payment is a row of its own");
+    assert_eq!(schedule[0].kind, "down_payment");
+    assert_eq!(schedule[0].amount, 200_000);
+    assert_eq!(schedule[0].due_date, "2026-02-01");
+
+    // Paying it writes a real expense, like any other row.
+    h.service
+        .pay_installment(schedule[0].id.clone(), Some("2026-02-01".to_string()))
+        .expect("pay the down payment");
+    let payment = h
+        .service
+        .get_transactions()
+        .expect("transactions")
+        .into_iter()
+        .find(|tx| tx.amount == 200_000)
+        .expect("the down payment landed in the ledger");
+    assert_eq!(payment.description, "Car 0/6");
+}
+
+#[test]
+fn a_down_payment_counts_towards_the_total_but_not_towards_the_installments() {
+    let schedule = vec![
+        test_row("down_payment", 1, 200_000, "2026-02-01", true),
+        test_row("installment", 1, 50_000, "2026-03-01", true),
+        test_row("installment", 2, 50_000, "2026-04-01", false),
+    ];
+    let totals = credit_totals(&schedule);
+    assert_eq!(totals.plan, 300_000);
+    assert_eq!(totals.paid, 250_000);
+
+    // The bar follows the money, so a large down payment shows as the large
+    // share of the debt it actually is.
+    assert!((totals.percentage() - 83.333).abs() < 0.01);
+
+    let progress = credit_progress(&schedule, "2026-03-02");
+    assert_eq!(
+        progress.paid_count, 1,
+        "one installment of the plan, not two"
+    );
+}
+
+#[test]
+fn a_loan_payment_follows_the_constant_payment_formula() {
+    // 1.000.000 over 12 months at 1,5% a month is the textbook case.
+    assert_eq!(french_installment(100_000_000, 15_000, 12), 9_167_999);
+
+    // Without interest the principal is simply split evenly.
+    assert_eq!(french_installment(120_000, 0, 12), 10_000);
+    // And a division that does not come out even rounds up, so the schedule
+    // covers the debt rather than falling a cent short.
+    assert_eq!(french_installment(100_001, 0, 10), 10_001);
+}
+
+#[test]
+fn an_amortization_table_pays_interest_first_and_principal_later() {
+    let schedule: Vec<crate::models::CreditInstallment> = (1..=12)
+        .map(|n| test_row("installment", n, 9_167_999, "2026-03-01", false))
+        .collect();
+    let table = amortization(100_000_000, 15_000, &schedule);
+
+    assert_eq!(table.len(), 12);
+    assert_eq!(table[0].interest, 1_500_000);
+    assert!(
+        table[0].principal < table[11].principal,
+        "the first payment buys less debt than the last"
+    );
+    assert!(
+        table[11].balance.abs() < 100,
+        "and the schedule lands on zero, give or take the rounding"
+    );
+}
+
+#[test]
+fn a_loan_reports_the_interest_it_charges_over_what_was_lent() {
+    let mut credit = test_credit(9_167_999, 12);
+    credit.kind = "loan".to_string();
+    credit.principal = Some(100_000_000);
+    credit.monthly_rate_ppm = Some(150);
+
+    let schedule: Vec<crate::models::CreditInstallment> = (1..=12)
+        .map(|n| test_row("installment", n, 9_167_999, "2026-03-01", false))
+        .collect();
+
+    // Twelve payments against the money actually lent, with no cash price in
+    // sight: a loan knows its cost from the other side.
+    assert_eq!(credit_interest(&credit, &schedule), Some(10_015_988));
+}
+
+#[test]
+fn a_loan_needs_the_amount_financed() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 0);
+
+    let err = h
+        .service
+        .create_credit(NewCredit {
+            account_id: account,
+            name: "Loan".to_string(),
+            category: "OTHER".to_string(),
+            kind: "loan".to_string(),
+            down_payment_cents: 0,
+            down_payment_date: None,
+            installment_amount_cents: 50_000,
+            installment_count: 12,
+            first_due_date: "2026-03-01".to_string(),
+            cash_price_cents: None,
+            principal_cents: None,
+            monthly_rate_ppm: Some(15_000),
+        })
+        .expect_err("a loan with nothing lent is not a loan");
+    assert!(matches!(err, FinanceError::Validation(_)));
+}
+
+#[test]
+fn correcting_an_installment_makes_an_irregular_schedule_possible() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 1_000_000);
+    let credit = create_test_credit(&h.service, &account, "Car", 50_000, 4, "2026-03-01");
+    let schedule = installments_of(&h.service, &credit);
+
+    // A balloon final payment: the last row is simply worth more than the rest.
+    h.service
+        .update_installment(UpdateInstallment {
+            installment_id: schedule[3].id.clone(),
+            amount_cents: 400_000,
+            due_date: "2026-06-15".to_string(),
+        })
+        .expect("correct the last installment");
+
+    let updated = installments_of(&h.service, &credit);
+    assert_eq!(updated[3].amount, 400_000);
+    assert_eq!(updated[3].due_date, "2026-06-15");
+    assert_eq!(
+        credit_totals(&updated).plan,
+        550_000,
+        "and the total follows the rows, not the nominal installment"
+    );
+
+    // Paying it charges what the row says, not what the credit was created with.
+    h.service
+        .pay_installment(updated[3].id.clone(), None)
+        .expect("pay");
+    let payment = h
+        .service
+        .get_transactions()
+        .expect("transactions")
+        .into_iter()
+        .find(|tx| tx.description == "Car 4/4")
+        .expect("the payment");
+    assert_eq!(payment.amount, 400_000);
+}
+
+#[test]
+fn a_paid_installment_cannot_be_corrected_behind_the_ledgers_back() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 1_000_000);
+    let credit = create_test_credit(&h.service, &account, "Car", 50_000, 4, "2026-03-01");
+    let first = installments_of(&h.service, &credit).remove(0);
+    h.service
+        .pay_installment(first.id.clone(), None)
+        .expect("pay");
+
+    let err = h
+        .service
+        .update_installment(UpdateInstallment {
+            installment_id: first.id,
+            amount_cents: 999,
+            due_date: "2026-03-01".to_string(),
+        })
+        .expect_err("the transaction is the amount once it is paid");
+    assert!(matches!(err, FinanceError::Validation(_)));
+}
+
+#[test]
+fn a_charge_is_payable_but_never_part_of_the_plan() {
+    let h = new_test_service();
+    let account = create_test_account(&h.service, "Checking", "USD", 1_000_000);
+    let credit = create_test_credit(&h.service, &account, "Car", 50_000, 4, "2026-03-01");
+
+    h.service
+        .add_charge(NewCharge {
+            credit_id: credit.clone(),
+            amount_cents: 7_500,
+            date: "2026-04-05".to_string(),
+            note: "Interés por atraso".to_string(),
+        })
+        .expect("add charge");
+
+    let schedule = installments_of(&h.service, &credit);
+    let totals = credit_totals(&schedule);
+    assert_eq!(totals.plan, 200_000, "the plan is untouched by a fee");
+    assert_eq!(totals.charges, 7_500);
+
+    let charge = schedule
+        .iter()
+        .find(|row| row.kind == "charge")
+        .expect("the charge");
+    h.service
+        .pay_installment(charge.id.clone(), None)
+        .expect("pay the charge");
+
+    // The user's own wording travels into the ledger, so it needs no translating.
+    let payment = h
+        .service
+        .get_transactions()
+        .expect("transactions")
+        .into_iter()
+        .find(|tx| tx.amount == 7_500)
+        .expect("the payment");
+    assert_eq!(payment.description, "Car - Interés por atraso");
+}
+
+#[test]
+fn a_charge_does_not_decide_whether_the_plan_is_on_schedule() {
+    let schedule = vec![
+        test_row("installment", 1, 50_000, "2026-03-01", true),
+        test_row("installment", 2, 50_000, "2026-04-01", false),
+        // Unpaid and long overdue, yet it is the lender's fee, not the plan.
+        test_row("charge", 1, 7_500, "2026-01-05", false),
+    ];
+
+    let progress = credit_progress(&schedule, "2026-03-15");
+    assert_eq!(progress.overdue_count, 0);
+    assert_eq!(progress.status, CreditStatus::OnTrack);
+    assert_eq!(progress.next_due_date.as_deref(), Some("2026-04-01"));
 }

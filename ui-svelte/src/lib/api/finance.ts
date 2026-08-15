@@ -19,7 +19,8 @@ import { invoke } from './ipc'
 import type {
   AccountsResponse, AccountDetailResponse,
   TransactionsResponse, TransactionFilter, TransferInput, CategoriesResponse,
-  RecurringDto, RecurringInput, BudgetDto, ReconciliationResponse
+  RecurringDto, RecurringInput, BudgetDto, ReconciliationResponse,
+  CreditDto, CreditInput, InstallmentUpdateInput, ChargeInput
 } from '../types'
 
 export async function fetchAccounts(): Promise<AccountsResponse> {
@@ -174,6 +175,44 @@ export async function deleteRecurring(id: string): Promise<void> {
 /** Creates every occurrence owed up to today. Returns how many landed. */
 export async function applyDueRecurring(): Promise<number> {
   return invoke<number>('apply_due_recurring')
+}
+
+export async function fetchCredits(): Promise<CreditDto[]> {
+  return invoke<CreditDto[]>('fetch_credits')
+}
+
+export async function addCredit(input: CreditInput): Promise<void> {
+  return invoke('add_credit', { input })
+}
+
+/** Deletes the plan. Payments already made stay in the ledger. */
+export async function deleteCredit(id: string): Promise<void> {
+  return invoke('delete_credit', { id })
+}
+
+/** Pays one installment, writing the expense it stands for. */
+export async function payInstallment(installmentId: string, date?: string): Promise<void> {
+  return invoke('pay_installment', { installmentId, date: date ?? null })
+}
+
+/** Undoes a payment, deleting the expense it wrote. */
+export async function unpayInstallment(installmentId: string): Promise<void> {
+  return invoke('unpay_installment', { installmentId })
+}
+
+/** Corrects one unpaid row of a schedule. */
+export async function updateInstallment(input: InstallmentUpdateInput): Promise<void> {
+  return invoke('update_installment', { input })
+}
+
+/** Records a fee the lender charged on top of the plan. */
+export async function addCreditCharge(input: ChargeInput): Promise<void> {
+  return invoke('add_credit_charge', { input })
+}
+
+/** Removes an unpaid charge. */
+export async function deleteCreditCharge(installmentId: string): Promise<void> {
+  return invoke('delete_credit_charge', { installmentId })
 }
 
 export async function fetchBudgets(month?: string): Promise<BudgetDto[]> {

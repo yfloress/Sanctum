@@ -90,6 +90,53 @@ pub struct UpdateTransfer {
     pub date: String,
 }
 
+/// Create a credit: a debt repaid over a fixed number of dated payments.
+///
+/// The fields come in two sets because a borrower is told one of two things.
+/// `installments` uses `installment_amount_cents` and `cash_price_cents`;
+/// `loan` uses `principal_cents` and `monthly_rate_bp`, with the installment
+/// derived from them and possibly corrected against the contract.
+#[derive(Debug, Clone)]
+pub struct NewCredit {
+    pub account_id: String,
+    pub name: String,
+    pub category: String,
+    /// `installments` or `loan`.
+    pub kind: String,
+    /// Paid up front, before the schedule starts. Zero when there is none.
+    pub down_payment_cents: i64,
+    /// ISO date the down payment is handed over. Defaults to `first_due_date`.
+    pub down_payment_date: Option<String>,
+    pub installment_amount_cents: i64,
+    pub installment_count: i32,
+    /// ISO date the first installment falls due.
+    pub first_due_date: String,
+    /// `installments` only: what it would have cost paid outright, when known.
+    pub cash_price_cents: Option<i64>,
+    /// `loan` only: the amount actually financed.
+    pub principal_cents: Option<i64>,
+    /// `loan` only: the monthly rate in millionths (a monthly 1.5% is 15000).
+    pub monthly_rate_ppm: Option<i64>,
+}
+
+/// Correct one unpaid row of a credit's schedule.
+#[derive(Debug, Clone)]
+pub struct UpdateInstallment {
+    pub installment_id: String,
+    pub amount_cents: i64,
+    pub due_date: String,
+}
+
+/// Record a fee the lender charged on top of a credit's plan.
+#[derive(Debug, Clone)]
+pub struct NewCharge {
+    pub credit_id: String,
+    pub amount_cents: i64,
+    pub date: String,
+    /// Why it was charged, in the user's own words.
+    pub note: String,
+}
+
 /// Create a recurring transaction rule.
 #[derive(Debug, Clone)]
 pub struct NewRecurring {

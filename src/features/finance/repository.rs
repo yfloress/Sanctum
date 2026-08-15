@@ -22,7 +22,11 @@
 
 use crate::db::{Database, DbError};
 // Use shared models from the central domain layer
-use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
+use crate::models::{
+    Account, AccountBalance, BalanceSummary, Credit, CreditInstallment, Transaction,
+    TransactionCategory,
+};
+use std::collections::HashMap;
 
 /// Repository for finance-related database operations
 pub struct FinanceRepository;
@@ -136,6 +140,66 @@ impl FinanceRepository {
         ids: &[String],
     ) -> Result<usize, DbError> {
         db.set_reconciled(account_id, ids)
+    }
+
+    // Credit operations
+    pub fn create_credit(
+        db: &Database,
+        credit: &Credit,
+        installments: &[CreditInstallment],
+    ) -> Result<(), DbError> {
+        db.create_credit(credit, installments)
+    }
+
+    pub fn get_credits(db: &Database) -> Result<Vec<Credit>, DbError> {
+        db.get_credits()
+    }
+
+    pub fn get_credit(db: &Database, id: &str) -> Result<Credit, DbError> {
+        db.get_credit(id)
+    }
+
+    pub fn get_credit_installments(
+        db: &Database,
+    ) -> Result<HashMap<String, Vec<CreditInstallment>>, DbError> {
+        db.get_credit_installments()
+    }
+
+    pub fn get_credit_installment(db: &Database, id: &str) -> Result<CreditInstallment, DbError> {
+        db.get_credit_installment(id)
+    }
+
+    pub fn delete_credit(db: &Database, id: &str) -> Result<(), DbError> {
+        db.delete_credit(id)
+    }
+
+    pub fn pay_credit_installment(
+        db: &Database,
+        installment_id: &str,
+        payment: &Transaction,
+    ) -> Result<(), DbError> {
+        db.pay_credit_installment(installment_id, payment)
+    }
+
+    pub fn unpay_credit_installment(db: &Database, installment_id: &str) -> Result<(), DbError> {
+        db.unpay_credit_installment(installment_id)
+    }
+
+    pub fn update_credit_installment(
+        db: &Database,
+        installment_id: &str,
+        amount: i64,
+        due_date: &str,
+    ) -> Result<(), DbError> {
+        db.update_credit_installment(installment_id, amount, due_date)
+    }
+
+    pub fn add_credit_charge(db: &Database, charge: &CreditInstallment) -> Result<(), DbError> {
+        db.add_credit_charge(charge)
+    }
+
+    pub fn delete_credit_charge(db: &Database, installment_id: &str) -> Result<(), DbError> {
+        db.delete_credit_charge(installment_id)
     }
 
     pub fn create_transfer(

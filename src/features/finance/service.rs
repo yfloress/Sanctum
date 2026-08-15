@@ -22,8 +22,8 @@
 
 use crate::db::{Database, DbError};
 use crate::models::{
-    Account, AccountBalance, BalanceSummary, BudgetStatus, CategoryBudget, RecurrenceFrequency,
-    RecurringTransaction, Transaction, TransactionCategory,
+    Account, AccountBalance, BalanceSummary, BudgetStatus, CategoryBudget, Credit,
+    CreditInstallment, RecurrenceFrequency, RecurringTransaction, Transaction, TransactionCategory,
 };
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::Utc;
@@ -32,9 +32,10 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use super::commands::{
-    NewAccount, NewRecurring, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction,
-    UpdateTransfer,
+    NewAccount, NewCharge, NewCredit, NewRecurring, NewTransaction, NewTransfer, UpdateAccount,
+    UpdateInstallment, UpdateTransaction, UpdateTransfer,
 };
+use super::credits::CreditOps;
 use super::export;
 use super::repository::FinanceRepository;
 use super::transactions::{CategoryOps, TransactionOps};
@@ -376,6 +377,62 @@ impl FinanceService {
         ids: Vec<String>,
     ) -> Result<usize, FinanceError> {
         self.with_db(|db| TransactionOps::confirm_reconciliation(db, &account_id, &ids))
+    }
+
+    // ==================== Credits ====================
+
+    /// Creates a credit and its whole installment schedule.
+    pub fn create_credit(&self, cmd: NewCredit) -> Result<String, FinanceError> {
+        self.with_db(|db| CreditOps::create_credit(db, cmd.clone()))
+    }
+
+    pub fn get_credits(&self) -> Result<Vec<Credit>, FinanceError> {
+        self.with_db(CreditOps::get_credits)
+    }
+
+    /// Installments of every credit, keyed by credit id and in order.
+    pub fn get_credit_installments(
+        &self,
+    ) -> Result<HashMap<String, Vec<CreditInstallment>>, FinanceError> {
+        self.with_db(CreditOps::get_credit_installments)
+    }
+
+    /// Deletes a credit. Payments already made stay in the ledger.
+    pub fn delete_credit(&self, id: String) -> Result<(), FinanceError> {
+        self.with_db(|db| CreditOps::delete_credit(db, &id))
+    }
+
+    /// Pays one installment on `date`, writing the expense it stands for.
+    pub fn pay_installment(
+        &self,
+        installment_id: String,
+        date: Option<String>,
+    ) -> Result<String, FinanceError> {
+        let date = match date {
+            Some(value) if !value.trim().is_empty() => value,
+            _ => Utc::now().format("%Y-%m-%d").to_string(),
+        };
+        self.with_db(|db| CreditOps::pay_installment(db, &installment_id, &date))
+    }
+
+    /// Undoes a payment, deleting the expense it wrote.
+    pub fn unpay_installment(&self, installment_id: String) -> Result<(), FinanceError> {
+        self.with_db(|db| CreditOps::unpay_installment(db, &installment_id))
+    }
+
+    /// Corrects one unpaid row of a schedule.
+    pub fn update_installment(&self, cmd: UpdateInstallment) -> Result<(), FinanceError> {
+        self.with_db(|db| CreditOps::update_installment(db, cmd.clone()))
+    }
+
+    /// Records a fee the lender charged on top of a credit's plan.
+    pub fn add_charge(&self, cmd: NewCharge) -> Result<String, FinanceError> {
+        self.with_db(|db| CreditOps::add_charge(db, cmd.clone()))
+    }
+
+    /// Removes an unpaid charge.
+    pub fn delete_charge(&self, installment_id: String) -> Result<(), FinanceError> {
+        self.with_db(|db| CreditOps::delete_charge(db, &installment_id))
     }
 
     // ==================== Category Budgets ====================

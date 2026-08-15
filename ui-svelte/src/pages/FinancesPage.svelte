@@ -37,10 +37,11 @@
   import ReconcilePanel from '../components/finance/ReconcilePanel.svelte'
   import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
   import FinanceRecurringPanel from '../components/finance/FinanceRecurringPanel.svelte'
+  import FinanceCreditPanel from '../components/finance/FinanceCreditPanel.svelte'
   import FinanceBudgetPanel from '../components/finance/FinanceBudgetPanel.svelte'
   import ConfirmDialog from '../components/ConfirmDialog.svelte'
 
-  type Tab = 'overview' | 'activity' | 'accounts' | 'settings'
+  type Tab = 'overview' | 'activity' | 'accounts' | 'credits' | 'settings'
 
   let activeTab = $state<Tab>('overview')
   let loading = $state(true)
@@ -694,6 +695,7 @@
       'fin-tab-overview': () => { activeTab = 'overview' },
       'fin-tab-activity': () => { activeTab = 'activity' },
       'fin-tab-accounts': () => { activeTab = 'accounts' },
+      'fin-tab-credits': () => { activeTab = 'credits' },
       'fin-tab-settings': () => { activeTab = 'settings' },
       'fin-new-account': openAddAccount,
       'fin-transfer': openTransfer,
@@ -776,6 +778,7 @@
     <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>{i18n.t('finances-tab-overview', 'Overview')}</button>
     <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('finances-tab-activity', 'Activity')}</button>
     <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>{i18n.t('finances-tab-accounts', 'Accounts')}</button>
+    <button class:active={activeTab === 'credits'} onclick={() => activeTab = 'credits'}>{i18n.t('finances-tab-credits', 'Credits')}</button>
     <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>{i18n.t('finances-tab-settings', 'Settings')}</button>
   </div>
 
@@ -1153,6 +1156,16 @@
           {/each}
         </div>
       {/if}
+    </section>
+
+  <!-- CREDITS TAB -->
+  {:else if activeTab === 'credits'}
+    <section class="tab-content">
+      <FinanceCreditPanel
+        accounts={accountsData?.accounts ?? []}
+        categories={categories}
+        onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+      />
     </section>
 
   <!-- SETTINGS TAB -->

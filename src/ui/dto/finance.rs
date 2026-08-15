@@ -28,8 +28,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 use crate::features::finance::{
-    NewAccount, NewRecurring, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction,
-    UpdateTransfer,
+    NewAccount, NewCharge, NewCredit, NewRecurring, NewTransaction, NewTransfer, UpdateAccount,
+    UpdateInstallment, UpdateTransaction, UpdateTransfer,
 };
 use crate::ui::{normalize_account_type, parse_amount_input};
 
@@ -378,6 +378,43 @@ mod tests {
         assert_eq!(err.field.as_deref(), Some("id"));
     }
 
+    fn credit_with_rate(rate: &str, period: &str) -> CreditInput {
+        CreditInput {
+            account_id: "acc".to_string(),
+            name: "Loan".to_string(),
+            category: "OTHER".to_string(),
+            kind: "loan".to_string(),
+            down_payment: None,
+            down_payment_date: None,
+            installment_amount: "100".to_string(),
+            installment_count: 12,
+            first_due_date: "2026-01-01".to_string(),
+            cash_price: None,
+            principal: Some("1000".to_string()),
+            rate: Some(rate.to_string()),
+            rate_period: Some(period.to_string()),
+        }
+    }
+
+    #[test]
+    fn an_annual_rate_becomes_a_monthly_one() {
+        // 18% a year is 1.5% a month, which is 15000 millionths.
+        let cmd = credit_with_rate("18", "annual").into_new().unwrap();
+        assert_eq!(cmd.monthly_rate_ppm, Some(15_000));
+
+        // The same figure quoted monthly is taken as it stands.
+        let cmd = credit_with_rate("1.5", "monthly").into_new().unwrap();
+        assert_eq!(cmd.monthly_rate_ppm, Some(15_000));
+    }
+
+    #[test]
+    fn a_small_annual_rate_survives_the_division_by_twelve() {
+        // 1.5% a year is 0.125% a month. Held in basis points this would round
+        // to 0.13% and the schedule would stop adding up.
+        let cmd = credit_with_rate("1.5", "annual").into_new().unwrap();
+        assert_eq!(cmd.monthly_rate_ppm, Some(1_250));
+    }
+
     #[test]
     fn account_create_maps_defaults() {
         let input = AccountInput {
@@ -436,6 +473,223 @@ impl RecurringInput {
             frequency: self.frequency,
             first_date: self.first_date,
             is_expense: self.is_expense,
+        })
+    }
+}
+
+/// One row of a credit's schedule, ready to render.
+#[derive(Debug, Clone, Serialize)]
+pub struct CreditInstallmentDto {
+    pub id: String,
+    /// `down_payment`, `installment` or `charge`.
+    pub kind: String,
+    /// 1-based position within its own kind.
+    pub number: i32,
+    pub amount: String,
+    /// The same figure unformatted, for the correction form to start from.
+    pub amount_raw: String,
+    pub due_date: String,
+    /// When it was actually paid, which need not be the due date.
+    pub paid_date: Option<String>,
+    /// Why a charge was made. Only charges carry one.
+    pub note: Option<String>,
+    pub is_paid: bool,
+    /// Unpaid and past its date.
+    pub is_overdue: bool,
+}
+
+/// One line of an amortisation table, ready to render.
+#[derive(Debug, Clone, Serialize)]
+pub struct AmortizationRowDto {
+    pub number: i32,
+    pub due_date: String,
+    pub payment: String,
+    /// The part of the payment that only rents the money.
+    pub interest: String,
+    /// The part that actually reduces the debt.
+    pub principal: String,
+    /// What is still owed after this payment.
+    pub balance: String,
+}
+
+/// A credit with its progress, ready to render.
+#[derive(Debug, Clone, Serialize)]
+pub struct CreditDto {
+    pub id: String,
+    pub name: String,
+    pub account_id: String,
+    pub account_name: String,
+    /// Stored category name, for showing what the payments are filed under.
+    pub category: String,
+    /// Translated, display-ready category.
+    pub category_label: String,
+    /// `installments` or `loan`.
+    pub kind: String,
+    /// Paid up front. Absent when the credit had none.
+    pub down_payment: Option<String>,
+    pub installment_amount: String,
+    pub installment_count: i32,
+    pub paid_count: usize,
+    pub overdue_count: usize,
+    pub total: String,
+    pub paid: String,
+    pub remaining: String,
+    /// Fees the lender added on top of the plan. Absent when there are none.
+    pub charges: Option<String>,
+    /// Share of the plan paid, in money rather than in rows, for the bar.
+    pub percentage: f32,
+    /// Date of the first plan row still to pay.
+    pub next_due_date: Option<String>,
+    /// One of `done`, `overdue`, `ahead`, `on_track`.
+    pub status: String,
+    /// What the credit costs beyond the thing it bought. Absent when there is
+    /// nothing to compare against, which differs from costing nothing extra.
+    pub interest: Option<String>,
+    pub cash_price: Option<String>,
+    /// `loan` only: the amount financed.
+    pub principal: Option<String>,
+    /// `loan` only: the monthly rate as a percentage, e.g. `1.79`.
+    pub monthly_rate: Option<String>,
+    pub installments: Vec<CreditInstallmentDto>,
+    /// `loan` only: how each payment splits between interest and principal.
+    pub amortization: Vec<AmortizationRowDto>,
+}
+
+/// Input for creating a credit.
+///
+/// Two sets of fields, one per kind: `installments` fills `installment_amount`
+/// and `cash_price`, `loan` fills `principal` and the rate. Both may carry a
+/// down payment.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreditInput {
+    pub account_id: String,
+    pub name: String,
+    pub category: String,
+    pub kind: String,
+    #[serde(default)]
+    pub down_payment: Option<String>,
+    #[serde(default)]
+    pub down_payment_date: Option<String>,
+    pub installment_amount: String,
+    pub installment_count: i32,
+    pub first_due_date: String,
+    #[serde(default)]
+    pub cash_price: Option<String>,
+    #[serde(default)]
+    pub principal: Option<String>,
+    /// The rate as typed, e.g. `1.79`, read together with `rate_period`.
+    #[serde(default)]
+    pub rate: Option<String>,
+    /// `monthly` or `annual`. Markets quote one or the other, so the app takes
+    /// whichever the borrower has in front of them and converts.
+    #[serde(default)]
+    pub rate_period: Option<String>,
+}
+
+/// Reads an optional money field: blank means absent, unparseable is an error.
+fn parse_optional_amount(raw: Option<&str>, field: &str) -> Result<Option<i64>, AppError> {
+    match raw.map(str::trim) {
+        None | Some("") => Ok(None),
+        Some(value) => Ok(Some(parse_positive_amount(value, field)?)),
+    }
+}
+
+impl CreditInput {
+    /// The monthly rate in millionths, from the rate as the user typed it.
+    ///
+    /// An annual figure is divided by twelve, the nominal convention consumer
+    /// lending quotes in. Millionths rather than basis points because that
+    /// division needs the room: 1.5% a year is 0.125% a month, and basis points
+    /// would flatten it to 0.13% and throw the whole schedule off.
+    ///
+    /// The frontend quantises the same way before suggesting a payment, so the
+    /// figure it offers and the breakdown drawn from this cannot disagree.
+    fn monthly_rate_ppm(&self) -> Result<Option<i64>, AppError> {
+        let Some(raw) = self
+            .rate
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+        else {
+            return Ok(None);
+        };
+        // Percent-to-basis-points is the same scaling as money-to-cents, so the
+        // shared parser does it and accepts either decimal separator on the way.
+        let bp = parse_amount_input(raw)
+            .filter(|value| *value >= 0)
+            .ok_or_else(|| AppError::validation("Rate is not a number").with_field("rate"))?;
+        let annual_ppm = bp * 100;
+
+        let annual = matches!(self.rate_period.as_deref(), Some("annual"));
+        Ok(Some(if annual {
+            (annual_ppm + 6) / 12
+        } else {
+            annual_ppm
+        }))
+    }
+
+    pub fn into_new(self) -> Result<NewCredit, AppError> {
+        let monthly_rate_ppm = self.monthly_rate_ppm()?;
+        let cash_price_cents = parse_optional_amount(self.cash_price.as_deref(), "cash_price")?;
+        let principal_cents = parse_optional_amount(self.principal.as_deref(), "principal")?;
+        let down_payment_cents =
+            parse_optional_amount(self.down_payment.as_deref(), "down_payment")?.unwrap_or(0);
+
+        Ok(NewCredit {
+            account_id: self.account_id,
+            name: self.name,
+            category: self.category,
+            kind: self.kind,
+            down_payment_cents,
+            down_payment_date: self.down_payment_date,
+            installment_amount_cents: parse_positive_amount(
+                &self.installment_amount,
+                "installment_amount",
+            )?,
+            installment_count: self.installment_count,
+            first_due_date: self.first_due_date,
+            cash_price_cents,
+            principal_cents,
+            monthly_rate_ppm,
+        })
+    }
+}
+
+/// Input for correcting one unpaid row of a schedule.
+#[derive(Debug, Clone, Deserialize)]
+pub struct InstallmentUpdateInput {
+    pub installment_id: String,
+    pub amount: String,
+    pub due_date: String,
+}
+
+impl InstallmentUpdateInput {
+    pub fn into_update(self) -> Result<UpdateInstallment, AppError> {
+        Ok(UpdateInstallment {
+            installment_id: self.installment_id,
+            amount_cents: parse_positive_amount(&self.amount, "amount")?,
+            due_date: self.due_date,
+        })
+    }
+}
+
+/// Input for recording a fee the lender charged on top of a plan.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ChargeInput {
+    pub credit_id: String,
+    pub amount: String,
+    pub date: String,
+    #[serde(default)]
+    pub note: String,
+}
+
+impl ChargeInput {
+    pub fn into_new(self) -> Result<NewCharge, AppError> {
+        Ok(NewCharge {
+            credit_id: self.credit_id,
+            amount_cents: parse_positive_amount(&self.amount, "amount")?,
+            date: self.date,
+            note: self.note,
         })
     }
 }

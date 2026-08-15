@@ -26,6 +26,7 @@
     clippy::type_complexity
 )]
 
+mod credits;
 mod crypto;
 mod finance;
 mod migrations;
@@ -108,6 +109,18 @@ pub enum DbError {
 
     #[error("Transaction not found")]
     TransactionNotFound,
+
+    #[error("Credit not found")]
+    CreditNotFound,
+
+    #[error("Installment not found")]
+    InstallmentNotFound,
+
+    #[error("Installment is already paid")]
+    InstallmentAlreadyPaid,
+
+    #[error("Installment is not paid yet")]
+    InstallmentNotPaid,
 
     #[error("Database mutex was poisoned")]
     MutexPoisoned,

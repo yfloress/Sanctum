@@ -238,6 +238,135 @@ pub struct RecurringTransaction {
     pub created_at: String,
 }
 
+/// How a credit was described to the borrower.
+///
+/// Not a product catalogue: it is the two forms the same information takes
+/// anywhere in the world. Either the payment is quoted and the rate is buried
+/// inside it, or a rate is quoted and the payment follows from it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CreditKind {
+    /// A quoted payment repeated N times, the rate left implicit.
+    Installments,
+    /// A principal at a rate, the payment derived from both.
+    Loan,
+}
+
+impl CreditKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Installments => "installments",
+            Self::Loan => "loan",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim().to_lowercase().as_str() {
+            "installments" => Some(Self::Installments),
+            "loan" => Some(Self::Loan),
+            _ => None,
+        }
+    }
+}
+
+/// A debt repaid over a fixed number of dated payments.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Credit {
+    pub id: String,
+    /// Account the payments come out of.
+    pub account_id: String,
+    pub name: String,
+    /// Category the generated payments are filed under.
+    pub category: String,
+    pub kind: String,
+    /// Paid up front, before the schedule starts. Zero when there was none.
+    pub down_payment: i64,
+    /// The nominal payment, in cents. The truth for any given payment is on its
+    /// own row, since a schedule can be irregular.
+    pub installment_amount: i64,
+    pub installment_count: i32,
+    pub first_due_date: String,
+    /// `Installments` only: what the purchase would have cost paid outright.
+    pub cash_price: Option<i64>,
+    /// `Loan` only: the amount actually financed.
+    pub principal: Option<i64>,
+    /// `Loan` only: the monthly rate in millionths (a monthly 1.5% is 15000).
+    pub monthly_rate_ppm: Option<i64>,
+    pub created_at: String,
+}
+
+impl Credit {
+    pub fn get_kind(&self) -> CreditKind {
+        CreditKind::parse(&self.kind).unwrap_or(CreditKind::Installments)
+    }
+}
+
+/// What a row of a credit's schedule stands for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallmentKind {
+    /// Money handed over up front, before the schedule proper.
+    DownPayment,
+    /// One payment of the plan.
+    Installment,
+    /// A fee the lender added later. Payable, but never part of the plan.
+    Charge,
+}
+
+impl InstallmentKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::DownPayment => "down_payment",
+            Self::Installment => "installment",
+            Self::Charge => "charge",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim().to_lowercase().as_str() {
+            "down_payment" => Some(Self::DownPayment),
+            "installment" => Some(Self::Installment),
+            "charge" => Some(Self::Charge),
+            _ => None,
+        }
+    }
+}
+
+/// One dated payment of a [`Credit`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreditInstallment {
+    pub id: String,
+    pub credit_id: String,
+    pub kind: String,
+    /// 1-based position within its own kind. The down payment is number 1 of a
+    /// kind that only ever has one row.
+    pub number: i32,
+    /// What this particular payment costs, in cents.
+    pub amount: i64,
+    pub due_date: String,
+    /// Why a charge was made, in the user's own words. Only charges carry one.
+    pub note: Option<String>,
+    /// The payment. Its presence is what makes the row paid.
+    pub transaction_id: Option<String>,
+    /// Date of that payment, read from the transaction it points at.
+    pub paid_date: Option<String>,
+}
+
+impl CreditInstallment {
+    pub fn is_paid(&self) -> bool {
+        self.transaction_id.is_some()
+    }
+
+    pub fn get_kind(&self) -> InstallmentKind {
+        InstallmentKind::parse(&self.kind).unwrap_or(InstallmentKind::Installment)
+    }
+
+    /// Rows that make up the plan: everything except lender-added fees.
+    pub fn is_plan(&self) -> bool {
+        self.get_kind() != InstallmentKind::Charge
+    }
+}
+
 /// A monthly spending limit for one expense category.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CategoryBudget {

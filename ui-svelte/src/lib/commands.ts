@@ -36,6 +36,7 @@ export const PAGE_COMMANDS: CommandSpec[] = [
   { id: 'fin-tab-overview', key: 'finances-tab-overview', fallback: 'Overview', page: 'finances' },
   { id: 'fin-tab-activity', key: 'finances-tab-activity', fallback: 'Activity', page: 'finances' },
   { id: 'fin-tab-accounts', key: 'finances-tab-accounts', fallback: 'Accounts', page: 'finances' },
+  { id: 'fin-tab-credits', key: 'finances-tab-credits', fallback: 'Credits', page: 'finances' },
   { id: 'fin-tab-settings', key: 'finances-tab-settings', fallback: 'Settings', page: 'finances' },
   { id: 'fin-new-account', key: 'finances-new-account', fallback: 'New Account', page: 'finances' },
   { id: 'fin-transfer', key: 'finances-transfer', fallback: 'Transfer', page: 'finances' },

@@ -20,6 +20,7 @@
 //! Handles FIAT accounts, transactions, and categories.
 //!
 //! Split into focused submodules:
+//! - `credits` - Installment plans and their schedules
 //! - `repository` - Database operations
 //! - `service` - Core service and account operations
 //! - `transactions` - Transaction and transfer operations
@@ -28,6 +29,7 @@
 //! Note: Charts moved to `features/dashboard/` as it serves the dashboard view.
 
 pub mod commands;
+pub mod credits;
 pub mod export;
 pub mod repository;
 pub mod service;
@@ -35,8 +37,12 @@ pub mod transactions;
 pub mod validation;
 
 pub use commands::{
-    NewAccount, NewRecurring, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction,
-    UpdateTransfer,
+    NewAccount, NewCharge, NewCredit, NewRecurring, NewTransaction, NewTransfer, UpdateAccount,
+    UpdateInstallment, UpdateTransaction, UpdateTransfer,
+};
+pub use credits::{
+    AmortizationRow, CreditProgress, CreditStatus, CreditTotals, amortization, credit_interest,
+    credit_progress, credit_totals, french_installment,
 };
 pub use repository::FinanceRepository;
 pub use service::{FinanceError, FinanceService};

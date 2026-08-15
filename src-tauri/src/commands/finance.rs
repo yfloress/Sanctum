@@ -21,14 +21,17 @@
 //! transfers, and categories.
 
 use sanctum::error::AppError;
-use sanctum::features::finance::FinanceService;
+use sanctum::features::finance::{
+    FinanceService, amortization, credit_interest, credit_progress, credit_totals,
+};
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::services::search::normalize;
 use sanctum::ui::dto::finance::{
-    AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, BudgetDto, BudgetInput,
-    CategoriesResponse, CategoryDto, ReconcileRowDto, ReconciliationResponse, RecurringDto,
-    RecurringInput, TransactionDto, TransactionFilter, TransactionInput, TransactionsResponse,
-    TransferInput,
+    AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, AmortizationRowDto,
+    BudgetDto, BudgetInput, CategoriesResponse, CategoryDto, ChargeInput, CreditDto, CreditInput,
+    CreditInstallmentDto, InstallmentUpdateInput, ReconcileRowDto, ReconciliationResponse,
+    RecurringDto, RecurringInput, TransactionDto, TransactionFilter, TransactionInput,
+    TransactionsResponse, TransferInput,
 };
 use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
@@ -747,6 +750,184 @@ pub fn delete_recurring(finance: State<'_, FinanceService>, id: String) -> Resul
 #[tauri::command]
 pub fn apply_due_recurring(finance: State<'_, FinanceService>) -> Result<usize, AppError> {
     finance.apply_due_recurring().map_err(AppError::from)
+}
+
+// ==================== Credits ====================
+
+/// List every credit with its schedule and progress.
+#[tauri::command]
+pub fn fetch_credits(
+    finance: State<'_, FinanceService>,
+    settings: State<'_, SettingsService>,
+) -> Result<Vec<CreditDto>, AppError> {
+    let credits = finance.get_credits().map_err(AppError::from)?;
+    let schedules = finance.get_credit_installments().map_err(AppError::from)?;
+    let accounts = finance.get_accounts().map_err(AppError::from)?;
+    let names: HashMap<String, (String, String)> = accounts
+        .iter()
+        .map(|a| (a.id.clone(), (a.name.clone(), a.currency.clone())))
+        .collect();
+    let preferred = settings
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string());
+
+    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+
+    Ok(credits
+        .into_iter()
+        .map(|credit| {
+            let (account_name, currency) = names
+                .get(&credit.account_id)
+                .cloned()
+                .unwrap_or_else(|| (String::new(), preferred.clone()));
+            let schedule = schedules.get(&credit.id).cloned().unwrap_or_default();
+            let progress = credit_progress(&schedule, &today);
+            let totals = credit_totals(&schedule);
+
+            let rows = schedule
+                .iter()
+                .map(|row| CreditInstallmentDto {
+                    id: row.id.clone(),
+                    kind: row.kind.clone(),
+                    number: row.number,
+                    amount: format_money(row.amount, &currency),
+                    amount_raw: format_decimal_from_cents(row.amount),
+                    due_date: row.due_date.clone(),
+                    paid_date: row.paid_date.clone(),
+                    note: row.note.clone(),
+                    is_paid: row.is_paid(),
+                    is_overdue: !row.is_paid() && row.due_date.as_str() < today.as_str(),
+                })
+                .collect();
+
+            // Only a loan has a principal and a rate to split payments against.
+            let amortization = match (credit.principal, credit.monthly_rate_ppm) {
+                (Some(principal), Some(rate)) => amortization(principal, rate, &schedule)
+                    .into_iter()
+                    .map(|line| AmortizationRowDto {
+                        number: line.number,
+                        due_date: line.due_date,
+                        payment: format_money(line.payment, &currency),
+                        interest: format_money(line.interest, &currency),
+                        principal: format_money(line.principal, &currency),
+                        balance: format_money(line.balance, &currency),
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            };
+
+            CreditDto {
+                id: credit.id.clone(),
+                name: credit.name.clone(),
+                account_id: credit.account_id.clone(),
+                account_name,
+                category_label: format_category_label(&credit.category),
+                category: credit.category.clone(),
+                kind: credit.kind.clone(),
+                down_payment: (credit.down_payment > 0)
+                    .then(|| format_money(credit.down_payment, &currency)),
+                installment_amount: format_money(credit.installment_amount, &currency),
+                installment_count: credit.installment_count,
+                paid_count: progress.paid_count,
+                overdue_count: progress.overdue_count,
+                total: format_money(totals.plan, &currency),
+                paid: format_money(totals.paid, &currency),
+                remaining: format_money(totals.remaining(), &currency),
+                charges: (totals.charges > 0).then(|| format_money(totals.charges, &currency)),
+                percentage: totals.percentage(),
+                next_due_date: progress.next_due_date.clone(),
+                status: progress.status.as_str().to_string(),
+                interest: credit_interest(&credit, &schedule)
+                    .map(|cents| format_money(cents, &currency)),
+                cash_price: credit
+                    .cash_price
+                    .map(|cents| format_money(cents, &currency)),
+                principal: credit.principal.map(|cents| format_money(cents, &currency)),
+                monthly_rate: credit.monthly_rate_ppm.map(format_rate_percent),
+                installments: rows,
+                amortization,
+            }
+        })
+        .collect())
+}
+
+/// A rate held in millionths, written back as the percentage it stands for.
+///
+/// Up to four decimals and no trailing zeros, so a monthly 1.5% reads as "1.5"
+/// while an annual rate divided by twelve still shows the "0.125" it really is.
+fn format_rate_percent(ppm: i64) -> String {
+    let percent = ppm as f64 / 10_000.0;
+    let text = format!("{percent:.4}");
+    text.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
+/// Create a credit and its whole installment schedule.
+#[tauri::command]
+pub fn add_credit(finance: State<'_, FinanceService>, input: CreditInput) -> Result<(), AppError> {
+    finance.create_credit(input.into_new()?)?;
+    Ok(())
+}
+
+/// Delete a credit. Payments already made stay in the ledger.
+#[tauri::command]
+pub fn delete_credit(finance: State<'_, FinanceService>, id: String) -> Result<(), AppError> {
+    finance.delete_credit(id).map_err(AppError::from)
+}
+
+/// Pay one installment, writing the expense it stands for.
+#[tauri::command]
+pub fn pay_installment(
+    finance: State<'_, FinanceService>,
+    installment_id: String,
+    date: Option<String>,
+) -> Result<(), AppError> {
+    finance
+        .pay_installment(installment_id, date)
+        .map(|_| ())
+        .map_err(AppError::from)
+}
+
+/// Undo a payment, deleting the expense it wrote.
+#[tauri::command]
+pub fn unpay_installment(
+    finance: State<'_, FinanceService>,
+    installment_id: String,
+) -> Result<(), AppError> {
+    finance
+        .unpay_installment(installment_id)
+        .map_err(AppError::from)
+}
+
+/// Correct one unpaid row of a schedule.
+#[tauri::command]
+pub fn update_installment(
+    finance: State<'_, FinanceService>,
+    input: InstallmentUpdateInput,
+) -> Result<(), AppError> {
+    finance
+        .update_installment(input.into_update()?)
+        .map_err(AppError::from)
+}
+
+/// Record a fee the lender charged on top of a credit's plan.
+#[tauri::command]
+pub fn add_credit_charge(
+    finance: State<'_, FinanceService>,
+    input: ChargeInput,
+) -> Result<(), AppError> {
+    finance.add_charge(input.into_new()?).map(|_| ())?;
+    Ok(())
+}
+
+/// Remove an unpaid charge.
+#[tauri::command]
+pub fn delete_credit_charge(
+    finance: State<'_, FinanceService>,
+    installment_id: String,
+) -> Result<(), AppError> {
+    finance
+        .delete_charge(installment_id)
+        .map_err(AppError::from)
 }
 
 // ==================== Category Budgets ====================

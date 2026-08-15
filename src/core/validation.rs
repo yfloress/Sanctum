@@ -86,6 +86,28 @@ pub fn sanitize_string(input: &str) -> String {
         .to_string()
 }
 
+/// Sanitizes a name without flattening its alphabet.
+///
+/// [`sanitize_string`] keeps only ASCII letters, which turns "Colchón" into
+/// "Colchn". A name the user typed is shown straight back to them, so this one
+/// accepts letters and digits from any script and keeps only the punctuation
+/// that belongs in a label.
+pub fn sanitize_text(input: &str) -> String {
+    input
+        .chars()
+        .filter(|c| {
+            c.is_alphanumeric()
+                || c.is_whitespace()
+                || matches!(
+                    c,
+                    '-' | '_' | '.' | ',' | '(' | ')' | '\'' | '&' | '+' | '/' | '#' | '%'
+                )
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 /// Validates a UUID string
 pub fn validate_uuid(id: &str) -> Result<String, String> {
     let trimmed = id.trim();
