@@ -20,54 +20,90 @@
     "yanked. It complements the shorter setting in pnpm-workspace.yaml, which",
     "pnpm enforces over the whole tree including transitive packages.",
     "The Nix manager is beta and opt-in, and lockFileMaintenance is what",
-    "refreshes flake.lock; without it only flake.nix inputs would move."
+    "refreshes flake.lock; without it only flake.nix inputs would move.",
+    "src-tauri/gen is the Android project Tauri generates; its Gradle files are regenerated rather than maintained, so nothing there is ours to update."
   ],
   "timezone": "Etc/UTC",
-  "schedule": ["before 6am on monday"],
-  "labels": ["maintenance"],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "labels": [
+    "maintenance"
+  ],
   "dependencyDashboard": true,
-  "baseBranches": ["main", "web"],
+  "baseBranches": [
+    "main",
+    "web"
+  ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "src-tauri/gen/**"
+  ],
   "minimumReleaseAge": "7 days",
   "nix": {
     "enabled": true
   },
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "schedule": [
+      "before 6am on monday"
+    ]
   },
   "packageRules": [
     {
       "description": "Majors are never grouped and wait longer: a breaking change must not hold back the rest, and it gets its own pull request to be judged on its own.",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "minimumReleaseAge": "30 days"
     },
     {
       "description": "Routine cargo updates arrive together.",
-      "matchManagers": ["cargo"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "cargo"
     },
     {
       "description": "Routine frontend updates arrive together.",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "ui-svelte"
     },
     {
       "description": "Workflow actions arrive together.",
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "actions"
     },
     {
       "description": "flake.lock moves all three inputs at once; splitting them would only produce pull requests that cannot be evaluated apart.",
-      "matchManagers": ["nix"],
+      "matchManagers": [
+        "nix"
+      ],
       "groupName": "nix"
     }
   ],
   "vulnerabilityAlerts": {
     "description": "An advisory that affects us is not quarantined and does not wait for Monday.",
     "minimumReleaseAge": null,
-    "schedule": ["at any time"],
-    "labels": ["maintenance", "security"]
+    "schedule": [
+      "at any time"
+    ],
+    "labels": [
+      "maintenance",
+      "security"
+    ]
   }
 }
