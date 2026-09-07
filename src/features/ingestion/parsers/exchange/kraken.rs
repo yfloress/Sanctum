@@ -368,18 +368,13 @@ impl PendingTrade {
             return Vec::new();
         }
 
-        let fee_coin_symbol;
-        let fee_amount;
-        if outgoing.fee.abs() > f64::EPSILON {
-            fee_coin_symbol = Some(outgoing.symbol.clone());
-            fee_amount = Some(outgoing.fee.abs());
+        let (fee_coin_symbol, fee_amount) = if outgoing.fee.abs() > f64::EPSILON {
+            (Some(outgoing.symbol.clone()), Some(outgoing.fee.abs()))
         } else if incoming.fee.abs() > f64::EPSILON {
-            fee_coin_symbol = Some(incoming.symbol.clone());
-            fee_amount = Some(incoming.fee.abs());
+            (Some(incoming.symbol.clone()), Some(incoming.fee.abs()))
         } else {
-            fee_coin_symbol = None;
-            fee_amount = None;
-        }
+            (None, None)
+        };
 
         let tx = ImportCryptoTransaction {
             date,
