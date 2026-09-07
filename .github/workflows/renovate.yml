@@ -1,0 +1,59 @@
+name: Renovate
+
+# Dependency updates for every ecosystem here: cargo, npm, GitHub Actions and
+# the Nix flake. The policy lives in `renovate.json`; this file only decides
+# where the bot runs and which identity it acts as.
+#
+# Self-hosted rather than the Mend-hosted app, so no third party holds write
+# access to the repository. The cost is that patching Renovate is ours: the
+# version below is pinned and Renovate updates the pin itself.
+#
+# The identity is a GitHub App owned by the repository owner, not the built-in
+# GITHUB_TOKEN and not a personal token. GITHUB_TOKEN would work but its pull
+# requests never trigger CI, which is the whole point of opening them; a
+# personal token would trigger CI but expires within a year and fails silently
+# when it does. An App token is minted per run and lasts an hour.
+
+on:
+  schedule:
+    # Mondays at 06:00 UTC. `renovate.json` schedules the updates themselves;
+    # this only decides how often the bot wakes up to notice them.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+# Renovate acts as the App, never as this workflow, so the built-in token needs
+# nothing at all.
+permissions: {}
+
+# Two runs against the same repository would fight over the same branches.
+concurrency:
+  group: renovate
+
+jobs:
+  renovate:
+    name: Renovate
+    runs-on: ubuntu-latest
+
+    steps:
+      # Exchanges the App's private key for a token scoped to this repository
+      # and valid for one hour.
+      - name: Mint an App token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RENOVATE_APP_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+
+      - name: Renovate
+        uses: renovatebot/github-action@v46.2.5
+        with:
+          token: ${{ steps.token.outputs.token }}
+        env:
+          RENOVATE_PLATFORM: github
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          # The configuration is `renovate.json`, already in the repository, so
+          # there is nothing to onboard and a missing config is an error rather
+          # than a reason to open an onboarding pull request.
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: "required"
+          LOG_LEVEL: info
