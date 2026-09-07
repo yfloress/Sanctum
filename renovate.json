@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>yfloress/renovate-config"],
+  "extends": ["local>yfloress/renovate-config"],
   "description": [
     "The policy lives in the shared preset. Only what is true of this",
     "repository alone belongs here.",
