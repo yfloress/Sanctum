@@ -1,109 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    ":semanticCommitTypeAll(chore)"
-  ],
+  "extends": ["local>yfloress/renovate-config"],
   "description": [
-    "Dependency updates for every ecosystem in this repository: cargo, npm,",
-    "GitHub Actions and the Nix flake. Nothing is merged automatically.",
-    "Renovate replaced Dependabot because Dependabot has no Nix support, which",
-    "left flake.lock as the only part of the toolchain with no automation.",
-    "Dependabot's security updates stay enabled in the repository settings:",
-    "they are a separate track that this file does not affect.",
+    "The policy lives in the shared preset. Only what is true of this",
+    "repository alone belongs here.",
     "The Astro site lives on its own branch with its own flake and lockfile.",
     "Renovate reads this config from the default branch and applies it to",
-    "both, which is what Dependabot could not do: its target-branch entries",
-    "never received security updates.",
-    "minimumReleaseAge is a quarantine: it refuses any release younger than a",
-    "week, the window in which a compromised package is normally spotted and",
-    "yanked. It complements the shorter setting in pnpm-workspace.yaml, which",
-    "pnpm enforces over the whole tree including transitive packages.",
-    "The Nix manager is beta and opt-in, and lockFileMaintenance is what",
-    "refreshes flake.lock; without it only flake.nix inputs would move.",
-    "src-tauri/gen is the Android project Tauri generates; its Gradle files are regenerated rather than maintained, so nothing there is ours to update."
+    "both, which is what Dependabot could not do: an entry with a",
+    "target-branch never received security updates."
   ],
-  "timezone": "Etc/UTC",
-  "schedule": [
-    "before 6am on monday"
-  ],
-  "labels": [
-    "maintenance"
-  ],
-  "dependencyDashboard": true,
-  "baseBranchPatterns": [
-    "main",
-    "web"
-  ],
-  "ignorePaths": [
-    "**/node_modules/**",
-    "**/bower_components/**",
-    "src-tauri/gen/**"
-  ],
-  "minimumReleaseAge": "7 days",
-  "nix": {
-    "enabled": true
-  },
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": [
-      "before 6am on monday"
-    ]
-  },
-  "packageRules": [
-    {
-      "description": "Majors are never grouped and wait longer: a breaking change must not hold back the rest, and it gets its own pull request to be judged on its own.",
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "minimumReleaseAge": "30 days"
-    },
-    {
-      "description": "Routine cargo updates arrive together.",
-      "matchManagers": [
-        "cargo"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "cargo"
-    },
-    {
-      "description": "Routine frontend updates arrive together.",
-      "matchManagers": [
-        "npm"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "ui-svelte"
-    },
-    {
-      "description": "Workflow actions arrive together.",
-      "matchManagers": [
-        "github-actions"
-      ],
-      "groupName": "actions"
-    },
-    {
-      "description": "flake.lock moves all three inputs at once; splitting them would only produce pull requests that cannot be evaluated apart.",
-      "matchManagers": [
-        "nix"
-      ],
-      "groupName": "nix"
-    }
-  ],
-  "vulnerabilityAlerts": {
-    "description": "An advisory that affects us is not quarantined and does not wait for Monday.",
-    "minimumReleaseAge": null,
-    "schedule": [
-      "at any time"
-    ],
-    "labels": [
-      "maintenance",
-      "security"
-    ]
-  }
+  "baseBranchPatterns": ["main", "web"]
 }
