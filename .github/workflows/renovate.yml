@@ -20,6 +20,12 @@ on:
     # this only decides how often the bot wakes up to notice them.
     - cron: "0 6 * * 1"
   workflow_dispatch:
+    inputs:
+      logLevel:
+        description: "Renovate log level"
+        type: choice
+        options: [info, debug]
+        default: debug
 
 # Renovate acts as the App, never as this workflow, so the built-in token needs
 # nothing at all.
@@ -56,4 +62,6 @@ jobs:
           # than a reason to open an onboarding pull request.
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: "required"
-          LOG_LEVEL: info
+          # Scheduled runs stay quiet; a manual run defaults to debug, which is
+          # the only way to see why Renovate skipped or aborted something.
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
