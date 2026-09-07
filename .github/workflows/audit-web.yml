@@ -39,7 +39,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
       # `pnpm audit` resolves the lockfile against the registry, so there is no
       # install step and no dependency code ever executes here. The threshold is
