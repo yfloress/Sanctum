@@ -100,6 +100,11 @@ pnpm-store
 .opencode/
 
 # ===========================
-# Study export (NotebookLM)
+# Study export
 # ===========================
 /study-export/
+
+# ===========================
+# Local notes
+# ===========================
+/notes/
