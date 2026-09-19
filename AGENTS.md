@@ -175,6 +175,7 @@ All generated code must pass the following without exception before being consid
 - `nix develop -c cargo clippy -- -D warnings` (zero warnings)
 - `nix develop -c cargo test -j 2` (all tests pass)
 - `nix develop -c cargo machete` (no new unused dependencies)
+- `nix develop -c cargo deny check --workspace` (no advisories, licence or source violations)
 
 Do not mark a task as done if any of these fail. If clippy or tests
 fail, fix them before continuing. Do not silence warnings with `#[allow]`
@@ -189,7 +190,7 @@ without explicitly justifying it.
 - **Database at rest**: SQLCipher encrypts the SQLite database. The vault password derives the encryption key — never log it, never store it.
 - **Secrets in memory**: use `secrecy::SecretString` / `Zeroize` for sensitive values (passwords, keys). Zero memory after use.
 - **No sensitive data in logs**: financial details, passwords, keys, and PII must never reach log output. Review `security_log.rs` usage.
-- **Supply chain**: `cargo deny check` for Rust advisories and licences, `ignoreScripts` plus a
+- **Supply chain**: `cargo deny check --workspace` for Rust advisories and licences, `ignoreScripts` plus a
   `minimumReleaseAge` quarantine for JS deps. The quarantine also covers transitive packages,
   which Dependabot's own cooldown does not.
 - **Tauri CSP**: keep `tauri.conf.json` CSP restrictive. No inline scripts, no external CDNs.
