@@ -511,9 +511,10 @@
   .motion-toggle:hover { opacity: 1; color: var(--foreground); transform: translateY(-2px); }
   .motion-toggle:active { transform: translateY(0) scale(0.96); }
   .motion-toggle svg { width: 1.1rem; height: 1.1rem; }
-  .motion-toggle .icon-static { display: none; }
-  [data-motion="off"] .motion-toggle .icon-animated { display: none; }
-  [data-motion="off"] .motion-toggle .icon-static { display: block; }
+  /* The button shows what pressing it does. */
+  .motion-toggle .icon-play { display: none; }
+  [data-motion="off"] .motion-toggle .icon-pause { display: none; }
+  [data-motion="off"] .motion-toggle .icon-play { display: block; }
 
 
   .panel-gradient {

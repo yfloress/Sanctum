@@ -17,7 +17,7 @@ const baseUrl = import.meta.env.BASE_URL;
 ---
 
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" class="dark" data-motion="off">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,6 +29,9 @@ const baseUrl = import.meta.env.BASE_URL;
           const theme = localStorage.getItem("sanctum-theme");
           if (theme === "light") {
             document.documentElement.classList.remove("dark");
+          }
+          if (localStorage.getItem("sanctum-motion") === "on") {
+            document.documentElement.dataset.motion = "on";
           }
           const lang = localStorage.getItem("sanctum-lang");
           if (lang === "es") {
@@ -98,17 +101,16 @@ const baseUrl = import.meta.env.BASE_URL;
       type="button"
       class="motion-toggle"
       data-motion-toggle
-      aria-pressed="true"
-      aria-label="Toggle background animation"
+      aria-pressed="false"
+      aria-label="Play the background animation"
       title="Background animation"
     >
-      <svg class="icon-animated" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="3.2"></circle>
-        <path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.1 5.1l1.7 1.7M17.2 17.2l1.7 1.7M18.9 5.1l-1.7 1.7M6.8 17.2l-1.7 1.7"></path>
-      </svg>
-      <svg class="icon-static" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg class="icon-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="6.5" y="5" width="3.5" height="14" rx="1.2"></rect>
         <rect x="14" y="5" width="3.5" height="14" rx="1.2"></rect>
+      </svg>
+      <svg class="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8 5.2v13.6L19 12z"></path>
       </svg>
     </button>
     <script is:inline>
@@ -729,7 +731,7 @@ const baseUrl = import.meta.env.BASE_URL;
           b.setAttribute("aria-pressed", String(on));
           b.setAttribute(
             "aria-label",
-            on ? "Disable background animation" : "Enable background animation"
+            on ? "Pause the background animation" : "Play the background animation"
           );
         });
       };
@@ -747,7 +749,8 @@ const baseUrl = import.meta.env.BASE_URL;
       try {
         storedMotion = localStorage.getItem(motionKey);
       } catch {}
-      applyMotion(storedMotion ? storedMotion === "on" : !prefersReducedMotion, false);
+      // Still by default: the animation is something the visitor asks for.
+      applyMotion(storedMotion === "on" && !prefersReducedMotion, false);
 
       motionToggles.forEach((b) =>
         b.addEventListener("click", () => applyMotion(!motionOn))
