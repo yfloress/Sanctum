@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 /* One typeface in two cuts, served by Bunny Fonts, which sets no cookies and
-   logs no addresses. Geist for every piece of text, Geist Mono for the CSV and
-   JSON samples. Bunny ships no variable build of either, so only the weights
-   the site uses are declared. */
+   logs no addresses. Fira Sans carries every piece of text and Fira Mono the
+   CSV and JSON samples: a humanist grotesque drawn for Firefox OS, so it has
+   a voice of its own and was built to stay legible in dense data. Bunny ships
+   no variable build, so only the weights the site uses are declared. */
 @font-face {
-  font-family: "Geist";
-  src: url("https://fonts.bunny.net/geist/files/geist-latin-400-normal.woff2")
+  font-family: "Fira Sans";
+  src: url("https://fonts.bunny.net/fira-sans/files/fira-sans-latin-400-normal.woff2")
     format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -17,8 +18,8 @@
 }
 
 @font-face {
-  font-family: "Geist";
-  src: url("https://fonts.bunny.net/geist/files/geist-latin-500-normal.woff2")
+  font-family: "Fira Sans";
+  src: url("https://fonts.bunny.net/fira-sans/files/fira-sans-latin-500-normal.woff2")
     format("woff2");
   font-weight: 500;
   font-style: normal;
@@ -29,8 +30,8 @@
 }
 
 @font-face {
-  font-family: "Geist";
-  src: url("https://fonts.bunny.net/geist/files/geist-latin-600-normal.woff2")
+  font-family: "Fira Sans";
+  src: url("https://fonts.bunny.net/fira-sans/files/fira-sans-latin-600-normal.woff2")
     format("woff2");
   font-weight: 600;
   font-style: normal;
@@ -41,8 +42,8 @@
 }
 
 @font-face {
-  font-family: "Geist";
-  src: url("https://fonts.bunny.net/geist/files/geist-latin-ext-400-normal.woff2")
+  font-family: "Fira Sans";
+  src: url("https://fonts.bunny.net/fira-sans/files/fira-sans-latin-ext-400-normal.woff2")
     format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -53,8 +54,8 @@
 }
 
 @font-face {
-  font-family: "Geist";
-  src: url("https://fonts.bunny.net/geist/files/geist-latin-ext-500-normal.woff2")
+  font-family: "Fira Sans";
+  src: url("https://fonts.bunny.net/fira-sans/files/fira-sans-latin-ext-500-normal.woff2")
     format("woff2");
   font-weight: 500;
   font-style: normal;
@@ -65,8 +66,8 @@
 }
 
 @font-face {
-  font-family: "Geist";
-  src: url("https://fonts.bunny.net/geist/files/geist-latin-ext-600-normal.woff2")
+  font-family: "Fira Sans";
+  src: url("https://fonts.bunny.net/fira-sans/files/fira-sans-latin-ext-600-normal.woff2")
     format("woff2");
   font-weight: 600;
   font-style: normal;
@@ -77,8 +78,8 @@
 }
 
 @font-face {
-  font-family: "Geist Mono";
-  src: url("https://fonts.bunny.net/geist-mono/files/geist-mono-latin-400-normal.woff2")
+  font-family: "Fira Mono";
+  src: url("https://fonts.bunny.net/fira-mono/files/fira-mono-latin-400-normal.woff2")
     format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -89,8 +90,8 @@
 }
 
 @font-face {
-  font-family: "Geist Mono";
-  src: url("https://fonts.bunny.net/geist-mono/files/geist-mono-latin-500-normal.woff2")
+  font-family: "Fira Mono";
+  src: url("https://fonts.bunny.net/fira-mono/files/fira-mono-latin-500-normal.woff2")
     format("woff2");
   font-weight: 500;
   font-style: normal;
@@ -101,8 +102,8 @@
 }
 
 @font-face {
-  font-family: "Geist Mono";
-  src: url("https://fonts.bunny.net/geist-mono/files/geist-mono-latin-ext-400-normal.woff2")
+  font-family: "Fira Mono";
+  src: url("https://fonts.bunny.net/fira-mono/files/fira-mono-latin-ext-400-normal.woff2")
     format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -113,8 +114,8 @@
 }
 
 @font-face {
-  font-family: "Geist Mono";
-  src: url("https://fonts.bunny.net/geist-mono/files/geist-mono-latin-ext-500-normal.woff2")
+  font-family: "Fira Mono";
+  src: url("https://fonts.bunny.net/fira-mono/files/fira-mono-latin-ext-500-normal.woff2")
     format("woff2");
   font-weight: 500;
   font-style: normal;
@@ -126,9 +127,9 @@
 
 @layer base {
   :root {
-    --font-sans: "Geist", system-ui, -apple-system, sans-serif;
-    --font-display: "Geist", system-ui, -apple-system, sans-serif;
-    --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: "Fira Sans", system-ui, -apple-system, sans-serif;
+    --font-display: "Fira Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "Fira Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     --background: #f8f7fd;
     --foreground: #1e1b2e;
     --card: #f2f0fc;
@@ -140,7 +141,7 @@
     --secondary: #ebe6ff;
     --secondary-foreground: #1e1b2e;
     --muted: #f3efff;
-    --muted-foreground: #6f6890;
+    --muted-foreground: #5a5478;
     --accent: #7c3aed;
     --accent-foreground: #ffffff;
     --destructive: #dc2626;
@@ -156,9 +157,9 @@
     --grad-surface-strong-start: #f0edff;
     --grad-surface-strong-end: #e8e3fc;
     --grad-section-start: #f8f7fd;
-    --grad-section-end: #cdbcf9;
+    --grad-section-end: #ddd2fb;
     --grad-section-alt-start: #f6f2ff;
-    --grad-section-alt-end: #c2b0ff;
+    --grad-section-alt-end: #d5c9ff;
     --glow-primary: rgba(139, 92, 246, 0.26);
     --glow-secondary: rgba(168, 85, 247, 0.22);
     --glow-shadow: rgba(139, 92, 246, 0.2);

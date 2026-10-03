@@ -40,8 +40,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Geist', 'system-ui', 'sans-serif'],
-        mono: ['Geist Mono', 'monospace'],
+        sans: ['Fira Sans', 'system-ui', 'sans-serif'],
+        mono: ['Fira Mono', 'monospace'],
       },
     },
   },

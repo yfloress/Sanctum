@@ -1,41 +1,23 @@
 ---
 // Features section - highlights key Sanctum capabilities based on app behavior
 
-import fs from 'node:fs';
-import path from 'node:path';
+import { Image } from 'astro:assets';
 
-const base = import.meta.env.BASE_URL;
-const screenshotsDir = path.resolve(process.cwd(), 'public', 'screenshots');
+import crypto from '@/assets/screenshots/crypto.png';
+import dashboard from '@/assets/screenshots/dashboard.png';
+import finances from '@/assets/screenshots/finances.png';
+import lock from '@/assets/screenshots/lock.png';
+import settings from '@/assets/screenshots/settings.png';
 
-const preferredOrder = ['lock', 'dashboard', 'finances', 'crypto', 'settings'];
-
-const screenshotFiles = fs.existsSync(screenshotsDir)
-  ? fs
-      .readdirSync(screenshotsDir)
-      .filter((name) => {
-        const ext = name.split('.').pop()?.toLowerCase();
-        return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
-      })
-      .sort((a, b) => {
-        const aBase = a.replace(/\.[^.]+$/, '').toLowerCase();
-        const bBase = b.replace(/\.[^.]+$/, '').toLowerCase();
-        const aIndex = preferredOrder.indexOf(aBase);
-        const bIndex = preferredOrder.indexOf(bBase);
-        if (aIndex !== -1 || bIndex !== -1) {
-          if (aIndex === -1) return 1;
-          if (bIndex === -1) return -1;
-          return aIndex - bIndex;
-        }
-        return aBase.localeCompare(bBase);
-      })
-  : [];
-
-const screens = screenshotFiles.map((name) => {
-  const baseName = name.replace(/\.[^.]+$/, '');
-  const label = baseName.replace(/[-_]+/g, ' ');
-  const alt = `${label.charAt(0).toUpperCase()}${label.slice(1)} screen`;
-  return { src: `${base}screenshots/${name}`, alt };
-});
+// Written out rather than read off disk, so each shot carries an alt text a
+// person wrote and the build knows its dimensions.
+const screens = [
+  { src: lock, alt: 'The vault asking for its master password' },
+  { src: dashboard, alt: 'Net worth and trends across finances and crypto' },
+  { src: finances, alt: 'Accounts, categories and the transaction ledger' },
+  { src: crypto, alt: 'Crypto portfolio with holdings and cost basis' },
+  { src: settings, alt: 'Settings, with backups and the appearance options' },
+];
 
 const slideDuration = 6;
 
@@ -89,9 +71,13 @@ const highlights = [
       >
         <div class="sanctum-slider__frame">
           {screens.map((screen, index) => (
-            <img
+            <Image
               src={screen.src}
               alt={screen.alt}
+              widths={[640, 1280, 1920]}
+              sizes="(min-width: 1024px) 960px, 100vw"
+              format="webp"
+              quality={72}
               class={`sanctum-slider__slide${index === 0 ? " is-active" : ""}`}
               loading={index === 0 ? "eager" : "lazy"}
               decoding="async"
