@@ -1,27 +1,66 @@
 @import "tailwindcss";
 
+/* Fonts served from Bunny Fonts while we settle on the typography. Once the
+   families are final these files get downloaded into public/fonts/ so the site
+   makes no third-party request. */
 @font-face {
   font-family: "Space Grotesk";
-  src: url("/Sanctum/fonts/SpaceGrotesk[wght].ttf") format("truetype");
+  src: url("https://fonts.bunny.net/space-grotesk/files/space-grotesk-latin-variable-wghtOnly-normal.woff2")
+    format("woff2-variations");
   font-weight: 300 700;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("https://fonts.bunny.net/space-grotesk/files/space-grotesk-latin-ext-variable-wghtOnly-normal.woff2")
+    format("woff2-variations");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @font-face {
   font-family: "Syne";
-  src: url("/Sanctum/fonts/Syne[wght].ttf") format("truetype");
+  src: url("https://fonts.bunny.net/syne/files/syne-latin-variable-wghtOnly-normal.woff2")
+    format("woff2-variations");
   font-weight: 400 800;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Syne";
+  src: url("https://fonts.bunny.net/syne/files/syne-latin-ext-variable-wghtOnly-normal.woff2")
+    format("woff2-variations");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+    U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("/Sanctum/fonts/JetBrainsMono[wght].ttf") format("truetype");
+  src: url("https://fonts.bunny.net/jetbrains-mono/files/jetbrains-mono-latin-variable-wghtOnly-normal.woff2")
+    format("woff2-variations");
   font-weight: 100 800;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @layer base {
@@ -149,7 +188,32 @@
     color: var(--foreground);
     font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-optical-sizing: auto;
+    /* Never let the browser fake a weight the variable font can produce. */
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
     position: relative;
+  }
+
+  /* Long headings break on a sensible word instead of leaving one alone. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Figures must not shift width as they change. */
+  table,
+  pre,
+  code,
+  time,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
   }
 
   select,

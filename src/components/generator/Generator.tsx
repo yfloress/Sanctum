@@ -1293,7 +1293,7 @@ export default function Generator() {
                 <p className="text-xs text-muted-foreground">
                   {copy.stats.transactions}
                 </p>
-                <p className="text-2xl font-semibold text-foreground">
+                <p className="text-2xl font-semibold text-foreground" data-numeric>
                   {transactions.length}
                 </p>
               </div>
@@ -1301,7 +1301,7 @@ export default function Generator() {
                 <p className="text-xs text-muted-foreground">
                   {copy.stats.crypto}
                 </p>
-                <p className="text-2xl font-semibold text-foreground">
+                <p className="text-2xl font-semibold text-foreground" data-numeric>
                   {cryptoTx.length}
                 </p>
               </div>

@@ -37,6 +37,18 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Bunny serves the fonts; cache them so an offline visit keeps its type.
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.bunny\.net\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'bunny-fonts',
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
         navigateFallback: `${base}404.html`,
       },
     }),

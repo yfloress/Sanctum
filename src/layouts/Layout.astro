@@ -46,7 +46,22 @@ const baseUrl = import.meta.env.BASE_URL;
     <link rel="icon" href={`${baseUrl}favicon.ico`} />
     <link rel="apple-touch-icon" sizes="180x180" href={`${baseUrl}apple-touch-icon.png`} />
 
-    <!-- Fonts (self-hosted) -->
+    <!-- Fonts: Bunny Fonts, which sets no cookies and logs no IP addresses -->
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="https://fonts.bunny.net/syne/files/syne-latin-variable-wghtOnly-normal.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="https://fonts.bunny.net/space-grotesk/files/space-grotesk-latin-variable-wghtOnly-normal.woff2"
+      crossorigin
+    />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href={`${baseUrl}manifest.webmanifest`} />
