@@ -1,5 +1,6 @@
 ---
 import Layout from '@layouts/Layout.astro';
+import Generator from '@components/generator/Generator';
 
 const base = import.meta.env.BASE_URL;
 ---
@@ -18,7 +19,7 @@ const base = import.meta.env.BASE_URL;
               <img src={`${base}favicon.png`} alt="Sanctum logo" class="logo-mark h-5 w-5" />
             </a>
             <a
-              href={`${base}#generator`}
+              href="#generator"
               class="text-muted-foreground hover:text-foreground transition-colors text-[0.7rem] font-semibold uppercase tracking-[0.35em]"
               data-i18n="imports.nav.generator"
             >Generator</a>
@@ -108,7 +109,7 @@ const base = import.meta.env.BASE_URL;
                 </svg>
               </summary>
               <div class="nav-mobile__panel">
-                <a href={`${base}#generator`} class="nav-mobile__link" data-i18n="imports.nav.generator">
+                <a href="#generator" class="nav-mobile__link" data-i18n="imports.nav.generator">
                   Generator
                 </a>
                 <a href={`${base}imports/`} class="nav-mobile__link nav-mobile__link--primary" data-i18n="imports.nav.current">
@@ -132,7 +133,7 @@ const base = import.meta.env.BASE_URL;
           Import formats, simplified.
         </h1>
         <p class="mt-4 text-muted-foreground max-w-2xl mx-auto" data-i18n="imports.description">
-          Choose the format that fits your day. CSV for spreadsheets, TXT for notes, JSON for full fidelity.
+          Choose the format that fits your day. CSV for spreadsheets, JSON for full fidelity.
         </p>
       </div>
 
@@ -146,7 +147,7 @@ const base = import.meta.env.BASE_URL;
               Spreadsheet exports (one file per type)
             </h2>
             <p class="text-sm text-muted-foreground mt-2" data-i18n="imports.csv.description">
-              Export as CSV from Excel, Sheets, LibreOffice, or Proton Sheets. You must export three separate files.
+              Export as CSV from Excel, Sheets, LibreOffice, or Proton Sheets. Transactions and crypto go in separate files.
             </p>
           </div>
           <a
@@ -162,9 +163,6 @@ const base = import.meta.env.BASE_URL;
           <div class="flex flex-wrap gap-2" data-csv-tabs>
             <button class="tab-button is-active" data-tab="transactions" data-i18n="imports.csv.tabs.transactions">
               Transactions CSV
-            </button>
-            <button class="tab-button" data-tab="habits" data-i18n="imports.csv.tabs.habits">
-              Habit Logs CSV
             </button>
             <button class="tab-button" data-tab="crypto" data-i18n="imports.csv.tabs.crypto">
               Crypto CSV
@@ -187,14 +185,6 @@ date,account,type,amount,currency,category,description,transfer_to_account
 2026-01-22,Checking,transfer,500,USD,Transfer,Savings move,Savings</pre>
               </div>
             </div>
-            <div class="tab-panel hidden" data-tab-panel="habits">
-              <div class="code-scroll rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground font-mono">
-                <pre>
-habit,date,completed
-Meditate,2026-01-21,true
-Exercise,2026-01-21,false</pre>
-              </div>
-            </div>
             <div class="tab-panel hidden" data-tab-panel="crypto">
               <div class="code-scroll rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground font-mono">
                 <pre>
@@ -208,24 +198,22 @@ date,wallet,symbol,type,subtype,amount,price_per_coin,fee,swap_to_symbol,swap_to
       </section>
 
       <section class="panel-gradient-strong rounded-3xl border border-border p-6 mb-10">
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground" data-i18n="imports.txt.tag">
-          TXT
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground" data-i18n="imports.exchanges.tag">
+          Exchanges
         </p>
-        <h2 class="text-2xl font-semibold text-foreground mt-2" data-i18n="imports.txt.title">
-          Quick notes format (prefixed)
+        <h2 class="text-2xl font-semibold text-foreground mt-2" data-i18n="imports.exchanges.title">
+          Exchange and wallet exports
         </h2>
-        <p class="text-sm text-muted-foreground mt-2" data-i18n="imports.txt.description">
-          Use prefixes to paste straight from notes or paper. One line per entry.
+        <p class="text-sm text-muted-foreground mt-2" data-i18n="imports.exchanges.description">
+          Drop the CSV an exchange gives you and Sanctum recognises the layout. Everything is parsed
+          on your device.
         </p>
-        <p class="mt-3 text-xs text-muted-foreground" data-i18n="imports.txt.required">
-          Required per line: date + key fields. Prefixes: T; transaction, H; habit, C; crypto.
+        <p class="mt-4 text-sm font-semibold text-foreground" data-i18n="imports.exchanges.available">
+          Kraken · Binance · MEXC · NotBank · Feather Wallet · Monero GUI
         </p>
-        <div class="code-scroll mt-4 rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground font-mono">
-          <pre>
-T;2026-01-21;Checking;expense;45.50;USD;Food;Groceries;
-H;Meditate;2026-01-21;true
-C;2026-01-21;Binance;BTC;trade;0.1;buy;42000;5</pre>
-        </div>
+        <p class="mt-2 text-xs text-muted-foreground" data-i18n="imports.exchanges.planned">
+          Planned: Coinbase, Bybit, OKX, KuCoin, Bitget, Buda, Orionx.
+        </p>
       </section>
 
       <section class="panel-gradient-strong rounded-3xl border border-border p-6 mb-14">
@@ -240,13 +228,30 @@ C;2026-01-21;Binance;BTC;trade;0.1;buy;42000;5</pre>
         </p>
         <div class="mt-4 flex flex-wrap items-center gap-3">
           <a
-            href={`${base}#generator`}
+            href="#generator"
             class="btn-gradient rounded-full px-5 py-2 text-sm font-semibold shadow-strong transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110"
             data-i18n="imports.json.cta"
           >
             Open Generator
           </a>
         </div>
+      </section>
+
+      <section id="generator" class="scroll-mt-24">
+        <div class="mb-12 text-center">
+          <p
+            class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground"
+            data-i18n="generator.tag"
+          >Generator</p>
+          <h2 class="font-display text-4xl font-semibold text-foreground mb-4" data-i18n="generator.title">
+            Daily Log Builder
+          </h2>
+          <p class="text-muted-foreground max-w-2xl mx-auto" data-i18n="generator.description">
+            Build a single sanctum_export.json file while traveling or offline. Load, add entries,
+            export.
+          </p>
+        </div>
+        <Generator client:load />
       </section>
     </div>
   </main>

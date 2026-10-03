@@ -329,6 +329,37 @@
     .bg-fx__glows { transform: none; }
   }
 
+  /* Site-wide notice: the app is not finished, and the site must say so. */
+  .site-notice {
+    position: fixed;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 40;
+    max-width: min(22rem, calc(100vw - 5rem));
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+    background: color-mix(in srgb, var(--card), transparent 10%);
+    backdrop-filter: blur(10px);
+  }
+
+  .site-notice__label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: var(--foreground);
+  }
+
+  .site-notice__text {
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: var(--muted-foreground);
+  }
+
   /* Subtle floating animation toggle. */
   .motion-toggle {
     position: fixed;

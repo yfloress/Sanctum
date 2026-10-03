@@ -7,7 +7,7 @@ import path from 'node:path';
 const base = import.meta.env.BASE_URL;
 const screenshotsDir = path.resolve(process.cwd(), 'public', 'screenshots');
 
-const preferredOrder = ['lock', 'dashboard', 'finances', 'crypto', 'habits', 'settings'];
+const preferredOrder = ['lock', 'dashboard', 'finances', 'crypto', 'settings'];
 
 const screenshotFiles = fs.existsSync(screenshotsDir)
   ? fs
@@ -55,11 +55,6 @@ const pages = [
     title: 'Crypto',
     description: 'Wallets, trades, swaps, portfolio, and tax reports (FIFO / LIFO / HIFO).',
   },
-  {
-    key: 'habits',
-    title: 'Habits',
-    description: 'Daily check-ins, streaks, and heatmap progress.',
-  },
 ];
 
 const highlights = [
@@ -78,10 +73,10 @@ const highlights = [
       data-i18n="features.tag"
     >Core Systems</p>
     <h2 class="font-display mt-4 text-4xl sm:text-5xl text-foreground" data-i18n="features.title">
-      Four screens. One encrypted vault.
+      Three screens. One encrypted vault.
     </h2>
     <p class="mt-3 text-muted-foreground max-w-2xl mx-auto text-lg" data-i18n="features.description">
-      A clean, offline-first suite for money, crypto, and habits.
+      A clean, offline-first suite for money and crypto.
     </p>
   </div>
 

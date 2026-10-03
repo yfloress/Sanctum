@@ -22,12 +22,11 @@ const base = import.meta.env.BASE_URL;
         </h1>
       </div>
       <p class="mx-auto max-w-2xl px-2 text-base text-muted-foreground sm:text-lg" data-i18n="hero.description">
-        Privacy-first, local-only tracking with encrypted storage. Sanctum keeps your vault private,
-        lets you work offline, and syncs your progress when you are back at your desk.
+        Your private vault for money and crypto. Encrypted, offline-first, and built for daily use.
       </p>
       <div class="flex flex-wrap items-center justify-center gap-4">
         <a
-          href="#generator"
+          href={`${base}imports/#generator`}
           class="btn-gradient shadow-strong rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-xl active:scale-[0.98]"
           data-i18n="hero.cta.primary"
         >

@@ -22,13 +22,6 @@ type Transaction = {
   transfer_to_account?: string | null;
 };
 
-type HabitLog = {
-  id: string;
-  habit: string;
-  date: string;
-  completed: boolean;
-};
-
 type CryptoTransaction = {
   id: string;
   date: string;
@@ -61,7 +54,6 @@ type ExportData = {
     description: string;
     transfer_to_account?: string | null;
   }[];
-  habit_logs: Omit<HabitLog, "id">[];
   crypto_transactions: {
     date: string;
     wallet: string;
@@ -394,7 +386,7 @@ const translations = {
     headerTag: "Generator",
     headerTitle: "Build a trip-safe log",
     headerDescription:
-      "This generator matches Sanctum's import schema. Account, habit, wallet, and category names must already exist in your vault for the import to succeed.",
+      "This generator matches Sanctum's import schema. Account, wallet, and category names must already exist in your vault for the import to succeed.",
     startOver: "Start over",
     steps: {
       load: "Step 1: Load",
@@ -403,7 +395,6 @@ const translations = {
     },
     stats: {
       transactions: "Transactions",
-      habits: "Habit Logs",
       crypto: "Crypto Entries",
     },
     loaded: "Loaded",
@@ -428,7 +419,6 @@ const translations = {
       tabs: {
         finances: "Finances",
         crypto: "Crypto",
-        habits: "Habits",
       },
     },
     transactions: {
@@ -448,21 +438,6 @@ const translations = {
         title: "Recent Transactions",
         empty: "No transactions yet. Add the first one.",
         remove: "Remove",
-      },
-    },
-    habits: {
-      form: {
-        name: "Habit name",
-        completed: "Completed",
-        add: "Add Habit Log",
-        required: "Required: Date, Habit name.",
-      },
-      list: {
-        title: "Habit Logs",
-        empty: "No habit logs yet. Capture today's progress.",
-        remove: "Remove",
-        completed: "Completed",
-        skipped: "Skipped",
       },
     },
     crypto: {
@@ -520,8 +495,6 @@ const translations = {
       transactionCategoryRequired:
         "Category is required unless this is a transfer.",
       transactionTransferRequired: "Transfer requires a destination account.",
-      habitDateRequired: "Habit date is required.",
-      habitNameRequired: "Habit name is required.",
       cryptoDateRequired: "Crypto date is required.",
       cryptoWalletRequired: "Crypto wallet is required.",
       cryptoSymbolRequired: "Crypto symbol is required.",
@@ -536,7 +509,7 @@ const translations = {
     headerTag: "Generador Sanctum",
     headerTitle: "Construye un registro seguro",
     headerDescription:
-      "Este generador respeta el esquema de importacion de Sanctum. Los nombres de cuentas, habitos, wallets y categorias deben existir en tu boveda para que la importacion funcione.",
+      "Este generador respeta el esquema de importacion de Sanctum. Los nombres de cuentas, wallets y categorias deben existir en tu boveda para que la importacion funcione.",
     startOver: "Reiniciar",
     steps: {
       load: "Paso 1: Cargar",
@@ -545,7 +518,6 @@ const translations = {
     },
     stats: {
       transactions: "Transacciones",
-      habits: "Registros de habitos",
       crypto: "Movimientos cripto",
     },
     loaded: "Cargado",
@@ -570,7 +542,6 @@ const translations = {
       tabs: {
         finances: "Finanzas",
         crypto: "Cripto",
-        habits: "Habitos",
       },
     },
     transactions: {
@@ -591,21 +562,6 @@ const translations = {
         title: "Transacciones recientes",
         empty: "Aun no hay transacciones. Agrega la primera.",
         remove: "Eliminar",
-      },
-    },
-    habits: {
-      form: {
-        name: "Nombre del habito",
-        completed: "Completado",
-        add: "Agregar registro de habito",
-        required: "Requerido: Fecha, Nombre del habito.",
-      },
-      list: {
-        title: "Registros de habitos",
-        empty: "Aun no hay registros. Captura el progreso de hoy.",
-        remove: "Eliminar",
-        completed: "Completado",
-        skipped: "Omitido",
       },
     },
     crypto: {
@@ -665,8 +621,6 @@ const translations = {
         "La categoria es obligatoria salvo que sea una transferencia.",
       transactionTransferRequired:
         "La transferencia requiere una cuenta destino.",
-      habitDateRequired: "La fecha del habito es obligatoria.",
-      habitNameRequired: "El nombre del habito es obligatorio.",
       cryptoDateRequired: "La fecha del movimiento cripto es obligatoria.",
       cryptoWalletRequired: "La wallet es obligatoria.",
       cryptoSymbolRequired: "El simbolo cripto es obligatorio.",
@@ -695,12 +649,6 @@ const createDefaultTx = (date: string) => ({
   category: "",
   description: "",
   transfer_to_account: "",
-});
-
-const createDefaultHabit = (date: string) => ({
-  habit: "",
-  date,
-  completed: true,
 });
 
 const createDefaultCrypto = (date: string) => ({
@@ -877,11 +825,10 @@ export default function Generator() {
   );
 
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
-  const [habits, setHabits] = React.useState<HabitLog[]>([]);
   const [cryptoTx, setCryptoTx] = React.useState<CryptoTransaction[]>([]);
-  const [activeTab, setActiveTab] = React.useState<
-    "transactions" | "habits" | "crypto"
-  >("transactions");
+  const [activeTab, setActiveTab] = React.useState<"transactions" | "crypto">(
+    "transactions",
+  );
   const [error, setError] = React.useState<string | null>(null);
   const [loadedFile, setLoadedFile] = React.useState<string | null>(null);
   const [rawInput, setRawInput] = React.useState("");
@@ -898,15 +845,6 @@ export default function Generator() {
     transfer_to_account?: boolean;
   }>({});
   const [txAttempted, setTxAttempted] = React.useState(false);
-
-  const [habitForm, setHabitForm] = React.useState(() =>
-    createDefaultHabit(getLocalDateString()),
-  );
-  const [habitErrors, setHabitErrors] = React.useState<{
-    date?: boolean;
-    habit?: boolean;
-  }>({});
-  const [habitAttempted, setHabitAttempted] = React.useState(false);
 
   const [cryptoForm, setCryptoForm] = React.useState(() =>
     createDefaultCrypto(getLocalDateString()),
@@ -994,7 +932,6 @@ export default function Generator() {
         type: transaction_type,
         transfer_to_account: tx.transfer_to_account || null,
       })),
-      habit_logs: habits.map(({ id, ...log }) => log),
       crypto_transactions: cryptoTx.map(({ id, transaction_type, ...tx }) => ({
         date: tx.date,
         wallet: tx.wallet,
@@ -1013,7 +950,7 @@ export default function Generator() {
         notes: tx.notes || null,
       })),
     };
-  }, [transactions, habits, cryptoTx]);
+  }, [transactions, cryptoTx]);
 
   const exportJson = React.useMemo(
     () => JSON.stringify(exportPayload, null, 2),
@@ -1024,15 +961,12 @@ export default function Generator() {
 
   function resetFormState() {
     setTxErrors({});
-    setHabitErrors({});
     setCryptoErrors({});
     setTxAttempted(false);
-    setHabitAttempted(false);
     setCryptoAttempted(false);
     setShowAdvancedSection(false);
     const today = getLocalDateString();
     setTxForm(createDefaultTx(today));
-    setHabitForm(createDefaultHabit(today));
     setCryptoForm(createDefaultCrypto(today));
   }
 
@@ -1059,18 +993,11 @@ export default function Generator() {
           transfer_to_account: tx.transfer_to_account ?? null,
         }))
       : [];
-    const nextHabits = Array.isArray(parsed.habit_logs)
-      ? parsed.habit_logs.map((log: HabitLog) => ({
-          ...log,
-          id: makeId(),
-        }))
-      : [];
     const nextCrypto = Array.isArray(parsed.crypto_transactions)
       ? parsed.crypto_transactions.map(parseCryptoFromJson)
       : [];
 
     setTransactions(nextTransactions);
-    setHabits(nextHabits);
     setCryptoTx(nextCrypto);
     setLoadedFile(sourceName);
     setRawInput("");
@@ -1135,7 +1062,6 @@ export default function Generator() {
 
   function handleReset() {
     setTransactions([]);
-    setHabits([]);
     setCryptoTx([]);
     setLoadedFile(null);
     setError(null);
@@ -1196,38 +1122,6 @@ export default function Generator() {
     setTxForm(createDefaultTx(getLocalDateString()));
     setTxErrors({});
     setTxAttempted(false);
-  }
-
-  function addHabit() {
-    setError(null);
-    setHabitAttempted(true);
-    const nextErrors: typeof habitErrors = {};
-    let message: string | null = null;
-    if (!habitForm.date) {
-      nextErrors.date = true;
-      message ??= copy.errors.habitDateRequired;
-    }
-    if (!habitForm.habit) {
-      nextErrors.habit = true;
-      message ??= copy.errors.habitNameRequired;
-    }
-    if (Object.keys(nextErrors).length > 0) {
-      setHabitErrors(nextErrors);
-      setError(message);
-      return;
-    }
-    setHabits((prev) => [
-      {
-        id: makeId(),
-        habit: habitForm.habit,
-        date: habitForm.date,
-        completed: habitForm.completed,
-      },
-      ...prev,
-    ]);
-    setHabitForm(createDefaultHabit(getLocalDateString()));
-    setHabitErrors({});
-    setHabitAttempted(false);
   }
 
   function addCrypto() {
@@ -1394,21 +1288,13 @@ export default function Generator() {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="panel-gradient rounded-xl border border-border p-4">
                 <p className="text-xs text-muted-foreground">
                   {copy.stats.transactions}
                 </p>
                 <p className="text-2xl font-semibold text-foreground">
                   {transactions.length}
-                </p>
-              </div>
-              <div className="panel-gradient rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">
-                  {copy.stats.habits}
-                </p>
-                <p className="text-2xl font-semibold text-foreground">
-                  {habits.length}
                 </p>
               </div>
               <div className="panel-gradient rounded-xl border border-border p-4">
@@ -1490,7 +1376,6 @@ export default function Generator() {
             {[
               { id: "transactions", label: copy.add.tabs.finances },
               { id: "crypto", label: copy.add.tabs.crypto },
-              { id: "habits", label: copy.add.tabs.habits },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1757,114 +1642,6 @@ export default function Generator() {
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== Habits Tab ==================== */}
-        {activeTab === "habits" && (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-            <div className="space-y-4 panel-gradient rounded-2xl border border-border p-5">
-              <Input
-                type="date"
-                value={habitForm.date}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setHabitForm({ ...habitForm, date: value });
-                  if (value) {
-                    setHabitErrors((prev) => ({
-                      ...prev,
-                      date: false,
-                    }));
-                  }
-                }}
-                aria-invalid={Boolean(habitAttempted && habitErrors.date)}
-                className={cn(
-                  habitAttempted &&
-                    habitErrors.date &&
-                    "border-destructive/60 focus-visible:ring-destructive/40",
-                )}
-              />
-              <Input
-                placeholder={copy.habits.form.name}
-                value={habitForm.habit}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setHabitForm({ ...habitForm, habit: value });
-                  if (value) {
-                    setHabitErrors((prev) => ({
-                      ...prev,
-                      habit: false,
-                    }));
-                  }
-                }}
-                aria-invalid={Boolean(habitAttempted && habitErrors.habit)}
-                className={cn(
-                  habitAttempted &&
-                    habitErrors.habit &&
-                    "border-destructive/60 focus-visible:ring-destructive/40",
-                )}
-              />
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={habitForm.completed}
-                  onChange={(event) =>
-                    setHabitForm({
-                      ...habitForm,
-                      completed: event.target.checked,
-                    })
-                  }
-                />
-                {copy.habits.form.completed}
-              </label>
-              <p className="text-xs text-muted-foreground">
-                {copy.habits.form.required}
-              </p>
-              <Button onClick={addHabit} className="w-full">
-                {copy.habits.form.add}
-              </Button>
-            </div>
-
-            <div className="panel-gradient-strong rounded-2xl border border-border p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {copy.habits.list.title}
-              </p>
-              <div className="mt-4 space-y-3">
-                {habits.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    {copy.habits.list.empty}
-                  </p>
-                )}
-                {habits.map((log) => (
-                  <div
-                    key={log.id}
-                    className="rounded-xl border border-border bg-card/70 px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-foreground">
-                        {log.habit}
-                      </p>
-                      <button
-                        className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
-                        onClick={() =>
-                          setHabits((prev) =>
-                            prev.filter((item) => item.id !== log.id),
-                          )
-                        }
-                      >
-                        {copy.habits.list.remove}
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {log.date} ·{" "}
-                      {log.completed
-                        ? copy.habits.list.completed
-                        : copy.habits.list.skipped}
-                    </p>
-                  </div>
-                ))}
               </div>
             </div>
           </div>

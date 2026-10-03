@@ -1,11 +1,10 @@
 ---
-// Main landing page with home and generator sections
+// Main landing page: hero, modules, download
 import Layout from '@layouts/Layout.astro';
 import Hero from '@components/landing/Hero.astro';
 import Features from '@components/landing/Features.astro';
 import Download from '@components/landing/Download.astro';
 import Footer from '@components/landing/Footer.astro';
-import Generator from '@components/generator/Generator';
 
 const base = import.meta.env.BASE_URL;
 ---
@@ -29,11 +28,6 @@ const base = import.meta.env.BASE_URL;
             class="text-muted-foreground hover:text-foreground transition-colors text-[0.7rem] font-semibold uppercase tracking-[0.35em]"
             data-i18n="nav.imports"
           >IMPORTS</a>
-          <a
-            href="#generator"
-            class="text-muted-foreground hover:text-foreground transition-colors text-[0.7rem] font-semibold uppercase tracking-[0.35em]"
-            data-i18n="nav.generator"
-          >GENERATOR</a>
           <button
             type="button"
             data-theme-toggle
@@ -115,10 +109,7 @@ const base = import.meta.env.BASE_URL;
               </svg>
             </summary>
             <div class="nav-mobile__panel">
-              <a href={`${base}imports/`} class="nav-mobile__link" data-i18n="nav.imports">IMPORTS</a>
-              <a href="#generator" class="nav-mobile__link nav-mobile__link--primary" data-i18n="nav.generator">
-                GENERATOR
-              </a>
+              <a href={`${base}imports/`} class="nav-mobile__link nav-mobile__link--primary" data-i18n="nav.imports">IMPORTS</a>
             </div>
           </details>
           </div>
@@ -135,26 +126,6 @@ const base = import.meta.env.BASE_URL;
 
     <section id="modules" class="scroll-mt-24 py-24">
       <Features />
-    </section>
-
-    <section id="generator" class="scroll-mt-24 py-24">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 reveal" data-reveal="left">
-          <p
-            class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground"
-            data-i18n="generator.tag"
-          >Generator</p>
-          <h2 class="font-display text-4xl font-semibold text-foreground mb-4" data-i18n="generator.title">
-            Daily Log Builder
-          </h2>
-          <p class="text-muted-foreground max-w-2xl mx-auto" data-i18n="generator.description">
-            Create or append to a single sanctum_export.json file while traveling or offline. Load
-            an existing file, add entries, and export a clean JSON v1 payload.
-          </p>
-        </div>
-        <!-- React Island for interactive form -->
-        <Generator client:load />
-      </div>
     </section>
 
     <section id="download" class="scroll-mt-24 py-24">

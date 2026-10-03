@@ -11,7 +11,7 @@ interface Props {
 
 const {
   title,
-  description = 'Sanctum is a privacy-first fortress for finance, crypto, and habit tracking with local encryption and offline workflows.',
+  description = 'Sanctum is a privacy-first vault for finance and crypto, with local encryption and offline workflows.',
 } = Astro.props;
 const baseUrl = import.meta.env.BASE_URL;
 ---
@@ -71,6 +71,13 @@ const baseUrl = import.meta.env.BASE_URL;
       </div>
       <div class="bg-fx__stars" data-stars></div>
     </div>
+    <aside class="site-notice" role="note">
+      <span class="site-notice__label" data-i18n="notice.label">Experimental</span>
+      <span class="site-notice__text" data-i18n="notice.text"
+        >Sanctum is under active development. Features shown here are not fully supported yet and
+        may change.</span
+      >
+    </aside>
     <slot />
     <button
       type="button"
@@ -115,12 +122,12 @@ const baseUrl = import.meta.env.BASE_URL;
             tag: "Imports",
             title: "Import formats, simplified.",
             description:
-              "Choose the format that fits your day. CSV for spreadsheets, TXT for notes, JSON for full fidelity.",
+              "Choose the format that fits your day. CSV for spreadsheets, JSON for full fidelity.",
             csv: {
               tag: "CSV",
               title: "Spreadsheet exports (one file per type)",
               description:
-                "Export as CSV from Excel, Sheets, LibreOffice, or Proton Sheets. You must export three separate files.",
+                "Export as CSV from Excel, Sheets, LibreOffice, or Proton Sheets. Transactions and crypto go in separate files.",
               download: "Download Excel Template",
               required:
                 "Required columns depend on file type. Crypto now uses fiscal type + subtype.",
@@ -128,16 +135,16 @@ const baseUrl = import.meta.env.BASE_URL;
                 "Transactions optional: transfer_to_account. Crypto optional: price, fee, swap targets, fee coin, notes.",
               tabs: {
                 transactions: "Transactions CSV",
-                habits: "Habit Logs CSV",
                 crypto: "Crypto CSV",
               },
             },
-            txt: {
-              tag: "TXT",
-              title: "Quick notes format (prefixed)",
-              description: "Use prefixes to paste straight from notes or paper. One line per entry.",
-              required:
-                "Required per line: date + key fields. Prefixes: T; transaction, H; habit, C; crypto (type + subtype).",
+            exchanges: {
+              tag: "Exchanges",
+              title: "Exchange and wallet exports",
+              description:
+                "Drop the CSV an exchange gives you and Sanctum recognises the layout. Everything is parsed on your device.",
+              available: "Kraken · Binance · MEXC · NotBank · Feather Wallet · Monero GUI",
+              planned: "Planned: Coinbase, Bybit, OKX, KuCoin, Bitget, Buda, Orionx.",
             },
             json: {
               tag: "JSON",
@@ -150,7 +157,7 @@ const baseUrl = import.meta.env.BASE_URL;
             tag: "SANCTUM",
             title: "SANCTUM",
             description:
-              "Your private vault for money, crypto, and habits. Encrypted, offline-first, and built for daily use.",
+              "Your private vault for money and crypto. Encrypted, offline-first, and built for daily use.",
             cta: {
               primary: "Open Generator",
               secondary: "Download Desktop Vault",
@@ -171,17 +178,13 @@ const baseUrl = import.meta.env.BASE_URL;
                 title: "Crypto Portfolio",
                 description: "Wallets, trades, swaps, and price sync via CoinGecko.",
               },
-              habits: {
-                title: "Habits",
-                description: "Daily logs, heatmaps, streak rewards, and goals.",
-              },
             },
           },
           features: {
             tag: "Core Screens",
-            title: "Four screens. One encrypted vault.",
+            title: "Three screens. One encrypted vault.",
             description:
-              "A clean, offline-first suite for money, crypto, and habits.",
+              "A clean, offline-first suite for money and crypto.",
             pages: {
               dashboard: {
                 title: "Dashboard",
@@ -194,10 +197,6 @@ const baseUrl = import.meta.env.BASE_URL;
               crypto: {
                 title: "Crypto",
                 description: "Wallets, trades, swaps, portfolio, and tax reports (FIFO / LIFO / HIFO).",
-              },
-              habits: {
-                title: "Habits",
-                description: "Daily check-ins, streaks, and heatmap progress.",
               },
             },
             highlights: {
@@ -220,6 +219,25 @@ const baseUrl = import.meta.env.BASE_URL;
               "Sanctum lives on your machine. Download the desktop app or audit the source on GitHub.",
             primary: "Desktop Releases",
             secondary: "View Source",
+            platforms: {
+              desktop: {
+                title: "Desktop",
+                status: "Linux, Windows and macOS. Where development happens today.",
+              },
+              android: {
+                title: "Android",
+                status: "Port in progress. No build to install yet.",
+              },
+              server: {
+                title: "Your own server",
+                status:
+                  "Planned. One vault across your devices, including iOS through the browser.",
+              },
+            },
+          },
+          notice: {
+            label: "Experimental",
+            text: "Sanctum is under active development. Features shown here are not fully supported yet and may change.",
           },
           footer: {
             note: "Sanctum — AGPL-3.0-or-later — Your data stays encrypted and local.",
@@ -251,12 +269,12 @@ const baseUrl = import.meta.env.BASE_URL;
             tag: "Importaciones",
             title: "Formatos de importación, simples.",
             description:
-              "Elige el formato que mejor te acomode. CSV para hojas de cálculo, TXT para notas, JSON para todo.",
+              "Elige el formato que mejor te acomode. CSV para hojas de cálculo, JSON para todo.",
             csv: {
               tag: "CSV",
               title: "Exportación desde hojas de cálculo (un archivo por tipo)",
               description:
-                "Exporta CSV desde Excel, Sheets, LibreOffice o Proton Sheets. Debes exportar tres archivos separados.",
+                "Exporta CSV desde Excel, Sheets, LibreOffice o Proton Sheets. Transacciones y cripto van en archivos separados.",
               download: "Descargar plantilla Excel",
               required:
                 "Las columnas requeridas dependen del tipo de archivo. Cripto ahora usa type fiscal + subtype.",
@@ -264,16 +282,16 @@ const baseUrl = import.meta.env.BASE_URL;
                 "Transacciones opcional: transfer_to_account. Cripto opcional: price, fee, destino swap, fee coin, notas.",
               tabs: {
                 transactions: "Transacciones CSV",
-                habits: "Hábitos CSV",
                 crypto: "Cripto CSV",
               },
             },
-            txt: {
-              tag: "TXT",
-              title: "Formato rápido (prefijos)",
-              description: "Usa prefijos para pegar desde notas o papel. Una línea por entrada.",
-              required:
-                "Requerido por línea: fecha + campos clave. Prefijos: T; transacción, H; hábito, C; cripto (type + subtype).",
+            exchanges: {
+              tag: "Exchanges",
+              title: "Exportaciones de exchanges y wallets",
+              description:
+                "Carga el CSV que te entrega el exchange y Sanctum reconoce el formato. Todo se procesa en tu dispositivo.",
+              available: "Kraken · Binance · MEXC · NotBank · Feather Wallet · Monero GUI",
+              planned: "Planeados: Coinbase, Bybit, OKX, KuCoin, Bitget, Buda, Orionx.",
             },
             json: {
               tag: "JSON",
@@ -286,7 +304,7 @@ const baseUrl = import.meta.env.BASE_URL;
             tag: "SANCTUM",
             title: "SANCTUM",
             description:
-              "Tu bóveda privada para finanzas, cripto y hábitos. Cifrado, offline y pensado para el día a día.",
+              "Tu bóveda privada para finanzas y cripto. Cifrado, offline y pensado para el día a día.",
             cta: {
               primary: "Abrir Generador",
               secondary: "Descargar bóveda de escritorio",
@@ -307,17 +325,13 @@ const baseUrl = import.meta.env.BASE_URL;
                 title: "Portafolio cripto",
                 description: "Wallets, operaciones, swaps y sincronización de precios vía CoinGecko.",
               },
-              habits: {
-                title: "Hábitos",
-                description: "Registros diarios, heatmaps, recompensas por rachas y metas.",
-              },
             },
           },
           features: {
             tag: "Pantallas principales",
-            title: "Cuatro pantallas. Una bóveda cifrada.",
+            title: "Tres pantallas. Una bóveda cifrada.",
             description:
-              "Una suite limpia y offline para dinero, cripto y hábitos.",
+              "Una suite limpia y offline para dinero y cripto.",
             pages: {
               dashboard: {
                 title: "Dashboard",
@@ -330,10 +344,6 @@ const baseUrl = import.meta.env.BASE_URL;
               crypto: {
                 title: "Cripto",
                 description: "Wallets, trades, swaps, portafolio e informes de impuestos (FIFO / LIFO / HIFO).",
-              },
-              habits: {
-                title: "Hábitos",
-                description: "Check-ins diarios, rachas y heatmap.",
               },
             },
             highlights: {
@@ -356,6 +366,25 @@ const baseUrl = import.meta.env.BASE_URL;
               "Sanctum vive en tu máquina. Descarga la app de escritorio o audita el código en GitHub.",
             primary: "Versiones de escritorio",
             secondary: "Ver código",
+            platforms: {
+              desktop: {
+                title: "Escritorio",
+                status: "Linux, Windows y macOS. Donde se trabaja hoy.",
+              },
+              android: {
+                title: "Android",
+                status: "Port en curso. Todavía no hay build para instalar.",
+              },
+              server: {
+                title: "Tu propio servidor",
+                status:
+                  "Planeado. Una bóveda para todos tus dispositivos, iOS incluido vía navegador.",
+              },
+            },
+          },
+          notice: {
+            label: "Experimental",
+            text: "Sanctum está en desarrollo activo. Lo que se muestra aquí todavía no está completamente soportado y puede cambiar.",
           },
           footer: {
             note: "Sanctum — AGPL-3.0-or-later — Tus datos permanecen cifrados y locales.",

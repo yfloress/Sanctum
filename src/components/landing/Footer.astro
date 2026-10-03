@@ -8,9 +8,9 @@ const base = import.meta.env.BASE_URL;
     <p data-i18n="footer.note">Sanctum — AGPL-3.0-or-later — Your data stays encrypted and local.</p>
     <div class="flex gap-4 text-muted-foreground">
       <a href="https://github.com/yfloress/Sanctum" class="hover:text-foreground">GitHub</a>
-      <a href="#modules" class="hover:text-foreground" data-i18n="nav.modules">Modules</a>
+      <a href={`${base}#modules`} class="hover:text-foreground" data-i18n="nav.modules">Modules</a>
       <a href={`${base}imports/`} class="hover:text-foreground" data-i18n="nav.imports">Imports</a>
-      <a href="#generator" class="hover:text-foreground" data-i18n="nav.generator">Generator</a>
+      <a href={`${base}imports/#generator`} class="hover:text-foreground" data-i18n="nav.generator">Generator</a>
     </div>
   </div>
 </footer>

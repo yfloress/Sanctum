@@ -10,7 +10,7 @@
     <p class="text-muted-foreground mb-8" data-i18n="download.description">
       Sanctum lives on your machine. Download the desktop app or audit the source on GitHub.
     </p>
-    <div class="flex flex-wrap justify-center gap-4">
+    <div class="flex flex-wrap justify-center gap-4 mb-8">
       <a
         href="https://github.com/yfloress/Sanctum/releases"
         class="btn-gradient shadow-glow rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-xl active:scale-[0.98]"
@@ -22,5 +22,31 @@
         data-i18n="download.secondary"
       >View Source</a>
     </div>
+    <dl class="grid gap-3 text-left sm:grid-cols-3">
+      <div class="rounded-2xl border border-border p-4">
+        <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-foreground" data-i18n="download.platforms.desktop.title">
+          Desktop
+        </dt>
+        <dd class="mt-1 text-xs text-muted-foreground" data-i18n="download.platforms.desktop.status">
+          Linux, Windows and macOS. Where development happens today.
+        </dd>
+      </div>
+      <div class="rounded-2xl border border-border p-4">
+        <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-foreground" data-i18n="download.platforms.android.title">
+          Android
+        </dt>
+        <dd class="mt-1 text-xs text-muted-foreground" data-i18n="download.platforms.android.status">
+          Port in progress. No build to install yet.
+        </dd>
+      </div>
+      <div class="rounded-2xl border border-border p-4">
+        <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-foreground" data-i18n="download.platforms.server.title">
+          Your own server
+        </dt>
+        <dd class="mt-1 text-xs text-muted-foreground" data-i18n="download.platforms.server.status">
+          Planned. One vault across your devices, including iOS through the browser.
+        </dd>
+      </div>
+    </dl>
   </div>
 </div>
