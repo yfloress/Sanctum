@@ -1251,7 +1251,7 @@ export default function Generator() {
       <div className="panel-gradient-strong rounded-3xl border border-border p-6 shadow-glow">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {copy.headerTag}
             </p>
             <h3 className="font-display mt-3 text-2xl font-semibold text-foreground">
@@ -1280,7 +1280,7 @@ export default function Generator() {
           }}
         />
 
-        <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <Badge variant="outline">{copy.steps.load}</Badge>
           <Badge variant="outline">{copy.steps.add}</Badge>
           <Badge variant="outline">{copy.steps.export}</Badge>
@@ -1316,7 +1316,7 @@ export default function Generator() {
 
           <div className="space-y-4">
             <div className="panel-gradient rounded-2xl border border-border p-5">
-              <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <h4 className="text-sm font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {copy.load.title}
               </h4>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -1336,7 +1336,7 @@ export default function Generator() {
             </div>
 
             <div className="panel-gradient rounded-2xl border border-border p-5">
-              <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <h4 className="text-sm font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {copy.paste.title}
               </h4>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -1365,7 +1365,7 @@ export default function Generator() {
       <div className="panel-gradient-strong rounded-3xl border border-border p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {copy.add.title}
             </p>
             <h4 className="mt-1 text-xl font-semibold text-foreground">
@@ -1588,7 +1588,7 @@ export default function Generator() {
             </div>
 
             <div className="panel-gradient-strong rounded-2xl border border-border p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {copy.transactions.list.title}
               </p>
               <div className="mt-4 space-y-3">
@@ -2045,7 +2045,7 @@ export default function Generator() {
 
             {/* Crypto list */}
             <div className="panel-gradient-strong rounded-2xl border border-border p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {copy.crypto.list.title}
               </p>
               <div className="mt-4 space-y-3">
@@ -2111,7 +2111,7 @@ export default function Generator() {
       <div className="panel-gradient rounded-3xl border border-border p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.1em] text-muted-foreground">
               {copy.export.title}
             </h4>
             <Badge variant="outline">JSON v1</Badge>
