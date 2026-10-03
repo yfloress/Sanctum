@@ -1097,15 +1097,16 @@
     width: fit-content;
     max-width: 100%;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+    border: 1px solid color-mix(in srgb, var(--border), transparent 55%);
     background: linear-gradient(
       140deg,
-      color-mix(in srgb, var(--grad-surface-start), transparent 18%),
-      color-mix(in srgb, var(--grad-surface-end), transparent 18%)
+      color-mix(in srgb, var(--grad-surface-start), transparent 60%),
+      color-mix(in srgb, var(--grad-surface-end), transparent 60%)
     );
-    box-shadow: 0 12px 28px rgba(12, 10, 28, 0.20);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 12px 28px rgba(12, 10, 28, 0.12);
+    /* Same treatment as the notice: the blur carries the legibility. */
+    backdrop-filter: blur(16px) saturate(130%);
+    -webkit-backdrop-filter: blur(16px) saturate(130%);
   }
 
   @media (max-width: 640px) {
