@@ -467,16 +467,17 @@
     gap: 0.35rem;
     padding: 0.7rem 0.9rem;
     border-radius: 1rem;
-    border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
-    background: color-mix(in srgb, var(--card), transparent 10%);
-    backdrop-filter: blur(10px);
+    border: 1px solid color-mix(in srgb, var(--border), transparent 55%);
+    background: color-mix(in srgb, var(--card), transparent 60%);
+    /* The blur, not the fill, is what keeps the text readable. */
+    backdrop-filter: blur(16px) saturate(130%);
   }
 
   .site-notice__label {
     font-size: 0.6rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.3em;
+    letter-spacing: 0.14em;
     color: var(--foreground);
   }
 
