@@ -503,7 +503,6 @@
     background: color-mix(in srgb, var(--card), transparent 25%);
     color: var(--muted-foreground);
     backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     box-shadow: 0 8px 20px rgba(12, 10, 28, 0.22);
     cursor: pointer;
     opacity: 0.5;
@@ -1097,16 +1096,17 @@
     width: fit-content;
     max-width: 100%;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--border), transparent 55%);
+    border: 1px solid color-mix(in srgb, var(--border), transparent 40%);
+    /* The fill, not the blur, is what gives this one substance: it sits over
+       the flat page background, where there is no detail to blur until a
+       section scrolls underneath. */
     background: linear-gradient(
       140deg,
-      color-mix(in srgb, var(--grad-surface-start), transparent 60%),
-      color-mix(in srgb, var(--grad-surface-end), transparent 60%)
+      color-mix(in srgb, var(--grad-surface-start), transparent 25%),
+      color-mix(in srgb, var(--grad-surface-end), transparent 25%)
     );
-    box-shadow: 0 12px 28px rgba(12, 10, 28, 0.12);
-    /* Same treatment as the notice: the blur carries the legibility. */
-    backdrop-filter: blur(16px) saturate(130%);
-    -webkit-backdrop-filter: blur(16px) saturate(130%);
+    box-shadow: 0 12px 28px rgba(12, 10, 28, 0.16);
+    backdrop-filter: blur(20px) saturate(130%);
   }
 
   @media (max-width: 640px) {
