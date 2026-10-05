@@ -111,7 +111,6 @@
       padding-top: env(safe-area-inset-top, 0px);
       background: rgba(14, 12, 20, 0.9);
       backdrop-filter: blur(18px) saturate(1.3);
-      -webkit-backdrop-filter: blur(18px) saturate(1.3);
       border-bottom: 1px solid rgba(168, 85, 247, 0.12);
       z-index: 100;
     }
@@ -176,7 +175,6 @@
     border-radius: var(--radius-md);
     box-shadow: var(--glass-shadow-lg);
     backdrop-filter: var(--glass-blur-heavy);
-    -webkit-backdrop-filter: var(--glass-blur-heavy);
     z-index: 102;
     animation: menuIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   }

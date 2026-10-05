@@ -1618,7 +1618,6 @@
     position: relative;
     display: flex; flex-direction: column; gap: 4px; padding: 16px;
     background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
     transition: all 0.2s; box-shadow: var(--card-shadow);
@@ -1638,7 +1637,6 @@
     position: relative;
     display: flex; flex-direction: column; gap: 12px; padding: 16px;
     background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit; transition: all 0.2s;
     box-shadow: var(--card-shadow);
@@ -1666,7 +1664,6 @@
     padding: 18px 20px;
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-left-width: 3px;
     border-radius: var(--radius-md);
@@ -1714,7 +1711,6 @@
     position: relative;
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: 16px 16px 6px;

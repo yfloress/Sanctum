@@ -1800,7 +1800,6 @@
   .ticker-bar {
     display: flex; align-items: center; gap: 0;
     background: var(--glass); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     padding: 0; margin-bottom: 16px; overflow: hidden;
     box-shadow: var(--glass-glow);
@@ -1898,7 +1897,6 @@
     position: relative;
     display: flex; flex-direction: column; gap: 6px; padding: 14px;
     background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
     transition: all 0.2s; box-shadow: var(--card-shadow);
@@ -1922,7 +1920,6 @@
   .chart-section {
     position: relative;
     background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
     padding: 16px; margin-bottom: 24px;
     box-shadow: var(--card-shadow);
@@ -1962,7 +1959,6 @@
     position: relative;
     display: flex; flex-direction: column; gap: 4px; padding: 16px;
     background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
     transition: all 0.2s; box-shadow: var(--card-shadow);
@@ -2148,7 +2144,7 @@
   /* Tax onboarding */
   .tax-onboarding {
     padding: 32px 24px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow); text-align: center;
   }
@@ -2169,7 +2165,7 @@
   .period-selector {
     display: flex; flex-direction: column; gap: 12px;
     padding: 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
@@ -2192,7 +2188,6 @@
 
   .settings-info {
     padding: 16px; background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
     border-radius: var(--radius-md); box-shadow: var(--card-shadow);
   }
 
@@ -2204,7 +2199,7 @@
   /* IPC section */
   .ipc-section {
     padding: 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
@@ -2219,7 +2214,7 @@
   /* Chile info */
   .chile-info {
     padding: 14px 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid rgba(96, 165, 250, 0.2); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
@@ -2235,14 +2230,13 @@
   /* Report skeleton */
   .report-skeleton {
     padding: 16px; background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
     border-radius: var(--radius-md); box-shadow: var(--card-shadow);
   }
 
   /* Summary */
   .report-summary {
     padding: 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
@@ -2256,7 +2250,7 @@
   /* Warnings */
   .warnings {
     padding: 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid rgba(248, 113, 113, 0.2); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
@@ -2276,7 +2270,7 @@
   /* Readiness */
   .readiness {
     padding: 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
@@ -2315,7 +2309,7 @@
   /* Events table */
   .events-table {
     padding: 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }

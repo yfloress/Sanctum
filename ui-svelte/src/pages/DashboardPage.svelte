@@ -452,7 +452,6 @@
     position: relative;
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: 16px 20px;
@@ -493,7 +492,6 @@
     position: relative;
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: 20px 20px 6px;
@@ -588,7 +586,6 @@
     position: relative;
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: 20px;

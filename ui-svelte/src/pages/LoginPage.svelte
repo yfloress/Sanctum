@@ -311,7 +311,6 @@
     max-width: 420px;
     background: var(--glass);
     backdrop-filter: var(--glass-blur-heavy);
-    -webkit-backdrop-filter: var(--glass-blur-heavy);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     box-shadow:

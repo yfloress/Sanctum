@@ -61,7 +61,6 @@
     border-radius: var(--radius-md);
     background: rgba(58, 46, 20, 0.8);
     backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     color: var(--warning);
     border: 1px solid rgba(251, 191, 36, 0.28);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(251, 191, 36, 0.06) inset;

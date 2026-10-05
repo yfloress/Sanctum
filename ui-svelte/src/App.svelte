@@ -439,7 +439,6 @@
     border: 1px solid var(--glass-border);
     width: fit-content;
     backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 12px rgba(0,0,0,0.2);
     position: relative;
   }

@@ -67,7 +67,6 @@
 .light-mode .modal {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.72) 0%, rgba(250, 248, 255, 0.66) 50%, rgba(245, 243, 255, 0.60) 100%);
   backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid rgba(139, 92, 246, 0.18);
   box-shadow: 0 12px 40px rgba(100, 60, 180, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
@@ -231,7 +230,6 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 .light-mode .detail-panel {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 246, 255, 0.66) 100%);
   backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border-left: 1px solid rgba(139, 92, 246, 0.15);
 }
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -403,7 +401,6 @@ select option { background: var(--option-bg); color: var(--text-primary); }
   position: relative;
   background: var(--card-bg);
   backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: 22px;

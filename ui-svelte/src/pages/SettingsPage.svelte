@@ -1010,7 +1010,6 @@
   .hidden-input { display: none; }
   .import-card {
     background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     padding: 16px; margin-top: 8px; box-shadow: var(--card-shadow);
   }
