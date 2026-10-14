@@ -72,6 +72,10 @@ const MIN_REQUEST_INTERVAL_MS: u64 = 1500;
 /// Maximum length for sanitized string fields from API
 const MAX_SANITIZED_STRING_LENGTH: usize = 128;
 
+/// Sent instead of an app name, which would tell every provider (and a Tor exit)
+/// that the request comes from Sanctum. CoinGecko rejects an empty User-Agent.
+const GENERIC_USER_AGENT: &str = "curl/8.11.1";
+
 /// Maximum allowed length for proxy URLs
 pub const MAX_PROXY_URL_LENGTH: usize = 2048;
 
@@ -226,7 +230,11 @@ pub fn validate_percentage(pct: f64) -> f64 {
     }
 }
 
-/// Validates a proxy URL and returns a normalized string
+/// Validates a proxy URL and returns a normalized string.
+///
+/// `socks5://` becomes `socks5h://`: plain SOCKS5 resolves host names locally,
+/// so the DNS resolver sees every API we contact even when the traffic itself
+/// goes through Tor.
 pub fn validate_proxy_url(raw: &str) -> Result<String, String> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
@@ -251,7 +259,12 @@ pub fn validate_proxy_url(raw: &str) -> Result<String, String> {
         return Err("Proxy URL must include a host".to_string());
     }
 
-    Ok(trimmed.to_string())
+    match trimmed.get(..9) {
+        Some(prefix) if prefix.eq_ignore_ascii_case("socks5://") => {
+            Ok(format!("socks5h://{}", &trimmed[9..]))
+        }
+        _ => Ok(trimmed.to_string()),
+    }
 }
 
 fn validate_fiat_currency_code(raw: &str) -> Result<String, String> {
@@ -302,7 +315,7 @@ fn create_secure_client(proxy: Option<&ProxyConfig>) -> Result<Client, String> {
     let mut builder = Client::builder()
         .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
         .connect_timeout(Duration::from_secs(10))
-        .user_agent("Sanctum/1.0")
+        .user_agent(GENERIC_USER_AGENT)
         .https_only(true)
         .redirect(reqwest::redirect::Policy::none());
 

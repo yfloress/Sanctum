@@ -30,12 +30,13 @@ export async function setAutoFetch(enabled: boolean): Promise<void> {
   return invoke('set_auto_fetch', { enabled })
 }
 
-export async function setProxyEnabled(enabled: boolean, current_url: string): Promise<void> {
-  return invoke('set_proxy_enabled', { enabled, currentUrl: current_url })
+export async function setProxyEnabled(enabled: boolean): Promise<void> {
+  return invoke('set_proxy_enabled', { enabled })
 }
 
-export async function setProxyUrl(url: string): Promise<void> {
-  return invoke('set_proxy_url', { url })
+/** Returns the URL as stored, which may be normalized (socks5 → socks5h). */
+export async function setProxyUrl(url: string): Promise<string> {
+  return invoke<string>('set_proxy_url', { url })
 }
 
 export async function setSessionTimeout(timeout_secs: number): Promise<void> {

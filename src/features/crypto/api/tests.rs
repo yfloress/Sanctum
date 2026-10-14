@@ -26,6 +26,22 @@ fn validate_proxy_url_accepts_supported_schemes() {
 }
 
 #[test]
+fn validate_proxy_url_resolves_dns_through_socks_proxies() {
+    assert_eq!(
+        validate_proxy_url("socks5://127.0.0.1:9050").unwrap(),
+        "socks5h://127.0.0.1:9050"
+    );
+    assert_eq!(
+        validate_proxy_url("SOCKS5://127.0.0.1:9050").unwrap(),
+        "socks5h://127.0.0.1:9050"
+    );
+    assert_eq!(
+        validate_proxy_url("socks5h://127.0.0.1:9050").unwrap(),
+        "socks5h://127.0.0.1:9050"
+    );
+}
+
+#[test]
 fn validate_proxy_url_rejects_invalid_values() {
     assert!(validate_proxy_url("").is_err());
     assert!(validate_proxy_url("ftp://127.0.0.1:21").is_err());

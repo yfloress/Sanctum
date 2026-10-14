@@ -313,14 +313,18 @@
   async function toggleProxy() {
     if (!app.settings) return
     const next = !app.settings.proxy_enabled
-    app.settings.proxy_enabled = next
-    await settingsApi.setProxyEnabled(next, app.settings.proxy_url)
+    try {
+      await settingsApi.setProxyEnabled(next)
+      app.settings.proxy_enabled = next
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
   }
 
   async function updateProxyUrl() {
     if (!app.settings) return
     try {
-      await settingsApi.setProxyUrl(app.settings.proxy_url)
+      app.settings.proxy_url = await settingsApi.setProxyUrl(app.settings.proxy_url)
     } catch (e) {
       app.showToast(errorMessage(e), true)
     }
@@ -836,9 +840,12 @@
             type="text"
             bind:value={app.settings.proxy_url}
             onblur={updateProxyUrl}
-            placeholder={i18n.t('settings-proxy-placeholder', 'socks5://127.0.0.1:9050')}
+            placeholder={i18n.t('settings-proxy-placeholder', 'socks5h://127.0.0.1:9050')}
           />
         </div>
+        {#if !app.settings.proxy_url.trim()}
+          <p class="section-note">{i18n.t('settings-proxy-no-url', 'Without a proxy URL, Sanctum makes no network requests.')}</p>
+        {/if}
       {/if}
     </section>
 

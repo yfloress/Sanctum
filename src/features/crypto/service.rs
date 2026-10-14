@@ -518,9 +518,31 @@ impl CryptoService {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::features::crypto::api::{
         sanitize_api_string, validate_coin_id, validate_percentage, validate_price,
     };
+
+    #[test]
+    fn an_enabled_proxy_without_a_url_blocks_requests() {
+        let dir = std::env::temp_dir().join(format!("sanctum-proxy-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("create test dir");
+        let password = secrecy::SecretString::from("test-password-123".to_string());
+        let db = Database::init(dir.join("vault.db"), &password).expect("init test database");
+        let service = CryptoService::new(Arc::new(RwLock::new(Some(db))));
+
+        // Every network call reads this first, so an error means nothing goes out.
+        service.set_proxy_enabled(true).expect("enable");
+        assert!(service.get_proxy_config().is_err());
+
+        service
+            .set_proxy_url("socks5://127.0.0.1:9050".to_string())
+            .expect("save url");
+        let proxy = service.get_proxy_config().expect("config").expect("proxy");
+        assert_eq!(proxy.url, "socks5h://127.0.0.1:9050");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn test_validate_coin_id_valid() {

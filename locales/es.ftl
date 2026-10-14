@@ -530,7 +530,8 @@ settings-auto-fetch-desc = Obtener precios de crypto automaticamente al sincroni
 settings-use-proxy = Usar Proxy
 settings-use-proxy-desc = Enrutar llamadas API a traves de un proxy
 settings-proxy-url = URL del Proxy
-settings-proxy-placeholder = socks5://127.0.0.1:9050
+settings-proxy-placeholder = socks5h://127.0.0.1:9050
+settings-proxy-no-url = Sin URL de proxy, Sanctum no hace ninguna petición de red.
 
 # About
 settings-about-version = Versión
