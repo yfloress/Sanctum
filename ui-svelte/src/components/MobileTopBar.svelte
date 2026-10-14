@@ -117,8 +117,8 @@
   }
 
   :global(.light-mode) .mtopbar {
-    background: rgba(250, 248, 255, 0.92);
-    border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+    background: rgba(242, 239, 243, 0.94);
+    border-bottom: 1px solid var(--sidebar-border);
   }
 
   .mtb-btn {

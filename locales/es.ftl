@@ -43,6 +43,8 @@ nav-group-overview = Resumen
 nav-group-vault = Bóveda
 nav-group-system = Sistema
 nav-hide-balances = Ocultar Saldos
+nav-light-mode = Modo claro
+nav-dark-mode = Modo oscuro
 nav-show-balances = Mostrar Saldos
 nav-menu = Menú
 nav-close = Cerrar
@@ -78,6 +80,8 @@ finances-tab-settings = Configuración
 finances-income-this-month = Ingresos este mes
 finances-expenses-this-month = Gastos este mes
 finances-net-this-month = Neto este mes
+finances-vs-last-month = vs. los mismos días del mes pasado
+finances-mixed-currency-note = Este mes hay cuentas en más de una moneda, así que los totales no se suman.
 
 # Overview charts
 finances-monthly-overview = Resumen Mensual

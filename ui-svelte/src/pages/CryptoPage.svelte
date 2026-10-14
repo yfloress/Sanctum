@@ -1116,7 +1116,6 @@
             <div class="tx-row" role="button" tabindex="0"
               onclick={() => openEditTransaction(tx.id)}
               onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx.id) }}>
-              <span class="tx-type-dot" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}></span>
               <img src={getCryptoIconPath(tx.symbol)} alt={tx.symbol} class="tx-crypto-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="tx-main">
                 <span class="tx-desc">{getCryptoTxLabel(tx)}</span>
@@ -1242,7 +1241,6 @@
             <div class="tx-row" role="button" tabindex="0"
               onclick={() => openEditTransaction(tx.id)}
               onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx.id) }}>
-              <span class="tx-type-dot" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}></span>
               <img src={getCryptoIconPath(tx.symbol)} alt={tx.symbol} class="tx-crypto-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="tx-main">
                 <span class="tx-desc">{getCryptoTxLabel(tx)}</span>
@@ -1909,7 +1907,7 @@
   /* Stats bar */
   .stats-bar { display: flex; gap: 24px; margin-bottom: 24px; }
   .stats-bar .stat { display: flex; flex-direction: column; }
-  .stat-lbl { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
+  .stat-lbl { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 500; }
   .stat-val { font-size: 1rem; font-weight: 600; color: var(--text-secondary); }
   .stat-val.positive { color: var(--success); }
   .stat-val.negative { color: var(--danger); }
@@ -1956,7 +1954,7 @@
     top: 0; left: 0; right: 0; height: 1px;
     background: var(--card-accent-line); opacity: 0.5;
   }
-  .chart-section h3 { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+  .chart-section h3 { font-size: 0.78rem; color: var(--text-tertiary); letter-spacing: 0; margin: 0; font-weight: 500; }
   .chart-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
   .range-picker {
     display: flex; gap: 2px;
@@ -1976,7 +1974,7 @@
 
   /* Wallets */
   .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .section-header h3 { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; margin: 0; }
+  .section-header h3 { font-size: 0.85rem; color: var(--text-secondary); margin: 0; font-weight: 500; }
 
   .wallet-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
@@ -2103,24 +2101,6 @@
   }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
-  .primary-btn {
-    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
-    background: var(--accent-bg); backdrop-filter: blur(8px);
-    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem; font-weight: 500;
-    transition: all 0.2s;
-  }
-  .primary-btn:hover:not(:disabled) { background: var(--accent); box-shadow: 0 0 16px var(--accent-glow); }
-  .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  /* Light mode: dark text on a soft tonal button (white text would vanish). */
-  :global(.light-mode) .primary-btn {
-    background: rgba(139, 92, 246, 0.18);
-    border-color: rgba(139, 92, 246, 0.38);
-    color: var(--text-primary);
-  }
-  :global(.light-mode) .primary-btn:hover:not(:disabled) {
-    background: rgba(139, 92, 246, 0.3);
-    color: var(--text-primary);
-  }
   .secondary-btn {
     padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
@@ -2268,7 +2248,7 @@
   }
   .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
   .summary-item { display: flex; flex-direction: column; gap: 4px; }
-  .summary-item .label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
+  .summary-item .label { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 500; }
   .summary-item .value { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
   .summary-item .value.negative { color: var(--danger); }
   .summary-item.highlight { background: rgba(255, 255, 255, 0.04); border-radius: var(--radius-sm); padding: 8px; }
@@ -2365,7 +2345,7 @@
   .cfg-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
   /* Ticker config modal */
-  .tc-section-label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px; }
+  .tc-section-label { font-size: 0.78rem; color: var(--text-tertiary); letter-spacing: 0; margin: 0 0 8px; font-weight: 500; }
   .tc-empty { font-size: 0.85rem; color: var(--text-tertiary); padding: 8px 0; margin: 0; }
 
   .tc-active-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
@@ -2432,28 +2412,20 @@
   .custom-coin-row input:focus, .custom-coin-row-bottom input:focus { border-color: var(--accent); outline: none; }
 
   /* Transaction list (Recent) */
-  .tx-list { display: flex; flex-direction: column; }
+  .tx-list { display: flex; flex-direction: column; gap: 6px; }
   .tx-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 11px 8px;
-    border-bottom: 1px solid var(--glass-border);
-    cursor: pointer;
+    gap: 12px;
+    padding: 9px 12px;
     border-radius: var(--radius-sm);
-    transition: background 0.15s;
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
+    cursor: pointer;
+    transition: background 0.15s ease;
   }
-  .tx-row:last-child { border-bottom: none; }
-  .tx-row:hover { background: var(--glass-hover); }
-
-  .tx-type-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--text-tertiary); flex-shrink: 0;
-  }
-  .tx-type-dot.buy { background: var(--success); }
-  .tx-type-dot.sell { background: var(--danger); }
-  .tx-type-dot.transfer { background: #60a5fa; }
-  .tx-crypto-icon { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+  .tx-row:hover { background: var(--row-bg-hover); }
+  .tx-crypto-icon { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
 
   .tx-main {
     flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;

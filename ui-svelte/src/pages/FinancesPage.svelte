@@ -25,9 +25,10 @@
     AccountsResponse, AccountDetailResponse, AccountDto, SearchHit, ReconciliationResponse
   } from '../lib/types'
   import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
-  import { mask } from '../lib/currency'
+  import { formatMoney, mask } from '../lib/currency'
   import { setPageActions, consumePendingCommand, consumePendingTarget } from '../lib/shortcuts'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
+  import TxAvatar from '../components/TxAvatar.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
   import FinanceTransactionModal from '../components/finance/FinanceTransactionModal.svelte'
@@ -675,8 +676,48 @@
       .slice(-8)
   })
 
+  // The month's totals add up amounts from several accounts, which only means
+  // something when they all share a currency: CLP plus USD is in neither.
+  let monthCurrency = $derived.by(() => {
+    const currencyOf = new Map((accountsData?.accounts ?? []).map(a => [a.id, a.currency]))
+    const used = new Set(currentMonthTx.map(tx => currencyOf.get(tx.account_id)).filter(Boolean))
+    if (used.size > 1) return null
+    return [...used][0] ?? app.settings?.preferred_currency ?? 'USD'
+  })
+
+  // Income and spending over the same span of last month (day 1 to today's
+  // day), so a month in progress is not set against a whole one.
+  let lastMonthToDate = $derived.by(() => {
+    const now = new Date()
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const key = localIsoDate(prev).slice(0, 7)
+    const prevDays = new Date(now.getFullYear(), now.getMonth(), 0).getDate()
+    const upTo = Math.min(now.getDate(), prevDays)
+    const txs = chartTransactions.filter(tx =>
+      !tx.is_transfer && tx.date.startsWith(key) && Number(tx.date.slice(8, 10)) <= upTo)
+    const sum = (list: TransactionDto[]) => list.reduce((s, tx) => s + (parseFloat(tx.amount_raw) || 0), 0)
+    return { income: sum(txs.filter(tx => !tx.is_expense)), expense: sum(txs.filter(tx => tx.is_expense)) }
+  })
+
+  /** Percent change against last month, or null when there is nothing honest to compare. */
+  function changeVsLastMonth(now: number, before: number): number | null {
+    if (monthCurrency === null || before === 0) return null
+    return ((now - before) / before) * 100
+  }
+
+  let incomeChange = $derived(changeVsLastMonth(monthIncome, lastMonthToDate.income))
+  let expenseChange = $derived(changeVsLastMonth(monthExpense, lastMonthToDate.expense))
+
+  let vsLabel = $derived(i18n.t('finances-vs-last-month', 'vs. the same days last month'))
+
+  function fmtChange(pct: number): string {
+    const abs = Math.abs(pct)
+    return `${abs >= 10 ? abs.toFixed(0) : abs.toFixed(1)}%`
+  }
+
   function fmtStat(n: number): string {
-    return n === 0 ? '—' : n.toFixed(2)
+    if (monthCurrency === null || n === 0) return '—'
+    return formatMoney(n, monthCurrency)
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -808,23 +849,43 @@
       <div class="overview-stats">
         <div class="stat-pill income">
           <span class="pill-label">{i18n.t('finances-income-this-month', 'Income this month')}</span>
-          <span class="pill-value">{mask(fmtStat(monthIncome))}</span>
+          <div class="pill-value-row">
+            <span class="pill-value">{mask(fmtStat(monthIncome))}</span>
+            {#if incomeChange !== null}
+              <span class="trend-badge" class:positive={incomeChange >= 0} class:negative={!(incomeChange >= 0)} title={vsLabel}>
+                {#if incomeChange >= 0}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 12V4M4 8l4-4 4 4"/></svg>{:else}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 4v8M4 8l4 4 4-4"/></svg>{/if}
+                {fmtChange(incomeChange)}
+              </span>
+            {/if}
+          </div>
         </div>
         <div class="stat-pill expense">
           <span class="pill-label">{i18n.t('finances-expenses-this-month', 'Expenses this month')}</span>
-          <span class="pill-value">{mask(fmtStat(monthExpense))}</span>
+          <div class="pill-value-row">
+            <span class="pill-value">{mask(fmtStat(monthExpense))}</span>
+            {#if expenseChange !== null}
+              <span class="trend-badge" class:positive={expenseChange <= 0} class:negative={!(expenseChange <= 0)} title={vsLabel}>
+                {#if expenseChange >= 0}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 12V4M4 8l4-4 4 4"/></svg>{:else}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 4v8M4 8l4 4 4-4"/></svg>{/if}
+                {fmtChange(expenseChange)}
+              </span>
+            {/if}
+          </div>
         </div>
         <div class="stat-pill net" class:negative-net={netIsNegative}>
           <span class="pill-label">{i18n.t('finances-net-this-month', 'Net this month')}</span>
-          <span class="pill-value">{mask(`${monthNet >= 0 ? '+' : ''}${fmtStat(monthNet)}`)}</span>
+          <span class="pill-value">{mask(`${monthNet > 0 && monthCurrency ? '+ ' : ''}${fmtStat(monthNet)}`)}</span>
         </div>
       </div>
+      {#if monthCurrency === null}
+        <p class="mixed-currency-note">{i18n.t('finances-mixed-currency-note', 'This month has accounts in more than one currency, so the totals are not added up.')}</p>
+      {/if}
 
       <!-- Charts row -->
       <div class="charts-row">
         <div class="chart-card">
           <h4>{i18n.t('finances-monthly-overview', 'Monthly Overview')}</h4>
           <FinanceBarChart
+            currency={monthCurrency ?? undefined}
             months={barChartData.months}
             income={barChartData.income}
             expenses={barChartData.expenses}
@@ -901,7 +962,7 @@
               <div class="tx-row" role="button" tabindex="0"
                 onclick={() => openEditTransaction(tx)}
                 onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
-                <span class="tx-type-dot" class:expense={tx.is_expense} class:transfer={tx.is_transfer}></span>
+                <TxAvatar isExpense={tx.is_expense} isTransfer={tx.is_transfer} />
                 <div class="tx-main">
                   <span class="tx-desc">{tx.description || tx.category}</span>
                   <div class="tx-meta">
@@ -1084,7 +1145,7 @@
                   toggleSelection(tx, index, e.shiftKey)
                 }
               }}>
-              <span class="tx-type-dot" class:expense={tx.is_expense} class:transfer={tx.is_transfer}></span>
+              <TxAvatar isExpense={tx.is_expense} isTransfer={tx.is_transfer} />
               <div class="tx-main">
                 <span class="tx-desc">{tx.description || tx.category}</span>
                 <div class="tx-meta">
@@ -1487,20 +1548,20 @@
   .bulk-bar .clear-btn { margin-left: auto; }
 
   /* Transaction list */
-  .tx-list { display: flex; flex-direction: column; }
+  .tx-list { display: flex; flex-direction: column; gap: 6px; }
 
   .tx-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 11px 8px;
-    border-bottom: 1px solid var(--glass-border);
+    gap: 12px;
+    padding: 9px 12px;
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
     cursor: pointer;
     border-radius: var(--radius-sm);
     transition: background 0.15s;
   }
-  .tx-row:last-child { border-bottom: none; }
-  .tx-row:hover { background: var(--glass-hover); }
+  .tx-row:hover { background: var(--row-bg-hover); }
   /* The accent edge does the work: on a long list a tinted background alone is
      easy to lose, and it has to survive the hover tint sitting on top of it. */
   .tx-row.selected,
@@ -1524,15 +1585,6 @@
     .tx-row.highlight { animation: none; }
   }
 
-  .tx-type-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--success);
-    flex-shrink: 0;
-  }
-  .tx-type-dot.expense  { background: var(--danger); }
-  .tx-type-dot.transfer { background: #60a5fa; }
 
   .tx-main {
     flex: 1;
@@ -1654,6 +1706,12 @@
   .acc-currency { font-size: 0.75rem; color: var(--text-tertiary); }
 
   /* Overview tab */
+  .mixed-currency-note {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin: -4px 0 12px;
+  }
+
   .overview-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1666,7 +1724,6 @@
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
-    border-left-width: 3px;
     border-radius: var(--radius-md);
     display: flex;
     flex-direction: column;
@@ -1674,15 +1731,17 @@
     box-shadow: var(--card-shadow);
     overflow: hidden;
   }
-  .stat-pill.income  { border-left-color: var(--success); }
-  .stat-pill.expense { border-left-color: var(--danger); }
-  .stat-pill.net     { border-left-color: var(--accent); }
-  .stat-pill.net.negative-net { border-left-color: var(--danger); }
+  .pill-value-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
   .pill-label {
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
+    font-weight: 500;
   }
   .pill-value {
     font-size: 1.25rem;
@@ -1690,8 +1749,8 @@
     letter-spacing: -0.02em;
     color: var(--text-primary);
   }
-  .stat-pill.income  .pill-value { color: var(--success); }
-  .stat-pill.expense .pill-value { color: var(--danger); }
+  .stat-pill.income  .pill-value { color: var(--success-vivid); }
+  .stat-pill.expense .pill-value { color: var(--danger-vivid); }
   .stat-pill.net     .pill-value { color: var(--accent); }
   .stat-pill.net.negative-net .pill-value { color: var(--danger); }
 
@@ -1726,11 +1785,11 @@
   }
   .chart-card--wide { grid-column: unset; }
   .chart-card h4 {
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     margin: 0 0 2px;
+    font-weight: 500;
   }
   .empty-chart {
     display: flex;

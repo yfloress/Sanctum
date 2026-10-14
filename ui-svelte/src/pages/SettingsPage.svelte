@@ -300,13 +300,6 @@
     }
   }
 
-  async function toggleDarkMode() {
-    if (!app.settings) return
-    const next = !app.settings.dark_mode
-    app.settings.dark_mode = next
-    await settingsApi.setDarkMode(next).catch(e => app.showToast(errorMessage(e), true))
-  }
-
   function changeBackground(e: Event) {
     app.setBackgroundFx((e.target as HTMLSelectElement).value as BackgroundFx)
   }
@@ -537,7 +530,7 @@
           <span class="setting-label">{i18n.t('settings-dark-mode', 'Dark Mode')}</span>
           <span class="setting-desc">{i18n.t('settings-dark-mode-desc', 'Toggle dark/light theme')}</span>
         </div>
-        <button class="toggle-switch" class:on={app.settings.dark_mode} onclick={toggleDarkMode} aria-label="Toggle dark mode">
+        <button class="toggle-switch" class:on={app.settings.dark_mode} onclick={() => app.toggleDarkMode()} aria-label="Toggle dark mode">
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -1111,24 +1104,8 @@
   .import-actions {
     display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px;
   }
-  .primary-btn {
-    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
-    background: var(--accent-bg); backdrop-filter: blur(8px);
-    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.2s;
-  }
-  .primary-btn:hover:not(:disabled) { background: var(--accent-border); box-shadow: 0 0 16px var(--accent-glow); }  .primary-btn:disabled, .secondary-btn:disabled {
+  .secondary-btn:disabled {
     opacity: 0.4; cursor: not-allowed;
-  }
-  /* Light mode: dark text on a soft tonal button (white text would vanish). */
-  :global(.light-mode) .primary-btn {
-    background: rgba(139, 92, 246, 0.18);
-    border-color: rgba(139, 92, 246, 0.38);
-    color: var(--text-primary);
-  }
-  :global(.light-mode) .primary-btn:hover:not(:disabled) {
-    background: rgba(139, 92, 246, 0.3);
-    color: var(--text-primary);
   }
   .import-errors { margin-top: 8px; }
   .error-heading { color: var(--danger); font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }

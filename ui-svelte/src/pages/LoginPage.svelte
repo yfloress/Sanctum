@@ -436,11 +436,6 @@
     letter-spacing: 0.4em;
     color: var(--text-primary);
     margin: 0;
-    text-shadow: 0 0 40px var(--accent-glow);
-    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 
   .subtitle {
@@ -620,8 +615,8 @@
   }
 
   :global(.light-mode) .error-banner {
-    background: rgba(220, 38, 38, 0.08);
-    border-color: rgba(220, 38, 38, 0.22);
+    background: rgba(180, 35, 24, 0.07);
+    border-color: rgba(180, 35, 24, 0.22);
   }
 
   /* ===== Submit Button ===== */

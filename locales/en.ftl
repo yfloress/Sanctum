@@ -43,6 +43,8 @@ nav-group-overview = Overview
 nav-group-vault = Vault
 nav-group-system = System
 nav-hide-balances = Hide Balances
+nav-light-mode = Light mode
+nav-dark-mode = Dark mode
 nav-show-balances = Show Balances
 nav-menu = Menu
 nav-close = Close
@@ -78,6 +80,8 @@ finances-tab-settings = Settings
 finances-income-this-month = Income this month
 finances-expenses-this-month = Expenses this month
 finances-net-this-month = Net this month
+finances-vs-last-month = vs. the same days last month
+finances-mixed-currency-note = This month has accounts in more than one currency, so the totals are not added up.
 
 # Overview charts
 finances-monthly-overview = Monthly Overview

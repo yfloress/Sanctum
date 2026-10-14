@@ -16,6 +16,8 @@
 //
 
 import type { AppSettings, SearchHit, SearchHitKind } from '../types'
+import * as settingsApi from '../api/settings'
+import { errorMessage } from '../errors'
 
 export type Page = 'dashboard' | 'finances' | 'crypto' | 'settings'
 
@@ -31,6 +33,17 @@ const HIT_PAGES: Record<SearchHitKind, Page> = {
 export type BackgroundFx = 'dots' | 'stars' | 'aurora' | 'diamonds' | 'dragon'
 
 const HIDE_BALANCES_KEY = 'sanctum:hideBalances'
+// The theme lives in the encrypted vault, which is closed on the lock screen.
+// Only "light" or "dark" is kept here so that screen opens in the same theme.
+const THEME_KEY = 'sanctum:theme'
+
+function readRememberedDark(): boolean {
+  try {
+    return localStorage.getItem(THEME_KEY) !== 'light'
+  } catch {
+    return true
+  }
+}
 const BACKGROUND_FX_KEY = 'sanctum:backgroundFx'
 
 function readHideBalances(): boolean {
@@ -74,8 +87,32 @@ class AppState {
 
   private toastTimeout: ReturnType<typeof setTimeout> | null = null
 
+  private rememberedDark = $state(readRememberedDark())
+
   get darkMode(): boolean {
-    return this.settings?.dark_mode ?? true
+    return this.settings?.dark_mode ?? this.rememberedDark
+  }
+
+  rememberTheme(dark: boolean) {
+    this.rememberedDark = dark
+    try {
+      localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
+    } catch {
+      // localStorage unavailable — the lock screen falls back to dark
+    }
+  }
+
+  /** Switches the theme now and saves it, reverting if the save fails. */
+  async toggleDarkMode() {
+    if (!this.settings) return
+    const next = !this.settings.dark_mode
+    this.settings.dark_mode = next
+    try {
+      await settingsApi.setDarkMode(next)
+    } catch (e) {
+      this.settings.dark_mode = !next
+      this.showToast(errorMessage(e), true)
+    }
   }
 
   get sidebarCollapsed(): boolean {

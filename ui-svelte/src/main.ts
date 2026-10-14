@@ -17,6 +17,8 @@
 
 import App from "./App.svelte";
 import { mount } from "svelte";
+// Bundled with the app, never fetched at runtime (CSP font-src is 'self').
+import "@fontsource-variable/instrument-sans";
 import "./lib/styles/shared.css";
 
 const target = document.getElementById("app")!;
