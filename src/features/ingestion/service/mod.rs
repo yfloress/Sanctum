@@ -35,6 +35,12 @@ use super::validation::validate_file_size;
 mod crypto;
 mod transactions;
 
+/// Shown when `detect_format` cannot classify a file. Names the columns the
+/// generic CSV parsers look for, since a `.csv` with other headers also fails.
+const UNSUPPORTED_FORMAT_HINT: &str = "Could not detect file format. Supported: JSON (.json), \
+     CSV (.csv) with 'account' and 'amount' columns for transactions, or CSV with \
+     'wallet' and 'symbol' columns for crypto.";
+
 pub(super) fn format_currency_simple(cents: i64, currency: &str) -> String {
     let amount = (cents.abs() as f64) / 100.0;
     format!("{:.2} {}", amount, currency)
@@ -377,10 +383,7 @@ impl IngestionService {
 
         // Detect format
         let format = detect_format(content, filename).ok_or_else(|| {
-            IngestionError::UnsupportedFormat(
-                "Could not detect file format. Supported: JSON (.json), CSV (.csv), Text (.txt)"
-                    .to_string(),
-            )
+            IngestionError::UnsupportedFormat(UNSUPPORTED_FORMAT_HINT.to_string())
         })?;
 
         match format {
@@ -403,10 +406,7 @@ impl IngestionService {
         validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
 
         let format = detect_format(content, filename).ok_or_else(|| {
-            IngestionError::UnsupportedFormat(
-                "Could not detect file format. Supported: JSON (.json), CSV (.csv), Text (.txt)"
-                    .to_string(),
-            )
+            IngestionError::UnsupportedFormat(UNSUPPORTED_FORMAT_HINT.to_string())
         })?;
 
         match format {

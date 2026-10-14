@@ -87,7 +87,7 @@ multi-currency support (USD, CLP, EUR, and more).
 
 ### Reliability
 - Encrypted backups (SQLCipher) with restore and rollback safety.
-- JSON/CSV/TXT import with per-row validation and duplicate detection.
+- JSON/CSV import with per-row validation and duplicate detection.
 - Multi-language interface (EN/ES).
 
 ## Import & Exchange Support
@@ -104,7 +104,6 @@ workflows. All imports are best-effort, validated per row, deduplicated, and mak
 
 - **JSON** *(recommended)* — full-fidelity format used by the Sanctum Generator.
 - **CSV** — spreadsheet exports (separate files for transactions, crypto).
-- **TXT** — prefixed, line-based notes for quick capture.
 
 **Exchange & wallet integrations:**
 
