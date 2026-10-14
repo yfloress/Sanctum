@@ -603,7 +603,7 @@ async fn fetch_historical_price_from_kraken(
         return Err("Kraken historical request failed".to_string());
     }
     let body = download_response_body(response).await?;
-    parse_kraken_ohlc_close_price(&body)
+    parse_kraken_ohlc_close_price(&body, normalized_date)
 }
 
 async fn fetch_clp_rate_from_mindicador(client: &Client) -> Result<f64, String> {
@@ -796,7 +796,7 @@ fn parse_coinpaprika_historical_price(body: &[u8]) -> Result<f64, String> {
     Ok(price)
 }
 
-fn parse_kraken_ohlc_close_price(body: &[u8]) -> Result<f64, String> {
+fn parse_kraken_ohlc_close_price(body: &[u8], date: &NaiveDate) -> Result<f64, String> {
     let payload: serde_json::Value =
         serde_json::from_slice(body).map_err(|_| "Failed to parse Kraken historical data")?;
 
@@ -820,9 +820,17 @@ fn parse_kraken_ohlc_close_price(body: &[u8]) -> Result<f64, String> {
         .and_then(|(_, value)| value.as_array())
         .ok_or("Kraken historical candles not available")?;
 
+    // Kraken serves only its latest 720 candles, so for an older date the first
+    // candle belongs to another day. Take the one that opens on `date`.
+    let day_start = date
+        .and_hms_opt(0, 0, 0)
+        .ok_or("Invalid date")?
+        .and_utc()
+        .timestamp();
     let close_value = candles
-        .first()
-        .and_then(|row| row.as_array())
+        .iter()
+        .filter_map(|row| row.as_array())
+        .find(|row| row.first().and_then(|t| t.as_i64()) == Some(day_start))
         .and_then(|row| row.get(4))
         .ok_or("Kraken historical close price not available")?;
 
@@ -1014,7 +1022,7 @@ pub fn default_coin_catalog() -> Vec<CryptoCatalogCoin> {
         ("axie-infinity", "Axie Infinity", "AXS"),
         ("decentraland", "Decentraland", "MANA"),
         ("the-sandbox", "The Sandbox", "SAND"),
-        ("enjin-coin", "Enjin Coin", "ENJ"),
+        ("enjincoin", "Enjin Coin", "ENJ"),
         ("chiliz", "Chiliz", "CHZ"),
     ];
 
