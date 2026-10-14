@@ -35,6 +35,7 @@
 </script>
 
 <script lang="ts">
+  import { localIsoDate } from '../../lib/dates'
   import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
@@ -60,15 +61,11 @@
     descriptionHistory = [], onsubmit, onclose,
   }: Props = $props()
 
-  /**
-   * `offset` days back from today, in the YYYY-MM-DD the date input expects.
-   * Built from the local date parts, not `toISOString`, which is UTC and so
-   * lands on tomorrow for anyone west of Greenwich late in the evening.
-   */
+  /** `offset` days back from today, in the YYYY-MM-DD the date input expects. */
   function dayOffset(offset: number): string {
     const d = new Date()
     d.setDate(d.getDate() - offset)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return localIsoDate(d)
   }
 
   const today = () => dayOffset(0)

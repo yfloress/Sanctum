@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { localIsoDate } from '../../lib/dates'
   import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
@@ -42,7 +43,7 @@
   let category = $state('')
   let description = $state('')
   let frequency = $state<'weekly' | 'monthly' | 'yearly'>('monthly')
-  let firstDate = $state(new Date().toISOString().slice(0, 10))
+  let firstDate = $state(localIsoDate())
   let isExpense = $state(true)
 
   let categoryOptions = $derived(
@@ -68,7 +69,7 @@
     category = ''
     description = ''
     frequency = 'monthly'
-    firstDate = new Date().toISOString().slice(0, 10)
+    firstDate = localIsoDate()
     isExpense = true
   }
 

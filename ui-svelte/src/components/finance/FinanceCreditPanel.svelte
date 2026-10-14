@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { localIsoDate } from '../../lib/dates'
   import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
@@ -74,7 +75,7 @@
   let categoryOptions = $derived(categories?.expense ?? [])
 
   function today(): string {
-    return new Date().toISOString().slice(0, 10)
+    return localIsoDate()
   }
 
   /** Reads a typed figure, accepting both a comma and a dot decimal. */

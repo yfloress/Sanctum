@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { localIsoDate } from '../lib/dates'
   import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
@@ -96,7 +97,7 @@
 
   function txDateBounds(): { from: string | undefined; to: string | undefined } {
     const today = new Date()
-    const iso = (d: Date) => d.toISOString().slice(0, 10)
+    const iso = localIsoDate
     switch (txFilterDateRange) {
       case 'this-month': {
         const start = new Date(today.getFullYear(), today.getMonth(), 1)
