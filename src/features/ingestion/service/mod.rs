@@ -1124,6 +1124,33 @@ mod integration_tests {
     }
 
     #[test]
+    fn test_process_transactions_rejects_transfer_across_currencies() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.read().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account_named(db, "Dollars", "USD");
+            seed_account_named(db, "Pesos", "CLP");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Dollars".to_string(),
+            transaction_type: "transfer".to_string(),
+            amount: 100.0,
+            currency: "USD".to_string(),
+            category: String::new(),
+            description: "test".to_string(),
+            transfer_to_account: Some("Pesos".to_string()),
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
     fn test_process_transactions_rejects_unknown_account() {
         let h = new_ingestion_harness();
         {

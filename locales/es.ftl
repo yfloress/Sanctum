@@ -564,6 +564,7 @@ import-error-currency-mismatch-detail = Moneda incompatible: la importación tie
 import-error-category-not-found-detail = Categoría no encontrada: { $name } (tipo: { $type })
 import-error-destination-account-not-found = Cuenta destino no encontrada: { $name }
 import-error-same-account-transfer = No se puede transferir a la misma cuenta
+import-error-transfer-currency-mismatch = La transferencia necesita ambas cuentas en la misma moneda ({ $from } → { $to })
 import-error-wallet-not-found = Wallet no encontrada: { $name }
 import-error-insufficient-crypto-balance = Balance insuficiente de { $symbol } en { $wallet }: tiene { $available }, necesita { $required }
 import-skipped-duplicate-transaction = Transacción duplicada (misma fecha/cuenta/monto/tipo/descripción)

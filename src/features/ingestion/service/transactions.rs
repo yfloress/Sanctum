@@ -207,6 +207,22 @@ impl IngestionService {
                     continue;
                 }
 
+                // One row holds one amount, so both sides must share a currency.
+                if dest_account.currency.to_uppercase() != account.currency.to_uppercase() {
+                    summary.record_error(RowError::new(
+                        line_num,
+                        Some("transfer_to_account"),
+                        t_args(
+                            "import-error-transfer-currency-mismatch",
+                            &[
+                                ("from", account.currency.as_str()),
+                                ("to", dest_account.currency.as_str()),
+                            ],
+                        ),
+                    ));
+                    continue;
+                }
+
                 let dedup_key = TransactionDedupKey::new(
                     &import_tx.date,
                     &account.id,

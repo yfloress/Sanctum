@@ -564,6 +564,7 @@ import-error-currency-mismatch-detail = Currency mismatch: import has { $import 
 import-error-category-not-found-detail = Category not found: { $name } (type: { $type })
 import-error-destination-account-not-found = Destination account not found: { $name }
 import-error-same-account-transfer = Cannot transfer to the same account
+import-error-transfer-currency-mismatch = Transfers need both accounts in the same currency ({ $from } → { $to })
 import-error-wallet-not-found = Wallet not found: { $name }
 import-error-insufficient-crypto-balance = Insufficient { $symbol } balance in { $wallet }: have { $available }, need { $required }
 import-skipped-duplicate-transaction = Duplicate transaction (same date/account/amount/type/description)
