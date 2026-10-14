@@ -1124,6 +1124,46 @@ mod integration_tests {
     }
 
     #[test]
+    fn test_process_transactions_lists_what_to_create_when_nothing_exists() {
+        let h = new_ingestion_harness();
+        let row = |kind: &str, category: &str, to: Option<&str>| ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Checking".to_string(),
+            transaction_type: kind.to_string(),
+            amount: 100.0,
+            currency: "clp".to_string(),
+            category: category.to_string(),
+            description: "test".to_string(),
+            transfer_to_account: to.map(str::to_string),
+        };
+        let rows = vec![
+            (1, row("income", "Bonus", None)),
+            (2, row("expense", "Rent", None)),
+            (3, row("expense", "rent", None)),
+            (4, row("transfer", "", Some("Savings"))),
+        ];
+
+        let result = h
+            .service
+            .process_transactions(rows, "Test Format")
+            .expect("process");
+
+        assert_eq!(result.inserted, 0);
+        let accounts: Vec<(&str, &str)> = result
+            .missing_accounts
+            .iter()
+            .map(|a| (a.name.as_str(), a.currency.as_str()))
+            .collect();
+        assert_eq!(accounts, [("Checking", "CLP"), ("Savings", "CLP")]);
+        let categories: Vec<(&str, &str)> = result
+            .missing_categories
+            .iter()
+            .map(|c| (c.name.as_str(), c.category_type.as_str()))
+            .collect();
+        assert_eq!(categories, [("Bonus", "income"), ("Rent", "expense")]);
+    }
+
+    #[test]
     fn test_process_transactions_rejects_transfer_across_currencies() {
         let h = new_ingestion_harness();
         {
@@ -1437,6 +1477,34 @@ mod integration_tests {
             fee_amount: None,
             notes: None,
         }
+    }
+
+    #[test]
+    fn test_process_crypto_lists_missing_wallets_once() {
+        let h = new_ingestion_harness();
+        let buy = |wallet: &str| {
+            make_crypto_tx(
+                "2024-06-15",
+                wallet,
+                "BTC",
+                "trade",
+                Some("buy"),
+                1.0,
+                Some(50000.0),
+                None,
+                None,
+                None,
+            )
+        };
+        let rows = vec![(1, buy("Binance")), (2, buy("binance")), (3, buy("Ledger"))];
+
+        let result = h
+            .service
+            .process_crypto_transactions_ext(rows, "Test Format", true)
+            .expect("process");
+
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.missing_wallets, ["Binance", "Ledger"]);
     }
 
     #[test]

@@ -525,6 +525,8 @@ settings-import-processed = Processed:
 settings-import-inserted = Inserted:
 settings-import-skipped = Skipped:
 settings-import-errors = Errors
+settings-import-missing-note = The file uses accounts, wallets or categories that do not exist yet. Create them to import its rows.
+settings-import-create-missing = Create and preview again
 settings-import-line = Line
 settings-import-done = Done
 

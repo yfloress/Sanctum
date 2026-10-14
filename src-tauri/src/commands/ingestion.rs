@@ -24,7 +24,7 @@ use sanctum::features::ingestion::parsers::detect_exchange_source as parse_excha
 use sanctum::features::ingestion::{IngestionService, MAX_FILE_SIZE};
 use sanctum::ui::dto::ingestion::{
     CsvAnalysisResult, CustomCsvMapping, ExchangeDetectionResult, ImportErrorDto,
-    ImportResultsResponse,
+    ImportResultsResponse, MissingAccountDto, MissingCategoryDto,
 };
 use tauri::State;
 
@@ -168,5 +168,22 @@ fn map_import_summary(
                 message: e.message,
             })
             .collect(),
+        missing_accounts: summary
+            .missing_accounts
+            .into_iter()
+            .map(|a| MissingAccountDto {
+                name: a.name,
+                currency: a.currency,
+            })
+            .collect(),
+        missing_categories: summary
+            .missing_categories
+            .into_iter()
+            .map(|c| MissingCategoryDto {
+                name: c.name,
+                category_type: c.category_type,
+            })
+            .collect(),
+        missing_wallets: summary.missing_wallets,
     }
 }

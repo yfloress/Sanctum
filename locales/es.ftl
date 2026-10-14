@@ -525,6 +525,8 @@ settings-import-processed = Procesados:
 settings-import-inserted = Insertados:
 settings-import-skipped = Omitidos:
 settings-import-errors = Errores
+settings-import-missing-note = El archivo usa cuentas, billeteras o categorías que aún no existen. Créalas para importar sus filas.
+settings-import-create-missing = Crear y volver a revisar
 settings-import-line = Linea
 settings-import-done = Listo
 

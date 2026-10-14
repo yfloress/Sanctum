@@ -103,6 +103,41 @@
     })
   }
 
+  // Account types picked for accounts the file refers to but the vault lacks.
+  let missingAccountTypes = $state<Record<string, string>>({})
+  // Categories picked for crypto wallets the file refers to but the vault lacks.
+  let missingWalletCategories = $state<Record<string, string>>({})
+  let hasMissing = $derived(
+    !!importPreview &&
+      (importPreview.missing_accounts.length > 0 ||
+        importPreview.missing_categories.length > 0 ||
+        importPreview.missing_wallets.length > 0)
+  )
+
+  /** Creates what the preview found missing, then previews the same file again. */
+  async function createMissingAndPreview() {
+    if (!importPreview) return
+    importLoading = true
+    try {
+      for (const acc of importPreview.missing_accounts) {
+        await financeApi.createAccount(acc.name, missingAccountTypes[acc.name] ?? 'bank', acc.currency, '0')
+      }
+      for (const cat of importPreview.missing_categories) {
+        await financeApi.addCategory(cat.name, cat.category_type)
+      }
+      for (const name of importPreview.missing_wallets) {
+        await cryptoApi.addWallet(name, missingWalletCategories[name] ?? 'exchange')
+      }
+      missingAccountTypes = {}
+      missingWalletCategories = {}
+      importPreview = await ingestionApi.previewImport(importContent, importFilename)
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    } finally {
+      importLoading = false
+    }
+  }
+
   async function handleGenericFile(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
@@ -721,7 +756,7 @@
             />
           </div>
         {:else}
-          <input type="file" accept=".csv" class="hidden-input" bind:this={genericFileInput} onchange={handleGenericFile} />
+          <input type="file" accept=".csv,.json" class="hidden-input" bind:this={genericFileInput} onchange={handleGenericFile} />
           <input type="file" accept=".csv" class="hidden-input" bind:this={exchangeFileInput} onchange={handleExchangeFile} />
           <input type="file" accept=".csv" class="hidden-input" bind:this={customFileInput} onchange={handleCustomFile} />
           <div class="setting-row">
@@ -773,21 +808,68 @@
             {importPreview.inserted} {i18n.t('settings-import-to-add', 'to add')} |
             {importPreview.skipped} {i18n.t('settings-import-to-skip', 'to skip')}
           </p>
+          {#if hasMissing}
+            <div class="wallet-create">
+              <p class="wallet-create-note">{i18n.t('settings-import-missing-note', 'The file uses accounts, wallets or categories that do not exist yet. Create them to import its rows.')}</p>
+              {#each importPreview.missing_accounts as acc}
+                <div class="setting-row">
+                  <span class="setting-label">{acc.name} · {acc.currency}</span>
+                  <select
+                    value={missingAccountTypes[acc.name] ?? 'bank'}
+                    onchange={(e) => missingAccountTypes[acc.name] = (e.target as HTMLSelectElement).value}
+                    aria-label={i18n.t('finances-type', 'Type')}
+                  >
+                    <option value="bank">{i18n.t('finances-account-type-bank', 'Bank')}</option>
+                    <option value="savings">{i18n.t('finances-account-type-savings', 'Savings')}</option>
+                    <option value="credit">{i18n.t('finances-account-type-credit', 'Credit Card')}</option>
+                    <option value="cash">{i18n.t('finances-account-type-cash', 'Cash')}</option>
+                    <option value="other">{i18n.t('finances-account-type-other', 'Other')}</option>
+                  </select>
+                </div>
+              {/each}
+              {#each importPreview.missing_wallets as wallet}
+                <div class="setting-row">
+                  <span class="setting-label">{wallet}</span>
+                  <select
+                    value={missingWalletCategories[wallet] ?? 'exchange'}
+                    onchange={(e) => missingWalletCategories[wallet] = (e.target as HTMLSelectElement).value}
+                    aria-label={i18n.t('crypto-wallet-category', 'Category')}
+                  >
+                    <option value="exchange">Exchange</option>
+                    <option value="hardware">Hardware</option>
+                    <option value="software">Software</option>
+                  </select>
+                </div>
+              {/each}
+              {#each importPreview.missing_categories as cat}
+                <div class="setting-row">
+                  <span class="setting-label">{cat.name}</span>
+                  <span class="setting-desc">{cat.category_type === 'income' ? i18n.t('finances-income', 'Income') : i18n.t('finances-expense', 'Expense')}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
           {#if importPreview.errors.length > 0}
-            <div class="import-errors">
-              <p class="error-heading">{i18n.t('settings-import-errors', 'Errors')} ({importPreview.errors.length}):</p>
+            <details class="import-errors" open={!hasMissing}>
+              <summary class="error-heading">{i18n.t('settings-import-errors', 'Errors')} ({importPreview.errors.length})</summary>
               {#each importPreview.errors as err}
                 <p class="error-line">
                   {#if err.line}{i18n.t('settings-import-line', 'Line')} {err.line}: {/if}{err.message}
                 </p>
               {/each}
-            </div>
+            </details>
           {/if}
           <div class="import-actions">
             <button class="secondary-btn" onclick={resetImport}>{i18n.t('settings-cancel', 'Cancel')}</button>
-            <button class="primary-btn" onclick={confirmImport} disabled={importLoading}>
-              {importLoading ? i18n.t('settings-import-importing', 'Importing...') : i18n.t('settings-import-confirm', 'Confirm Import')}
-            </button>
+            {#if hasMissing}
+              <button class="primary-btn" onclick={createMissingAndPreview} disabled={importLoading}>
+                {i18n.t('settings-import-create-missing', 'Create and preview again')}
+              </button>
+            {:else}
+              <button class="primary-btn" onclick={confirmImport} disabled={importLoading}>
+                {importLoading ? i18n.t('settings-import-importing', 'Importing...') : i18n.t('settings-import-confirm', 'Confirm Import')}
+              </button>
+            {/if}
           </div>
         </div>
 
@@ -1050,6 +1132,7 @@
   }
   .import-errors { margin-top: 8px; }
   .error-heading { color: var(--danger); font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }
+  summary.error-heading { cursor: pointer; }
   .error-line { color: var(--text-secondary); font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
   .wallet-create { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
   .wallet-create-note { margin: 0 0 8px; font-size: 0.82rem; color: var(--text-secondary); }
