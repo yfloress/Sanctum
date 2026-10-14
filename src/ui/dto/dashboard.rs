@@ -31,6 +31,9 @@ pub struct BalanceOverview {
     pub crypto_total: String,
     pub crypto_negative: bool,
     pub currency: String,
+    /// The totals mix currencies but a needed USD rate is not cached, so they
+    /// were converted at 1:1 and must be shown as approximate.
+    pub fx_missing: bool,
 }
 
 /// A single recent transaction for the dashboard feed.

@@ -979,18 +979,15 @@ fn fmt_pref_override(
     });
 
     let n = if v == 0.0 { 0.0 } else { v };
-    let mut amount = n;
 
-    if pref != "USD" {
-        let pair = format!("{}_USD", pref);
-        if let Ok(Some((rate, _))) = finance.load_exchange_rate_allow_stale(pair)
-            && rate > 0.0
-        {
-            amount = n * rate;
-        }
+    // Without a cached rate the value stays in USD, labelled as USD.
+    if pref != "USD"
+        && let Ok(Some((rate, _))) = finance.load_exchange_rate_allow_stale(format!("{pref}_USD"))
+        && rate > 0.0
+    {
+        return sanctum::ui::currency::format_preferred(n * rate, &pref);
     }
-
-    sanctum::ui::currency::format_preferred(amount, &pref)
+    sanctum::ui::currency::format_preferred(n, "USD")
 }
 
 fn build_fx_rate_badge(settings: &SettingsService, finance: &FinanceService) -> Option<FxRateDto> {

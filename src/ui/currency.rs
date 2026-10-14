@@ -55,6 +55,19 @@ pub fn convert_currency(amount_cents: i64, from: &str, to: &str, clp_rate: f64) 
     }
 }
 
+/// Whether showing amounts held in `held` currencies in `display` relies on a
+/// rate that is not cached. Conversions go through USD, so a currency other than
+/// `display` needs its own rate and `display`'s rate, except where either is USD.
+pub fn fx_rate_missing<'a>(
+    held: impl IntoIterator<Item = &'a str>,
+    display: &str,
+    has_rate: impl Fn(&str) -> bool,
+) -> bool {
+    held.into_iter()
+        .filter(|c| *c != display)
+        .any(|c| (c != "USD" && !has_rate(c)) || (display != "USD" && !has_rate(display)))
+}
+
 /// Converts a float USD amount to the preferred currency using a USD/target rate.
 pub fn convert_usd_to_preferred(amount_usd: f64, preferred: &str, usd_rate: f64) -> f64 {
     let target = preferred.trim().to_uppercase();
@@ -72,7 +85,7 @@ pub fn format_clp(amount: f64) -> String {
 
 /// Formats a float amount as USD (converts dollars to cents internally).
 pub fn format_usd(amount: f64) -> String {
-    format_money((amount * 100.0) as i64, "USD")
+    format_money((amount * 100.0).round() as i64, "USD")
 }
 
 /// Formats a float amount in the preferred currency.
@@ -81,7 +94,7 @@ pub fn format_preferred(amount: f64, currency: &str) -> String {
     if code == "CLP" {
         format_clp(amount)
     } else {
-        format_money((amount * 100.0) as i64, &code)
+        format_money((amount * 100.0).round() as i64, &code)
     }
 }
 
@@ -103,5 +116,35 @@ pub fn format_money_signed(amount_cents: i64, currency: &str) -> String {
         format!("- {}", format_money(amount_cents.abs(), currency))
     } else {
         format_money(amount_cents, currency)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn float_amounts_round_to_the_nearest_cent() {
+        // 0.29 * 100 is 28.999… in binary floating point.
+        assert_eq!(format_preferred(0.29, "USD"), "USD 0.29");
+        assert_eq!(format_usd(1.005_000_1), "USD 1.01");
+    }
+
+    #[test]
+    fn a_single_currency_never_needs_a_rate() {
+        assert!(!fx_rate_missing(["CLP"], "CLP", |_| false));
+        assert!(!fx_rate_missing(["USD"], "USD", |_| false));
+    }
+
+    #[test]
+    fn mixing_currencies_needs_every_rate_on_the_way_through_usd() {
+        // Crypto (USD) shown in CLP needs the CLP rate.
+        assert!(fx_rate_missing(["CLP", "USD"], "CLP", |_| false));
+        assert!(!fx_rate_missing(["CLP", "USD"], "CLP", |c| c == "CLP"));
+        // CLP shown in USD needs the CLP rate too.
+        assert!(fx_rate_missing(["CLP"], "USD", |_| false));
+        // EUR shown in CLP needs both.
+        assert!(fx_rate_missing(["EUR"], "CLP", |c| c == "CLP"));
+        assert!(!fx_rate_missing(["EUR"], "CLP", |_| true));
     }
 }

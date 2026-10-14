@@ -123,6 +123,9 @@
     <!-- ── Hero ─────────────────────────────────────────────────── -->
     <section class="hero">
       <p class="hero-label">{i18n.t('dashboard-net-worth', 'Net Worth')} · {balance.currency}</p>
+      {#if balance.fx_missing}
+        <p class="fx-missing">{i18n.t('dashboard-fx-missing', 'No exchange rate yet: totals that mix currencies are approximate. Sync prices in Crypto.')}</p>
+      {/if}
       <div class="hero-value-row">
         <h1 class="net-worth" class:negative={balance.total_negative}>{mask(balance.total)}</h1>
         {#if pctChange !== null}
@@ -346,6 +349,14 @@
     color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.12em;
+    margin: 0 0 10px;
+  }
+
+  .fx-missing {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    border-left: 2px solid var(--warning);
+    padding-left: 8px;
     margin: 0 0 10px;
   }
   .hero-value-row {

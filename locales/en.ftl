@@ -50,6 +50,7 @@ nav-close = Close
 # ==================== Dashboard ====================
 dashboard-retry = Retry
 dashboard-net-worth = Net Worth
+dashboard-fx-missing = No exchange rate yet: totals that mix currencies are approximate. Sync prices in Crypto.
 dashboard-fiat = Fiat
 dashboard-crypto = Crypto
 dashboard-income = Income

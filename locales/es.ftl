@@ -50,6 +50,7 @@ nav-close = Cerrar
 # ==================== Dashboard ====================
 dashboard-retry = Reintentar
 dashboard-net-worth = Patrimonio Neto
+dashboard-fx-missing = Aún no hay tipo de cambio: los totales que mezclan monedas son aproximados. Sincroniza precios en Cripto.
 dashboard-fiat = Fiat
 dashboard-crypto = Crypto
 dashboard-income = Ingresos

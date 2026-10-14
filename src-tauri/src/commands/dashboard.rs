@@ -27,8 +27,8 @@ use sanctum::ui::dto::dashboard::{
     AnalyticsData, BalanceOverview, ExpenseBreakdownItem, MonthlyCashFlowItem, NetWorthChartData,
     RecentTransaction,
 };
-use sanctum::ui::{format_category_label, format_money, format_preferred};
-use std::collections::HashMap;
+use sanctum::ui::{format_category_label, format_money, format_preferred, fx_rate_missing};
+use std::collections::{HashMap, HashSet};
 use tauri::State;
 
 /// Maximum days for crypto portfolio snapshots (2 years).
@@ -50,6 +50,14 @@ fn load_cached_usd_rate(finance: &FinanceService, currency: &str) -> f64 {
         .and_then(|r| r.map(|(rate, _)| rate))
         .filter(|rate| *rate > 0.0)
         .unwrap_or(1.0)
+}
+
+fn has_cached_usd_rate(finance: &FinanceService, currency: &str) -> bool {
+    finance
+        .load_exchange_rate_allow_stale(format!("{currency}_USD"))
+        .ok()
+        .flatten()
+        .is_some_and(|(rate, _)| rate > 0.0)
 }
 
 fn convert_usd_to_preferred(amount_usd: f64, currency: &str, rate: f64) -> f64 {
@@ -118,6 +126,18 @@ pub fn fetch_balance(
         })
         .sum();
 
+    let mut held: HashSet<&str> = balances
+        .iter()
+        .filter(|b| b.current_balance != 0)
+        .filter_map(|b| currency_map.get(&b.account_id).map(String::as_str))
+        .collect();
+    if crypto_total_usd != 0.0 {
+        held.insert("USD");
+    }
+    let fx_missing = fx_rate_missing(held, &preferred_currency, |c| {
+        has_cached_usd_rate(&finance, c)
+    });
+
     let fiat_dollars = total_fiat_usd / 100.0;
     let net_worth_usd = fiat_dollars + crypto_total_usd;
 
@@ -134,6 +154,7 @@ pub fn fetch_balance(
         crypto_total: format_preferred(crypto_display.abs(), &preferred_currency),
         crypto_negative: crypto_display < 0.0,
         currency: preferred_currency,
+        fx_missing,
     })
 }
 
