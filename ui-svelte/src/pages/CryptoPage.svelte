@@ -15,7 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { localIsoDate } from '../lib/dates'
+  import { formatSyncTime, localIsoDate } from '../lib/dates'
   import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
@@ -37,7 +37,7 @@
     WalletsResponse, WalletDetailResponse,
     CryptoTransactionDto, CryptoTransactionEditData, CoinCatalogDto,
     CryptoAssetPriceDto, IpcSummaryDto,
-    TaxReportDto, TaxSettingsDto, TaxSummaryDto, SearchHit
+    TaxReportDto, TaxSettingsDto, TaxSummaryDto, SearchHit, CoinRef
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'activity' | 'tax'
@@ -359,6 +359,15 @@
     } catch (_) { /* ignore */ }
   }
 
+  // Coins outside the top 250 waiting for the user to allow a lookup by name.
+  let consentCoins = $state<CoinRef[]>([])
+
+  async function allowConsentCoins() {
+    await cryptoApi.allowPriceLookup(consentCoins.map(c => c.id))
+    consentCoins = []
+    await syncTickerPrices()
+  }
+
   async function syncTickerPrices() {
     tickerSyncing = true
     try {
@@ -368,9 +377,14 @@
         return
       }
       
-      const msg = await cryptoApi.syncCryptoData()
+      const result = await cryptoApi.syncCryptoData()
+      if (app.settings) app.settings.prices_updated_at = result.updated_at
       await Promise.all([refreshTickerBar(), load()])
-      app.showToast(msg)
+      if (result.needs_consent.length > 0) {
+        consentCoins = result.needs_consent
+      } else {
+        app.showToast(i18n.t('crypto-toast-synced', 'Prices updated'))
+      }
     } catch (e) {
       app.showToast(errorMessage(e), true)
     } finally {
@@ -896,6 +910,7 @@
 
   $effect(() => {
     app.settings?.preferred_currency
+    app.pricesVersion
     load()
     loadTickerPrices()
     loadWallets()
@@ -957,7 +972,7 @@
     </div>
     <div class="ticker-actions">
       {#if tickerPrices.length > 0 && tickerPrices[0].last_updated}
-        <span class="ticker-updated" title={tickerPrices[0].last_updated}>{new Date(tickerPrices[0].last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        <span class="ticker-updated" title={tickerPrices[0].last_updated}>{formatSyncTime(tickerPrices[0].last_updated)}</span>
       {/if}
       <button class="ticker-sync-btn" onclick={syncTickerPrices} disabled={tickerSyncing} aria-label={i18n.t('crypto-sync-prices', 'Sync prices')} title={i18n.t('crypto-sync-prices', 'Sync prices')}>
         <svg class:spinning={tickerSyncing} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m0 0a9 9 0 019-9m-9 9a9 9 0 009 9"/></svg>
@@ -973,7 +988,7 @@
     <h2 class="total">{mask(portfolio?.total_value ?? '--')}</h2>
     <p class="label">{i18n.t('crypto-portfolio-value', 'Portfolio Value')}</p>
     {#if portfolio?.last_updated}
-      <p class="last-updated">{i18n.tArgs('crypto-last-updated-label', { value: portfolio.last_updated }, `Last updated: ${portfolio.last_updated}`)}</p>
+      <p class="last-updated">{i18n.tArgs('crypto-last-updated-label', { value: formatSyncTime(portfolio.last_updated) }, `Last updated: ${formatSyncTime(portfolio.last_updated)}`)}</p>
     {/if}
   </section>
 
@@ -1778,6 +1793,16 @@
 />
 
 <!-- Delete Transaction Confirm -->
+<ConfirmDialog
+  show={consentCoins.length > 0}
+  title={i18n.t('crypto-consent-title', 'Coins outside the top 250')}
+  message={i18n.t('crypto-consent-message', 'Sanctum fetches the 250 largest coins in one request that is the same for every user. These are outside it, so getting their price means asking CoinGecko for them by name, which reveals that you follow them.')}
+  detail={consentCoins.map(c => `${c.symbol} (${c.name})`).join(', ')}
+  confirmLabel={i18n.t('crypto-consent-allow', 'Allow')}
+  onconfirm={allowConsentCoins}
+  onclose={() => consentCoins = []}
+/>
+
 <ConfirmDialog
   show={pendingDeleteTxId !== null}
   message={i18n.t('confirm-delete-transaction', 'Are you sure you want to delete this transaction?')}

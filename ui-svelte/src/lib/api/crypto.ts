@@ -24,7 +24,7 @@ import type {
   CryptoTransactionUpdateInput, CryptoTransactionEditData,
   CoinCatalogDto, CryptoAssetPriceDto,
   TaxSettingsDto, TaxReportDto, TaxSummaryDto, IpcSummaryDto,
-  ExchangeRateDto
+  ExchangeRateDto, SyncResult
 } from '../types'
 
 export async function fetchPortfolio(): Promise<PortfolioResponse> {
@@ -205,8 +205,13 @@ export async function loadExchangeRate(pair: string): Promise<ExchangeRateDto | 
   return invoke<ExchangeRateDto | null>('load_exchange_rate', { pair })
 }
 
-export async function syncCryptoData(): Promise<string> {
-  return invoke<string>('sync_crypto_data')
+export async function syncCryptoData(): Promise<SyncResult> {
+  return invoke<SyncResult>('sync_crypto_data')
+}
+
+/** Lets coins outside the top 250 be requested by name from now on. */
+export async function allowPriceLookup(coin_ids: string[]): Promise<void> {
+  return invoke('allow_price_lookup', { coinIds: coin_ids })
 }
 
 /** Copies a transaction into a new one dated today. Returns the new id. */

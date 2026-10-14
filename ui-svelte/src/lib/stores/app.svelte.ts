@@ -123,6 +123,14 @@ class AppState {
     this.pendingTarget = hit
   }
 
+  /** Bumped after each background price sync so the page on screen reloads. */
+  pricesVersion = $state(0)
+
+  notePricesSynced(at: string) {
+    if (this.settings) this.settings.prices_updated_at = at
+    this.pricesVersion++
+  }
+
   toggleHideBalances() {
     this.hideBalances = !this.hideBalances
     try {

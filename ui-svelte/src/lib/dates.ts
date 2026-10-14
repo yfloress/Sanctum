@@ -22,3 +22,12 @@ export function localIsoDate(d: Date = new Date()): string {
   const day = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${month}-${day}`
 }
+
+/** `HH:MM` for a time today, with the date otherwise, so prices weeks old never
+ *  pass for fresh ones. */
+export function formatSyncTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return localIsoDate(d) === localIsoDate() ? time : `${d.toLocaleDateString()} ${time}`
+}

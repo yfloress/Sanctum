@@ -22,7 +22,8 @@
 
 use sanctum::error::AppError;
 use sanctum::features::crypto::{
-    CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+    CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_PROXY_ENABLED,
+    SETTING_CRYPTO_PROXY_URL,
 };
 use sanctum::features::settings::{
     SETTING_DARK_MODE, SETTING_LAST_BACKUP_AT, SETTING_PREFERRED_CURRENCY,
@@ -92,6 +93,11 @@ pub fn load_settings(
         .ok()
         .filter(|v| !v.trim().is_empty());
 
+    let prices_updated_at = settings
+        .get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
+        .ok()
+        .filter(|v| !v.trim().is_empty());
+
     Ok(AppSettings {
         dark_mode,
         auto_fetch,
@@ -103,6 +109,7 @@ pub fn load_settings(
         sidebar_collapsed,
         login_wallpaper_path,
         last_backup_at,
+        prices_updated_at,
     })
 }
 

@@ -29,8 +29,8 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use super::api::{
-    MAX_PROXY_URL_LENGTH, ProxyConfig, default_price_allowlist, fetch_crypto_prices,
-    fetch_historical_price_usd, fetch_usd_fx_rate, validate_proxy_url,
+    MAX_COINS_PER_REQUEST, MAX_PROXY_URL_LENGTH, ProxyConfig, fetch_crypto_prices,
+    fetch_historical_price_usd, fetch_price_universe, fetch_usd_fx_rate, validate_proxy_url,
 };
 use super::validation::{
     MAX_ICON_LENGTH, MAX_WALLET_NAME_LENGTH, sanitize_string, validate_coin_id_str, validate_date,
@@ -45,6 +45,7 @@ pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
 pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
 pub const SETTING_CRYPTO_FAVORITE_COINS: &str = "crypto_favorite_coins";
+pub const SETTING_CRYPTO_PRICE_OPT_INS: &str = "crypto_price_opt_ins";
 pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
 pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 pub const SETTING_CRYPTO_PROXY_ENABLED: &str = "crypto_proxy_enabled";
@@ -57,6 +58,14 @@ pub use crate::core::settings::{
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
     SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
 };
+
+/// Result of a price sync: the prices fetched, and the monitored coins outside
+/// the universe that need the user's consent before being requested by name.
+#[derive(Debug)]
+pub struct PriceSync {
+    pub prices: Vec<CryptoAsset>,
+    pub needs_consent: Vec<String>,
+}
 
 // ==================== Error Types ====================
 
@@ -169,50 +178,30 @@ impl CryptoService {
         Ok(ids)
     }
 
-    pub async fn get_crypto_prices(
-        &self,
-        coins: Vec<String>,
-    ) -> Result<Vec<CryptoAsset>, CryptoError> {
-        const MAX_BATCH_SIZE: usize = 50;
-
-        let mut final_list = Vec::new();
-        let mut seen = HashSet::new();
-        let mut truncated = false;
-
-        for coin in coins {
-            if seen.insert(coin.clone()) {
-                if final_list.len() < MAX_BATCH_SIZE {
-                    final_list.push(coin);
-                } else {
-                    truncated = true;
-                }
-            }
-        }
-
-        if final_list.len() < MAX_BATCH_SIZE {
-            let padding = default_price_allowlist();
-
-            for privacy_coin in padding {
-                if final_list.len() >= MAX_BATCH_SIZE {
-                    break;
-                }
-                if seen.insert(privacy_coin.clone()) {
-                    final_list.push(privacy_coin);
-                }
-            }
-        }
-
-        if truncated {
-            log::warn!(
-                "Price request exceeds {} unique coins; truncating to limit",
-                MAX_BATCH_SIZE
-            );
-        }
-
+    /// Prices for `monitored` coins. The universe comes in one request that is
+    /// the same for everyone; a coin outside it is requested by name only once
+    /// the user allowed it, and is otherwise returned in `needs_consent`.
+    pub async fn sync_prices(&self, monitored: Vec<String>) -> Result<PriceSync, CryptoError> {
         let proxy = self.get_proxy_config()?;
-        fetch_crypto_prices(final_list, proxy.as_ref())
+        let mut prices = fetch_price_universe(proxy.as_ref())
             .await
-            .map_err(CryptoError::Api)
+            .map_err(CryptoError::Api)?;
+
+        let in_universe: HashSet<String> = prices.iter().map(|p| p.id.clone()).collect();
+        let (lookup, needs_consent) =
+            split_outside_universe(monitored, &in_universe, &self.get_price_lookup_opt_ins());
+
+        for chunk in lookup.chunks(MAX_COINS_PER_REQUEST) {
+            let named = fetch_crypto_prices(chunk.to_vec(), proxy.as_ref())
+                .await
+                .map_err(CryptoError::Api)?;
+            prices.extend(named);
+        }
+
+        Ok(PriceSync {
+            prices,
+            needs_consent,
+        })
     }
 
     pub async fn get_usd_fx_rate(&self, target_currency: String) -> Result<f64, CryptoError> {
@@ -237,16 +226,8 @@ impl CryptoService {
 
     pub fn save_crypto_prices(&self, prices: Vec<CryptoAsset>) -> Result<(), CryptoError> {
         self.with_db(|db| {
-            for price in prices {
-                db.save_crypto_price(
-                    &price.id,
-                    &price.symbol,
-                    &price.name,
-                    price.current_price,
-                    price.price_change_percentage_24h,
-                )?;
-            }
-            Ok(())
+            db.save_crypto_prices(&prices)
+                .map_err(CryptoError::Database)
         })
     }
 
@@ -516,9 +497,34 @@ impl CryptoService {
 
 // ==================== Tests ====================
 
+/// Of the monitored coins missing from the universe, returns those the user
+/// allowed to be requested by name and those still needing consent.
+fn split_outside_universe(
+    monitored: Vec<String>,
+    in_universe: &HashSet<String>,
+    allowed: &HashSet<String>,
+) -> (Vec<String>, Vec<String>) {
+    monitored
+        .into_iter()
+        .filter(|id| !in_universe.contains(id))
+        .partition(|id| allowed.contains(id))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_allowed_coins_outside_the_universe_are_requested_by_name() {
+        let ids = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<HashSet<String>>();
+        let monitored = vec!["bitcoin".into(), "kusama".into(), "flow".into()];
+
+        let (lookup, needs_consent) =
+            split_outside_universe(monitored, &ids(&["bitcoin"]), &ids(&["flow"]));
+
+        assert_eq!(lookup, ["flow"]);
+        assert_eq!(needs_consent, ["kusama"]);
+    }
     use crate::features::crypto::api::{
         sanitize_api_string, validate_coin_id, validate_percentage, validate_price,
     };

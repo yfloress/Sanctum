@@ -87,6 +87,7 @@
 
   $effect(() => {
     app.settings?.preferred_currency
+    app.pricesVersion
     load()
   })
 </script>

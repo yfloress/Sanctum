@@ -66,6 +66,24 @@ pub struct PortfolioResponse {
     pub last_updated: Option<String>,
 }
 
+/// A coin as shown to the user, by id, symbol and name.
+#[derive(Debug, Clone, Serialize)]
+pub struct CoinRefDto {
+    pub id: String,
+    pub symbol: String,
+    pub name: String,
+}
+
+/// Outcome of a price sync.
+#[derive(Debug, Clone, Serialize)]
+pub struct SyncResultDto {
+    /// RFC 3339 time of this sync.
+    pub updated_at: String,
+    /// Monitored coins outside the price universe that were not requested,
+    /// because asking for them by name needs the user's consent first.
+    pub needs_consent: Vec<CoinRefDto>,
+}
+
 /// A single asset in the portfolio.
 #[derive(Debug, Clone, Serialize)]
 pub struct PortfolioAssetDto {

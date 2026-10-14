@@ -19,6 +19,7 @@
   import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import { startShortcuts } from './lib/shortcuts'
+  import { startAutoSync } from './lib/autoSync'
   import Sidebar from './components/Sidebar.svelte'
   import MobileTopBar from './components/MobileTopBar.svelte'
   import StarField from './components/StarField.svelte'
@@ -51,6 +52,17 @@
         showShortcuts = false
         showPalette = false
       }
+    }
+  })
+
+  // Only `isLoggedIn` and `auto_fetch` are read here; the callbacks read the rest
+  // later, so a sync does not restart the loop.
+  $effect(() => {
+    if (app.isLoggedIn && app.settings?.auto_fetch) {
+      return startAutoSync(
+        () => app.settings?.prices_updated_at ?? null,
+        (at) => app.notePricesSynced(at),
+      )
     }
   })
 

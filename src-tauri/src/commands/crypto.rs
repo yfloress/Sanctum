@@ -24,17 +24,17 @@
 
 use chrono::Local;
 use sanctum::error::AppError;
-use sanctum::features::crypto::{CryptoService, default_coin_catalog};
+use sanctum::features::crypto::{CryptoService, SETTING_CRYPTO_LAST_UPDATED, default_coin_catalog};
 use sanctum::features::finance::FinanceService;
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::models::{CryptoTransaction, CryptoWallet};
 use sanctum::ui::dto::crypto::{
-    CoinCatalogDto, CryptoAssetPriceDto, CryptoSwapInput, CryptoTransactionDto,
+    CoinCatalogDto, CoinRefDto, CryptoAssetPriceDto, CryptoSwapInput, CryptoTransactionDto,
     CryptoTransactionEditData, CryptoTransactionInput, CryptoTransactionListResponse,
     CryptoTransactionUpdateInput, CryptoTransferInput, CryptoTxFilterInput, DistributionItem,
     ExchangeRateDto, FxRateDto, IpcSummaryDto, PortfolioAssetDto, PortfolioResponse,
-    PortfolioTrendData, TaxReportDto, TaxSettingsDto, TaxSummaryDto, WalletDetailResponse,
-    WalletDto, WalletHoldingDto, WalletSimpleDto, WalletsResponse,
+    PortfolioTrendData, SyncResultDto, TaxReportDto, TaxSettingsDto, TaxSummaryDto,
+    WalletDetailResponse, WalletDto, WalletHoldingDto, WalletSimpleDto, WalletsResponse,
 };
 use std::collections::HashMap;
 use tauri::State;
@@ -164,7 +164,10 @@ pub fn fetch_portfolio(
         assets: portfolio_assets,
         distribution,
         fx_rate: build_fx_rate_badge(&settings, &finance),
-        last_updated: None,
+        last_updated: crypto
+            .get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
+            .ok()
+            .filter(|v| !v.is_empty()),
     })
 }
 
@@ -638,15 +641,16 @@ pub async fn sync_crypto_data(
     crypto: State<'_, CryptoService>,
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
-) -> Result<String, AppError> {
+) -> Result<SyncResultDto, AppError> {
     // 1. Fetch and save crypto prices
     let ids = crypto.get_monitored_coin_ids().map_err(AppError::from)?;
+    let mut needs_consent = Vec::new();
     if !ids.is_empty() {
-        let prices = crypto
-            .get_crypto_prices(ids)
-            .await
+        let sync = crypto.sync_prices(ids).await.map_err(AppError::from)?;
+        crypto
+            .save_crypto_prices(sync.prices)
             .map_err(AppError::from)?;
-        crypto.save_crypto_prices(prices).map_err(AppError::from)?;
+        needs_consent = sync.needs_consent;
     }
 
     // 2. Refresh the USD rates anything downstream can ask for. Two and only
@@ -670,7 +674,42 @@ pub async fn sync_crypto_data(
         }
     }
 
-    Ok("Synced successfully".to_string())
+    let updated_at = chrono::Utc::now().to_rfc3339();
+    crypto
+        .set_app_setting(SETTING_CRYPTO_LAST_UPDATED, &updated_at)
+        .map_err(AppError::from)?;
+
+    let catalog = crypto.get_coin_catalog().unwrap_or_default();
+    let needs_consent = needs_consent
+        .into_iter()
+        .map(|id| match catalog.iter().find(|c| c.id == id) {
+            Some(coin) => CoinRefDto {
+                id,
+                symbol: coin.symbol.clone(),
+                name: coin.name.clone(),
+            },
+            None => CoinRefDto {
+                symbol: id.to_uppercase(),
+                name: id.clone(),
+                id,
+            },
+        })
+        .collect();
+
+    Ok(SyncResultDto {
+        updated_at,
+        needs_consent,
+    })
+}
+
+/// Lets the given coins, which sit outside the price universe, be requested by
+/// name from now on. Called after the user agreed to reveal them.
+#[tauri::command]
+pub fn allow_price_lookup(
+    crypto: State<'_, CryptoService>,
+    coin_ids: Vec<String>,
+) -> Result<(), AppError> {
+    Ok(crypto.allow_price_lookup(coin_ids)?)
 }
 
 // ==================== Tax ====================

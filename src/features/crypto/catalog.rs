@@ -25,7 +25,7 @@ use std::collections::HashSet;
 use super::api::default_coin_catalog;
 use super::service::{
     CryptoError, CryptoService, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
-    SETTING_CRYPTO_HIDDEN_COINS, SETTING_TICKER_COINS,
+    SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_PRICE_OPT_INS, SETTING_TICKER_COINS,
 };
 use super::validation::{
     MAX_COIN_NAME_LENGTH, sanitize_string, validate_coin_id_str, validate_field_length,
@@ -63,6 +63,29 @@ impl CryptoService {
             coin.custom = true;
         }
         Ok(coins)
+    }
+
+    /// Coins outside the price universe the user allowed to be requested by name.
+    pub fn get_price_lookup_opt_ins(&self) -> HashSet<String> {
+        self.get_app_setting(SETTING_CRYPTO_PRICE_OPT_INS)
+            .ok()
+            .filter(|val| !val.is_empty())
+            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .collect()
+    }
+
+    pub fn allow_price_lookup(&self, coin_ids: Vec<String>) -> Result<(), CryptoError> {
+        let mut ids = self.get_price_lookup_opt_ins();
+        for id in coin_ids {
+            ids.insert(validate_coin_id_str(&id)?);
+        }
+        let mut ids: Vec<String> = ids.into_iter().collect();
+        ids.sort();
+        let json =
+            serde_json::to_string(&ids).map_err(|e| CryptoError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_CRYPTO_PRICE_OPT_INS, &json)
     }
 
     pub fn get_hidden_coin_ids(&self) -> Vec<String> {

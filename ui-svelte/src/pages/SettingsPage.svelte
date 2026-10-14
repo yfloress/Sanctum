@@ -306,8 +306,12 @@
   async function toggleAutoFetch() {
     if (!app.settings) return
     const next = !app.settings.auto_fetch
-    app.settings.auto_fetch = next
-    await settingsApi.setAutoFetch(next)
+    try {
+      await settingsApi.setAutoFetch(next)
+      app.settings.auto_fetch = next
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
   }
 
   async function toggleProxy() {
@@ -818,7 +822,7 @@
       <div class="setting-row" id="setting-auto-fetch" class:setting-highlight={revealed === 'auto-fetch'}>
         <div>
           <span class="setting-label">{i18n.t('settings-auto-fetch', 'Auto-fetch Prices')}</span>
-          <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Automatically fetch crypto prices on sync')}</span>
+          <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Off: Sanctum never goes online on its own. On: refreshes prices every 10 minutes while the window is visible.')}</span>
         </div>
         <button class="toggle-switch" class:on={app.settings.auto_fetch} onclick={toggleAutoFetch} aria-label="Toggle auto-fetch">
           <span class="toggle-knob"></span>

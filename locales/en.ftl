@@ -214,6 +214,10 @@ crypto-tab-tax = Tax
 crypto-tab-activity = Activity
 crypto-portfolio-value = Portfolio Value
 crypto-last-updated-label = Last updated: {$value}
+crypto-toast-synced = Prices updated
+crypto-consent-title = Coins outside the top 250
+crypto-consent-message = Sanctum fetches the 250 largest coins in one request that is the same for every user. These are outside it, so getting their price means asking CoinGecko for them by name, which reveals that you follow them.
+crypto-consent-allow = Allow
 crypto-welcome = Welcome to Crypto
 crypto-welcome-desc = Add wallets and transactions in the Wallets tab to start tracking your portfolio.
 
@@ -526,7 +530,7 @@ settings-import-done = Done
 
 # Data Sync
 settings-auto-fetch = Auto-fetch Prices
-settings-auto-fetch-desc = Automatically fetch crypto prices on sync
+settings-auto-fetch-desc = Off: Sanctum never goes online on its own. On: refreshes prices every 10 minutes while the window is visible.
 settings-use-proxy = Use Proxy
 settings-use-proxy-desc = Route API calls through a proxy
 settings-proxy-url = Proxy URL

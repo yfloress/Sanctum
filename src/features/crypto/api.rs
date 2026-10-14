@@ -55,7 +55,11 @@ const CURRENCY_API_MIRROR_URL: &str =
     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json";
 
 /// Maximum number of coins per request (CoinGecko limit)
-const MAX_COINS_PER_REQUEST: usize = 50;
+pub const MAX_COINS_PER_REQUEST: usize = 50;
+
+/// Top coins by market cap fetched in one request: about 200 KB, and CoinGecko's
+/// CDN only refreshes it once a minute.
+pub const PRICE_UNIVERSE_SIZE: usize = 250;
 
 /// Request timeout in seconds
 const REQUEST_TIMEOUT_SECS: u64 = 30;
@@ -81,12 +85,6 @@ pub const MAX_PROXY_URL_LENGTH: usize = 2048;
 
 /// Last request timestamp for rate limiting (atomic for thread safety)
 static LAST_REQUEST_TIME: AtomicU64 = AtomicU64::new(0);
-
-/// List of popular tickers used for traffic padding/obfuscation
-const PRIVACY_PRESERVING_PRICE_IDS: &[&str] = &[
-    "bitcoin", "ethereum", "litecoin", "monero", "tether", "solana", "polkadot", "cardano",
-    "dogecoin", "ripple",
-];
 
 /// Default tickers shown in the UI when no user selection exists
 const DEFAULT_TICKER_IDS: &[&str] = &["bitcoin", "litecoin", "monero", "ethereum", "tether"];
@@ -360,7 +358,21 @@ fn handle_request_error(error: reqwest::Error) -> String {
 
 // ==================== API Functions ====================
 
-/// Fetches cryptocurrency prices from CoinGecko API
+/// Fetches the top coins by market cap. The request is the same for every user,
+/// so it reveals nothing about which coins anyone holds.
+pub async fn fetch_price_universe(proxy: Option<&ProxyConfig>) -> Result<Vec<CryptoAsset>, String> {
+    enforce_rate_limit().await?;
+
+    let url = format!(
+        "{}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page={}&page=1&sparkline=false",
+        COINGECKO_API_BASE, PRICE_UNIVERSE_SIZE
+    );
+    log_security_event(SecurityEvent::ExternalApiRequest, Some("price_universe"));
+    fetch_markets(&url, proxy, PRICE_UNIVERSE_SIZE).await
+}
+
+/// Fetches named coins. Naming them tells CoinGecko which coins the user cares
+/// about, so this is only for coins outside the universe the user allowed.
 pub async fn fetch_crypto_prices(
     coin_ids: Vec<String>,
     proxy: Option<&ProxyConfig>,
@@ -389,23 +401,26 @@ pub async fn fetch_crypto_prices(
         ));
     }
 
-    let ids_param = validated_ids.join(",");
     let url = format!(
         "{}/coins/markets?vs_currency=usd&ids={}&order=market_cap_desc&sparkline=false",
-        COINGECKO_API_BASE, ids_param
+        COINGECKO_API_BASE,
+        validated_ids.join(",")
     );
-
     log_security_event(
         SecurityEvent::ExternalApiRequest,
         Some(&format!("coins={}", validated_ids.len())),
     );
+    fetch_markets(&url, proxy, MAX_COINS_PER_REQUEST).await
+}
 
+/// GETs a CoinGecko `/coins/markets` URL and parses at most `max_items` coins.
+async fn fetch_markets(
+    url: &str,
+    proxy: Option<&ProxyConfig>,
+    max_items: usize,
+) -> Result<Vec<CryptoAsset>, String> {
     let client = create_secure_client(proxy)?;
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(handle_request_error)?;
+    let response = client.get(url).send().await.map_err(handle_request_error)?;
 
     let status = response.status();
     if !status.is_success() {
@@ -420,36 +435,15 @@ pub async fn fetch_crypto_prices(
         });
     }
 
-    if let Some(content_length) = response.content_length()
-        && content_length as usize > MAX_RESPONSE_SIZE
-    {
-        return Err("Response too large".to_string());
-    }
-
-    let mut downloaded: usize = 0;
-    let mut body: Vec<u8> = Vec::new();
-    let mut stream = response.bytes_stream();
-
-    while let Some(chunk) = stream
-        .try_next()
-        .await
-        .map_err(|_| "Failed to download response".to_string())?
-    {
-        downloaded += chunk.len();
-        if downloaded > MAX_RESPONSE_SIZE {
-            return Err("Response too large".to_string());
-        }
-        body.extend_from_slice(&chunk);
-    }
-
+    let body = download_response_body(response).await?;
     let market_data: Vec<CoinGeckoMarketData> = serde_json::from_slice(&body)
         .map_err(|_| "Failed to parse cryptocurrency data".to_string())?;
 
-    if market_data.len() > MAX_COINS_PER_REQUEST * 2 {
+    if market_data.len() > max_items {
         return Err("Unexpected response format".to_string());
     }
 
-    let assets: Vec<CryptoAsset> = market_data
+    Ok(market_data
         .into_iter()
         .map(|data| CryptoAsset {
             id: sanitize_api_string(&data.id),
@@ -463,9 +457,7 @@ pub async fn fetch_crypto_prices(
                 &data.last_updated.unwrap_or_else(|| "N/A".to_string()),
             ),
         })
-        .collect();
-
-    Ok(assets)
+        .collect())
 }
 
 /// Fetches the current USD/target fiat exchange rate.
@@ -912,14 +904,6 @@ fn validate_exchange_rate_range(rate: f64, _target: &str) -> Result<f64, String>
 }
 
 // ==================== Default Data ====================
-
-/// Returns the padding list used for default tickers and privacy obfuscation
-pub fn default_price_allowlist() -> Vec<String> {
-    PRIVACY_PRESERVING_PRICE_IDS
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
-}
 
 /// Returns the default ticker IDs shown in the UI
 pub fn default_ticker_ids() -> Vec<String> {
