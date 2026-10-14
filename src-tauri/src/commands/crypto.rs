@@ -36,6 +36,7 @@ use sanctum::ui::dto::crypto::{
     PortfolioTrendData, SyncResultDto, TaxReportDto, TaxSettingsDto, TaxSummaryDto,
     WalletDetailResponse, WalletDto, WalletHoldingDto, WalletSimpleDto, WalletsResponse,
 };
+use sanctum::ui::format_crypto_amount;
 use std::collections::HashMap;
 use tauri::State;
 
@@ -97,7 +98,7 @@ pub fn fetch_portfolio(
                 price: fmt_pref(price, &settings, &finance),
                 price_change_24h: format!("{:.2}%", chg),
                 price_change_24h_negative: chg < 0.0,
-                amount: trim_amount(a.total_amount),
+                amount: format_crypto_amount(a.total_amount),
                 value: fmt_pref(val, &settings, &finance),
                 allocation_pct: alloc,
             }
@@ -317,7 +318,7 @@ pub fn fetch_wallet_detail(
             WalletHoldingDto {
                 coin_id: h.coin_id.clone(),
                 symbol: h.symbol.clone(),
-                amount: trim_amount(h.total_amount),
+                amount: format_crypto_amount(h.total_amount),
                 value: fmt_pref(h.total_amount * price, &settings, &finance),
                 price: fmt_pref(price, &settings, &finance),
             }
@@ -872,7 +873,7 @@ fn map_tax_report_dto(
                 date: e.date,
                 coin_id: e.coin_id,
                 symbol: e.symbol,
-                amount: e.amount.to_string(),
+                amount: format_crypto_amount(e.amount),
                 proceeds: fmt_pref_override(e.proceeds, override_curr, settings, finance),
                 cost_basis: fmt_pref_override(e.cost_basis, override_curr, settings, finance),
                 gain: fmt_pref_override(e.gain.abs(), override_curr, settings, finance),
@@ -992,13 +993,6 @@ pub fn load_exchange_rate(
 
 // ==================== Helpers ====================
 
-fn trim_amount(v: f64) -> String {
-    format!("{:.8}", v)
-        .trim_end_matches('0')
-        .trim_end_matches('.')
-        .to_string()
-}
-
 fn fmt_pref(v: f64, settings: &SettingsService, finance: &FinanceService) -> String {
     fmt_pref_override(v, None, settings, finance)
 }
@@ -1072,7 +1066,7 @@ fn map_crypto_transactions(
             symbol: tx.symbol.clone(),
             transaction_type: tx.transaction_type.clone(),
             subtype: tx.subtype.clone(),
-            amount: trim_amount(tx.amount),
+            amount: format_crypto_amount(tx.amount),
             price: tx
                 .price_per_coin
                 .map(|p| fmt_pref(p, settings, finance))
@@ -1082,7 +1076,7 @@ fn map_crypto_transactions(
                 .map(|f| fmt_pref(f, settings, finance))
                 .unwrap_or_else(|| fmt_pref(0.0, settings, finance)),
             fee_coin_id: tx.fee_coin_id.clone(),
-            fee_amount: tx.fee_amount.map(trim_amount),
+            fee_amount: tx.fee_amount.map(format_crypto_amount),
             value: fmt_pref(
                 tx.amount * tx.price_per_coin.unwrap_or(0.0),
                 settings,

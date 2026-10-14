@@ -21,7 +21,7 @@
 //! CLP uses Chilean format (dot for thousands, no decimals).
 
 /// Formats a whole number with thousand separators (no decimals).
-fn format_thousands_with_sep(value: i64, sep: char) -> String {
+pub(crate) fn format_thousands_with_sep(value: i64, sep: char) -> String {
     let abs = value.abs();
     let digits = abs.to_string();
     let mut result = String::new();
