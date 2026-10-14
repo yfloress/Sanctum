@@ -298,6 +298,29 @@ impl CryptoService {
         })
     }
 
+    /// Adds snapshots for past days that have transactions but none recorded,
+    /// so imported history shows up in the charts. Never overwrites a snapshot.
+    pub fn backfill_portfolio_snapshots(&self) -> Result<usize, CryptoError> {
+        let today = Local::now().format("%Y-%m-%d").to_string();
+        self.with_db(|db| {
+            let transactions = db
+                .get_all_crypto_transactions(0, i64::MAX)
+                .map_err(CryptoError::Database)?;
+            let existing: HashSet<String> = db
+                .load_crypto_portfolio_snapshots("")
+                .map_err(CryptoError::Database)?
+                .into_iter()
+                .map(|(date, _, _)| date)
+                .collect();
+            let missing = super::history::missing_snapshots(transactions, &existing, &today);
+            for (date, value, cost) in &missing {
+                db.save_crypto_portfolio_snapshot(date, *value, *cost)
+                    .map_err(CryptoError::Database)?;
+            }
+            Ok(missing.len())
+        })
+    }
+
     pub fn get_crypto_portfolio_snapshots(
         &self,
         days: i64,

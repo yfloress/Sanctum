@@ -22,6 +22,7 @@
 //! ## Module Structure
 //! - `api` - CoinGecko API client
 //! - `catalog` - Coin catalog management (custom coins, favorites, hidden)
+//! - `history` - Portfolio snapshots rebuilt from transactions
 //! - `models` - Domain models
 //! - `repository` - Database operations
 //! - `service` - Core service (wallets, prices, portfolio)
@@ -31,6 +32,7 @@
 pub mod api;
 pub mod catalog;
 pub mod commands;
+mod history;
 pub mod service;
 mod service_tax;
 pub mod tax;
