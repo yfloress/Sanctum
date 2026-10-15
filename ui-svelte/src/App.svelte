@@ -546,11 +546,17 @@
     isolation: isolate;
   }
 
+  /* Only on touch screens, where it stops the pull-to-refresh bounce. On the
+     desktop it buys nothing, and WebKitGTK has had bugs where it leaves the
+     mouse wheel unable to scroll. */
+  @media (pointer: coarse) {
+    .content { overscroll-behavior-y: contain; }
+  }
+
   .content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior-y: contain;
     height: 100vh;
     display: flex;
     flex-direction: column;
