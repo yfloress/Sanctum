@@ -42,9 +42,9 @@ pub const MAX_BULK_TRANSACTIONS: usize = 1000;
 pub const MAX_CREDIT_NAME_LENGTH: usize = 64;
 /// Ceiling on how many installments one credit may be split into.
 ///
-/// Ten years of monthly payments, which no consumer plan reaches. It is here so
-/// a mistyped count cannot write an unbounded schedule.
-pub const MAX_INSTALLMENTS: i32 = 120;
+/// Forty years of monthly payments, which covers a mortgage anywhere. It is here
+/// so a mistyped count cannot write an unbounded schedule.
+pub const MAX_INSTALLMENTS: i32 = 480;
 /// Ceiling on a credit's monthly rate, in millionths.
 ///
 /// 100% a month, far above anything any market allows, so it rejects a typo

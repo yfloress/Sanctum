@@ -47,6 +47,26 @@ pub struct ImportResultsResponse {
     pub inserted: usize,
     pub skipped: usize,
     pub errors: Vec<ImportErrorDto>,
+    /// Accounts the file refers to that do not exist yet.
+    pub missing_accounts: Vec<MissingAccountDto>,
+    /// Categories the file refers to that do not exist yet.
+    pub missing_categories: Vec<MissingCategoryDto>,
+    /// Crypto wallets the file refers to that do not exist yet.
+    pub missing_wallets: Vec<String>,
+}
+
+/// An account to create before importing.
+#[derive(Debug, Clone, Serialize)]
+pub struct MissingAccountDto {
+    pub name: String,
+    pub currency: String,
+}
+
+/// A category to create before importing.
+#[derive(Debug, Clone, Serialize)]
+pub struct MissingCategoryDto {
+    pub name: String,
+    pub category_type: String,
 }
 
 /// An error from the import process.

@@ -35,6 +35,12 @@ use super::validation::validate_file_size;
 mod crypto;
 mod transactions;
 
+/// Shown when `detect_format` cannot classify a file. Names the columns the
+/// generic CSV parsers look for, since a `.csv` with other headers also fails.
+const UNSUPPORTED_FORMAT_HINT: &str = "Could not detect file format. Supported: JSON (.json), \
+     CSV (.csv) with 'account' and 'amount' columns for transactions, or CSV with \
+     'wallet' and 'symbol' columns for crypto.";
+
 pub(super) fn format_currency_simple(cents: i64, currency: &str) -> String {
     let amount = (cents.abs() as f64) / 100.0;
     format!("{:.2} {}", amount, currency)
@@ -377,10 +383,7 @@ impl IngestionService {
 
         // Detect format
         let format = detect_format(content, filename).ok_or_else(|| {
-            IngestionError::UnsupportedFormat(
-                "Could not detect file format. Supported: JSON (.json), CSV (.csv), Text (.txt)"
-                    .to_string(),
-            )
+            IngestionError::UnsupportedFormat(UNSUPPORTED_FORMAT_HINT.to_string())
         })?;
 
         match format {
@@ -403,10 +406,7 @@ impl IngestionService {
         validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
 
         let format = detect_format(content, filename).ok_or_else(|| {
-            IngestionError::UnsupportedFormat(
-                "Could not detect file format. Supported: JSON (.json), CSV (.csv), Text (.txt)"
-                    .to_string(),
-            )
+            IngestionError::UnsupportedFormat(UNSUPPORTED_FORMAT_HINT.to_string())
         })?;
 
         match format {
@@ -1124,6 +1124,73 @@ mod integration_tests {
     }
 
     #[test]
+    fn test_process_transactions_lists_what_to_create_when_nothing_exists() {
+        let h = new_ingestion_harness();
+        let row = |kind: &str, category: &str, to: Option<&str>| ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Checking".to_string(),
+            transaction_type: kind.to_string(),
+            amount: 100.0,
+            currency: "clp".to_string(),
+            category: category.to_string(),
+            description: "test".to_string(),
+            transfer_to_account: to.map(str::to_string),
+        };
+        let rows = vec![
+            (1, row("income", "Bonus", None)),
+            (2, row("expense", "Rent", None)),
+            (3, row("expense", "rent", None)),
+            (4, row("transfer", "", Some("Savings"))),
+        ];
+
+        let result = h
+            .service
+            .process_transactions(rows, "Test Format")
+            .expect("process");
+
+        assert_eq!(result.inserted, 0);
+        let accounts: Vec<(&str, &str)> = result
+            .missing_accounts
+            .iter()
+            .map(|a| (a.name.as_str(), a.currency.as_str()))
+            .collect();
+        assert_eq!(accounts, [("Checking", "CLP"), ("Savings", "CLP")]);
+        let categories: Vec<(&str, &str)> = result
+            .missing_categories
+            .iter()
+            .map(|c| (c.name.as_str(), c.category_type.as_str()))
+            .collect();
+        assert_eq!(categories, [("Bonus", "income"), ("Rent", "expense")]);
+    }
+
+    #[test]
+    fn test_process_transactions_rejects_transfer_across_currencies() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.read().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account_named(db, "Dollars", "USD");
+            seed_account_named(db, "Pesos", "CLP");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Dollars".to_string(),
+            transaction_type: "transfer".to_string(),
+            amount: 100.0,
+            currency: "USD".to_string(),
+            category: String::new(),
+            description: "test".to_string(),
+            transfer_to_account: Some("Pesos".to_string()),
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
     fn test_process_transactions_rejects_unknown_account() {
         let h = new_ingestion_harness();
         {
@@ -1410,6 +1477,34 @@ mod integration_tests {
             fee_amount: None,
             notes: None,
         }
+    }
+
+    #[test]
+    fn test_process_crypto_lists_missing_wallets_once() {
+        let h = new_ingestion_harness();
+        let buy = |wallet: &str| {
+            make_crypto_tx(
+                "2024-06-15",
+                wallet,
+                "BTC",
+                "trade",
+                Some("buy"),
+                1.0,
+                Some(50000.0),
+                None,
+                None,
+                None,
+            )
+        };
+        let rows = vec![(1, buy("Binance")), (2, buy("binance")), (3, buy("Ledger"))];
+
+        let result = h
+            .service
+            .process_crypto_transactions_ext(rows, "Test Format", true)
+            .expect("process");
+
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.missing_wallets, ["Binance", "Ledger"]);
     }
 
     #[test]

@@ -26,9 +26,14 @@
 
   let { data }: Props = $props()
 
+  // Green when the period ended above where it started, red when below.
+  let rising = $derived(data.values.length < 2 || data.values[data.values.length - 1] >= data.values[0])
+  let lineColor = $derived(rising ? pick('#4ade80', L.positive) : pick('#f87171', L.negative))
+  let areaRgb = $derived(rising ? pick('74, 222, 128', '41, 163, 131') : pick('248, 113, 113', '229, 72, 77'))
+
   function formatYAxis(value: number): string {
-    if (value === 0) return formatCurrency(0)
-    return formatCurrency(value, undefined, {
+    if (value === 0) return formatCurrency(0, data.currency)
+    return formatCurrency(value, data.currency, {
       notation: 'compact',
       compactDisplay: 'short',
       minimumFractionDigits: 0,
@@ -41,9 +46,9 @@
   // stay flat (consecutive same-Y points) and only the rising/falling segment
   // between shoulder and anchor gets bezier-rounded.
   const seriesData = $derived.by(() => {
-    if (!data.dates.length) return [] as { value: [number, number]; symbol?: string }[]
+    if (!data.dates.length) return [] as { value: [number, number]; symbol?: string; symbolSize?: number }[]
     const showAnchorDots = data.values.length <= 3
-    const out: { value: [number, number]; symbol?: string }[] = []
+    const out: { value: [number, number]; symbol?: string; symbolSize?: number }[] = []
     for (let i = 0; i < data.dates.length; i++) {
       const t = new Date(data.dates[i] + 'T00:00:00').getTime()
       const v = data.values[i]
@@ -57,6 +62,8 @@
       }
       out.push({ value: [t, v], symbol: showAnchorDots ? 'circle' : 'none' })
     }
+    // Mark where the portfolio stands today.
+    out[out.length - 1] = { ...out[out.length - 1], symbol: 'circle', symbolSize: 8 }
     return out
   })
 
@@ -71,8 +78,9 @@
       formatter: (params: { value: [number, number] }[]) => {
         const pt = params[0]
         if (!pt) return ''
-        const v = Array.isArray(pt.value) ? pt.value[1] : pt.value
-        return `<b>${formatCurrency(v)}</b>`
+        const [t, v] = pt.value
+        const date = new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+        return `<span style="opacity:0.7;font-size:11px">${date}</span><br/><b>${formatCurrency(v, data.currency)}</b>`
       },
     },
     xAxis: {
@@ -82,6 +90,10 @@
     },
     yAxis: {
       type: 'value',
+      // Fit the range of the data instead of starting at zero, where a 15 % move
+      // would look flat.
+      scale: true,
+      splitNumber: 3,
       axisLine: { show: false },
       splitLine: { lineStyle: { color: pick('#1a1a1a', L.splitLine) } },
       axisLabel: { color: pick('#666', L.labelDim), fontSize: 10, formatter: (val: number) => formatYAxis(val) },
@@ -92,14 +104,14 @@
       smooth: 0.4,
       showSymbol: true,
       symbolSize: 6,
-      itemStyle: { color: pick('#4ade80', L.positive) },
-      lineStyle: { color: pick('#4ade80', L.positive), width: 2.5, cap: 'round', join: 'round' },
+      itemStyle: { color: lineColor, borderColor: pick('#0e0c15', '#ffffff'), borderWidth: 2 },
+      lineStyle: { color: lineColor, width: 2.5, cap: 'round', join: 'round' },
       areaStyle: {
         color: {
           type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: pick('rgba(74, 222, 128, 0.25)', 'rgba(22, 163, 74, 0.2)') },
-            { offset: 1, color: pick('rgba(74, 222, 128, 0.02)', 'rgba(22, 163, 74, 0.02)') },
+            { offset: 0, color: `rgba(${areaRgb}, 0.24)` },
+            { offset: 1, color: `rgba(${areaRgb}, 0.01)` },
           ],
         },
       },

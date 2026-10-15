@@ -15,10 +15,12 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { untrack } from 'svelte'
   import { app, type Page } from './lib/stores/app.svelte'
   import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import { startShortcuts } from './lib/shortcuts'
+  import { startAutoSync } from './lib/autoSync'
   import Sidebar from './components/Sidebar.svelte'
   import MobileTopBar from './components/MobileTopBar.svelte'
   import StarField from './components/StarField.svelte'
@@ -54,6 +56,17 @@
     }
   })
 
+  // Only `isLoggedIn` and `auto_fetch` are read here; the callbacks read the rest
+  // later, so a sync does not restart the loop.
+  $effect(() => {
+    if (app.isLoggedIn && app.settings?.auto_fetch) {
+      return startAutoSync(
+        () => app.settings?.prices_updated_at ?? null,
+        (at) => app.notePricesSynced(at),
+      )
+    }
+  })
+
   $effect(() => {
     document.documentElement.dataset.bg = app.backgroundFx
   })
@@ -64,6 +77,7 @@
   $effect(() => {
     const dark = app.darkMode
     document.documentElement.classList.toggle('light-mode', !dark)
+    untrack(() => app.rememberTheme(dark))
 
     // Crossfade colours only for a genuine user toggle — not the async settings
     // load right after mount (that first flip should be invisible, no startup
@@ -178,6 +192,11 @@
     --success: #4ade80;
     --danger: #f87171;
     --warning: #fbbf24;
+    --success-vivid: var(--success);
+    --danger-vivid: var(--danger);
+    --row-bg: rgba(255, 255, 255, 0.025);
+    --row-bg-hover: rgba(255, 255, 255, 0.055);
+    --row-border: rgba(255, 255, 255, 0.04);
     --text-primary: #e8eaed;
     --text-secondary: #9aa0a6;
     --text-tertiary: #5f6368;
@@ -202,6 +221,12 @@
     --accent-bg: rgba(168, 85, 247, 0.2);
     --accent-border: rgba(168, 85, 247, 0.3);
     --text-on-accent: #ffffff;
+    /* Solid fill for the primary button: deeper than --accent so white text
+       clears 4.5:1 on it, which #a855f7 does not. */
+    --accent-solid: #7c3aed;
+    --accent-solid-hover: #6d28d9;
+    --btn-bg: rgba(255, 255, 255, 0.05);
+    --btn-bg-hover: rgba(255, 255, 255, 0.09);
     --card-bg:
       radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.10) 0%, transparent 55%),
       linear-gradient(145deg, rgba(18, 16, 24, 0.70) 0%, rgba(14, 12, 21, 0.70) 100%);
@@ -210,58 +235,74 @@
     --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.35) 30%, rgba(168, 85, 247, 0.35) 70%, transparent 100%);
   }
 
+  /* Light is a daylight theme, not dark inverted: frosted white glass over a
+     soft mauve page with the dot pattern showing through. --bg-gradient stays a
+     single layer, because the dots background repeats its tile size across
+     every layer. Neutrals and accent follow Radix Colors (mauve, violet, jade,
+     red). Built for bright rooms: body text clears 14:1 and every state colour
+     4.5:1 on glass; `-vivid` variants are for large figures and chart fills,
+     where 3:1 is enough. */
   :global(.light-mode) {
-    --bg-base: #f8f7fd;
-    --bg-gradient: linear-gradient(135deg, #f8f7fd 0%, #f0edff 40%, #e8e3fc 100%);
-    --bg-dots: radial-gradient(circle, rgba(124, 58, 237, 0.28) 1px, transparent 1.6px);
-    --star-color: rgba(109, 40, 217, 0.95);
-    --star-glow: rgba(109, 40, 217, 0.55);
-    --diamond-color: rgba(124, 58, 237, 0.20);
-    --aurora-1: rgba(139, 92, 246, 0.45);
-    --aurora-2: rgba(99, 102, 241, 0.38);
-    --aurora-3: rgba(217, 70, 239, 0.32);
-    --aurora-opacity: 0.75;
-    --glass: rgba(255, 255, 255, 0.65);
-    --glass-hover: rgba(147, 51, 234, 0.06);
-    --glass-active: rgba(147, 51, 234, 0.1);
-    --glass-elevated: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(147, 51, 234, 0.1);
-    --glass-border-hover: rgba(147, 51, 234, 0.18);
-    --glass-shadow: 0 4px 20px rgba(100, 60, 180, 0.06);
-    --glass-shadow-lg: 0 8px 32px rgba(100, 60, 180, 0.1);
-    --glass-glow: 0 0 0 1px rgba(147, 51, 234, 0.06) inset;
-    --accent: #8b5cf6;
-    --accent-glow: rgba(139, 92, 246, 0.15);
-    --accent-hover: #7c3aed;
-    --success: #16a34a;
-    --danger: #dc2626;
-    --warning: #d97706;
-    --text-primary: #1e1b2e;
-    --text-secondary: #4c4665;
-    --text-tertiary: #8882a0;
-    --scrollbar-thumb: rgba(139, 92, 246, 0.2);
-    --scrollbar-thumb-hover: rgba(139, 92, 246, 0.38);
-    --select-bg: rgba(255, 255, 255, 0.7);
-    --select-bg-hover: rgba(255, 255, 255, 0.9);
+    --bg-base: #f4f2f7;
+    --bg-gradient: linear-gradient(135deg, #f7f6fa 0%, #f4f2f7 50%, #efedf4 100%);
+    --bg-dots: radial-gradient(circle, rgba(33, 31, 38, 0.10) 1px, transparent 1.6px);
+    --star-color: rgba(101, 80, 185, 0.5);
+    --star-glow: rgba(110, 86, 207, 0.22);
+    --diamond-color: rgba(33, 31, 38, 0.05);
+    --aurora-1: rgba(110, 86, 207, 0.32);
+    --aurora-2: rgba(255, 159, 128, 0.30);
+    --aurora-3: rgba(217, 119, 242, 0.24);
+    --aurora-opacity: 0.45;
+    --glass: rgba(255, 255, 255, 0.62);
+    --glass-hover: rgba(255, 255, 255, 0.78);
+    --glass-active: rgba(255, 255, 255, 0.9);
+    --glass-elevated: rgba(255, 255, 255, 0.82);
+    --glass-border: rgba(33, 31, 38, 0.08);
+    --glass-border-hover: rgba(33, 31, 38, 0.14);
+    --glass-blur: blur(20px) saturate(150%);
+    --glass-blur-heavy: blur(28px) saturate(160%);
+    --glass-shadow: 0 1px 1px rgba(33, 31, 38, 0.03), 0 10px 30px -14px rgba(70, 50, 130, 0.20);
+    --glass-shadow-lg: 0 24px 60px -20px rgba(70, 50, 130, 0.28);
+    --glass-glow: 0 0 0 1px rgba(255, 255, 255, 0.75) inset;
+    --accent: #6e56cf;
+    --accent-glow: rgba(110, 86, 207, 0.18);
+    --accent-hover: #6550b9;
+    --success: #1d775e;
+    --success-vivid: #208368;
+    --danger: #c12a2f;
+    --danger-vivid: #dc3e42;
+    --warning: #9a5a00;
+    --text-primary: #211f26;
+    --text-secondary: #5c5a64;
+    --text-tertiary: #65636d;
+    --scrollbar-thumb: rgba(33, 31, 38, 0.18);
+    --scrollbar-thumb-hover: rgba(33, 31, 38, 0.30);
+    --select-bg: rgba(255, 255, 255, 0.75);
+    --select-bg-hover: rgba(255, 255, 255, 0.92);
     --option-bg: #ffffff;
-    --sidebar-bg: linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%);
-    --sidebar-border: rgba(139, 92, 246, 0.1);
-    --nav-active-bg: rgba(139, 92, 246, 0.1);
-    --nav-active-border: rgba(139, 92, 246, 0.15);
-    --danger-bg: rgba(220, 38, 38, 0.08);
-    --danger-border: rgba(220, 38, 38, 0.15);
-    --modal-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.97) 0%, rgba(250, 248, 255, 0.95) 50%, rgba(245, 243, 255, 0.92) 100%);
-    --modal-border: rgba(139, 92, 246, 0.1);
-    --modal-shadow: 0 8px 32px rgba(100, 60, 180, 0.1);
-    --accent-bg: rgba(139, 92, 246, 0.1);
-    --accent-border: rgba(139, 92, 246, 0.2);
+    --sidebar-bg: rgba(250, 249, 252, 0.55);
+    --sidebar-border: rgba(33, 31, 38, 0.07);
+    --nav-active-bg: rgba(255, 255, 255, 0.85);
+    --nav-active-border: rgba(110, 86, 207, 0.22);
+    --danger-bg: rgba(193, 42, 47, 0.07);
+    --danger-border: rgba(193, 42, 47, 0.20);
+    --modal-bg: rgba(255, 255, 255, 0.86);
+    --modal-border: rgba(255, 255, 255, 0.9);
+    --modal-shadow: 0 30px 80px -24px rgba(50, 35, 100, 0.35), 0 0 0 1px rgba(33, 31, 38, 0.06);
+    --accent-bg: rgba(110, 86, 207, 0.10);
+    --accent-border: rgba(110, 86, 207, 0.28);
     --text-on-accent: #ffffff;
-    --card-bg:
-      radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.10) 0%, transparent 55%),
-      linear-gradient(145deg, rgba(248, 246, 255, 0.70) 0%, rgba(242, 240, 252, 0.70) 100%);
-    --card-bg-solid: #f2f0fc;
-    --card-shadow: 0 4px 20px rgba(100, 60, 180, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-    --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.4) 30%, rgba(139, 92, 246, 0.4) 70%, transparent 100%);
+    --accent-solid: #6e56cf;
+    --accent-solid-hover: #6550b9;
+    --btn-bg: rgba(255, 255, 255, 0.78);
+    --btn-bg-hover: #ffffff;
+    --card-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.60) 100%);
+    --row-bg: rgba(33, 31, 38, 0.035);
+    --row-bg-hover: rgba(33, 31, 38, 0.06);
+    --row-border: rgba(33, 31, 38, 0.05);
+    --card-bg-solid: #ffffff;
+    --card-shadow: 0 1px 1px rgba(33, 31, 38, 0.03), 0 12px 32px -16px rgba(70, 50, 130, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(110, 86, 207, 0.30) 30%, rgba(110, 86, 207, 0.30) 70%, transparent 100%);
   }
 
   /* Make white logo visible in light mode */
@@ -276,12 +317,23 @@
   :global(body) {
     margin: 0;
     padding: 0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Instrument Sans Variable', system-ui, -apple-system, sans-serif;
+    /* Every digit the same width, so amounts line up in columns and do not
+       shift as values change. */
+    font-variant-numeric: tabular-nums;
     background: var(--bg-base);
     background-image: var(--bg-gradient);
     background-attachment: fixed;
     color: var(--text-primary);
     min-height: 100vh;
+  }
+
+  /* Form controls do not inherit the font by default. */
+  :global(button),
+  :global(input),
+  :global(select),
+  :global(textarea) {
+    font-family: inherit;
   }
 
   /* Background designs — chosen from Settings, persisted in localStorage and
@@ -444,8 +496,8 @@
   }
 
   :global(.light-mode .tab-bar) {
-    background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(147,51,234,0.04) 100%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 12px rgba(100,60,180,0.06);
+    background: var(--glass);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px -14px rgba(70,50,130,0.22);
   }
 
   :global(.tab-bar button) {
@@ -484,7 +536,7 @@
   }
 
   :global(.light-mode .tab-bar button.active) {
-    background: linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(139,92,246,0.06) 100%);
+    background: rgba(255,255,255,0.92);
     box-shadow:
       0 0 0 1px var(--accent-border) inset,
       0 2px 10px var(--accent-glow),
@@ -502,11 +554,17 @@
     isolation: isolate;
   }
 
+  /* Only on touch screens, where it stops the pull-to-refresh bounce. On the
+     desktop it buys nothing, and WebKitGTK has had bugs where it leaves the
+     mouse wheel unable to scroll. */
+  @media (pointer: coarse) {
+    .content { overscroll-behavior-y: contain; }
+  }
+
   .content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior-y: contain;
     height: 100vh;
     display: flex;
     flex-direction: column;

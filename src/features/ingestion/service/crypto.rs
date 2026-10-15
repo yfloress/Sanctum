@@ -258,6 +258,7 @@ impl IngestionService {
             let wallet = match wallet_lookup.get(&wallet_key) {
                 Some(w) => w,
                 None => {
+                    summary.note_missing_wallet(&import_tx.wallet);
                     summary.record_error(RowError::new(
                         line_num,
                         Some("wallet"),

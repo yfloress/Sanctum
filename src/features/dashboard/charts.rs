@@ -139,12 +139,22 @@ impl DashboardCharts {
 
         let today = Local::now().date_naive();
         let today_str = today.format("%Y-%m-%d").to_string();
+        // ALL starts at the oldest data point, so a short history is not
+        // squeezed against years of empty chart. Five years stays the cap.
+        let earliest_data = transactions
+            .iter()
+            .map(|tx| tx.date.as_str())
+            .chain(crypto_sorted.first().map(|(d, _)| d.as_str()))
+            .filter_map(|d| NaiveDate::parse_from_str(d, DATE_FORMAT).ok())
+            .min()
+            .unwrap_or(today)
+            .clamp(today - chrono::Duration::days(365 * 5), today);
         let start_date = match range {
             "1M" => today - chrono::Duration::days(30),
             "3M" => today - chrono::Duration::days(90),
             "6M" => today - chrono::Duration::days(180),
             "1Y" => today - chrono::Duration::days(365),
-            _ => today - chrono::Duration::days(365 * 5), // ALL
+            _ => earliest_data, // ALL
         };
 
         // Build daily balance history from transactions
@@ -577,6 +587,32 @@ mod tests {
         );
 
         assert_eq!(result.net_worth, "USD 300.00");
+    }
+
+    #[test]
+    fn test_all_range_starts_at_the_oldest_transaction() {
+        let today = Local::now().date_naive();
+        let oldest = (today - chrono::Duration::days(40))
+            .format(DATE_FORMAT)
+            .to_string();
+        let accounts = vec![make_account("acc1", "USD", 0)];
+        let transactions = vec![make_transaction(
+            "t1", "acc1", 5000, "SALARY", "income", &oldest,
+        )];
+
+        let result = DashboardCharts::calculate_dashboard_data(
+            &[],
+            &accounts,
+            &transactions,
+            0.0,
+            &[],
+            &usd_rates(&[]),
+            "ALL",
+            "USD",
+        );
+
+        assert_eq!(result.chart_dates.first(), Some(&oldest));
+        assert_eq!(result.chart_dates.len(), 41);
     }
 
     #[test]

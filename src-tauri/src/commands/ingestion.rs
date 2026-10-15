@@ -18,12 +18,13 @@
 //! Ingestion domain Tauri commands.
 
 use sanctum::error::AppError;
+use sanctum::features::crypto::CryptoService;
 use sanctum::features::ingestion::parsers::CustomColumnMapping;
 use sanctum::features::ingestion::parsers::detect_exchange_source as parse_exchange_source;
 use sanctum::features::ingestion::{IngestionService, MAX_FILE_SIZE};
 use sanctum::ui::dto::ingestion::{
     CsvAnalysisResult, CustomCsvMapping, ExchangeDetectionResult, ImportErrorDto,
-    ImportResultsResponse,
+    ImportResultsResponse, MissingAccountDto, MissingCategoryDto,
 };
 use tauri::State;
 
@@ -42,12 +43,14 @@ pub fn preview_import(
 #[tauri::command]
 pub fn import_data(
     ingestion: State<'_, IngestionService>,
+    crypto: State<'_, CryptoService>,
     content: String,
     filename: String,
 ) -> Result<ImportResultsResponse, AppError> {
     let summary = ingestion
         .import_from_content(&content, &filename)
         .map_err(AppError::from)?;
+    backfill_history(&crypto);
     Ok(map_import_summary(summary))
 }
 
@@ -86,12 +89,14 @@ pub fn preview_exchange_csv(
 #[tauri::command]
 pub fn import_exchange_csv(
     ingestion: State<'_, IngestionService>,
+    crypto: State<'_, CryptoService>,
     content: String,
     wallet_name: String,
 ) -> Result<ImportResultsResponse, AppError> {
     let summary = ingestion
         .import_exchange_csv_auto(&content, &wallet_name)
         .map_err(AppError::from)?;
+    backfill_history(&crypto);
     Ok(map_import_summary(summary))
 }
 
@@ -112,6 +117,7 @@ pub fn analyze_custom_csv(
 #[tauri::command]
 pub fn import_custom_csv(
     ingestion: State<'_, IngestionService>,
+    crypto: State<'_, CryptoService>,
     content: String,
     mapping: CustomCsvMapping,
     wallet_name: String,
@@ -119,7 +125,17 @@ pub fn import_custom_csv(
     let summary = ingestion
         .import_custom_csv(&content, into_domain_mapping(mapping), &wallet_name)
         .map_err(AppError::from)?;
+    backfill_history(&crypto);
     Ok(map_import_summary(summary))
+}
+
+/// Imported crypto history has no daily snapshots, so the charts would start
+/// today. A failure here leaves the charts sparse but must not fail the import,
+/// which is already committed.
+fn backfill_history(crypto: &CryptoService) {
+    if let Err(e) = crypto.backfill_portfolio_snapshots() {
+        log::warn!("Portfolio history backfill failed: {e}");
+    }
 }
 
 /// Maps the IPC mapping DTO into the ingestion feature's domain mapping,
@@ -152,5 +168,22 @@ fn map_import_summary(
                 message: e.message,
             })
             .collect(),
+        missing_accounts: summary
+            .missing_accounts
+            .into_iter()
+            .map(|a| MissingAccountDto {
+                name: a.name,
+                currency: a.currency,
+            })
+            .collect(),
+        missing_categories: summary
+            .missing_categories
+            .into_iter()
+            .map(|c| MissingCategoryDto {
+                name: c.name,
+                category_type: c.category_type,
+            })
+            .collect(),
+        missing_wallets: summary.missing_wallets,
     }
 }

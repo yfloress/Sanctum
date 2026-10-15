@@ -103,6 +103,41 @@
     })
   }
 
+  // Account types picked for accounts the file refers to but the vault lacks.
+  let missingAccountTypes = $state<Record<string, string>>({})
+  // Categories picked for crypto wallets the file refers to but the vault lacks.
+  let missingWalletCategories = $state<Record<string, string>>({})
+  let hasMissing = $derived(
+    !!importPreview &&
+      (importPreview.missing_accounts.length > 0 ||
+        importPreview.missing_categories.length > 0 ||
+        importPreview.missing_wallets.length > 0)
+  )
+
+  /** Creates what the preview found missing, then previews the same file again. */
+  async function createMissingAndPreview() {
+    if (!importPreview) return
+    importLoading = true
+    try {
+      for (const acc of importPreview.missing_accounts) {
+        await financeApi.createAccount(acc.name, missingAccountTypes[acc.name] ?? 'bank', acc.currency, '0')
+      }
+      for (const cat of importPreview.missing_categories) {
+        await financeApi.addCategory(cat.name, cat.category_type)
+      }
+      for (const name of importPreview.missing_wallets) {
+        await cryptoApi.addWallet(name, missingWalletCategories[name] ?? 'exchange')
+      }
+      missingAccountTypes = {}
+      missingWalletCategories = {}
+      importPreview = await ingestionApi.previewImport(importContent, importFilename)
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    } finally {
+      importLoading = false
+    }
+  }
+
   async function handleGenericFile(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
@@ -265,13 +300,6 @@
     }
   }
 
-  async function toggleDarkMode() {
-    if (!app.settings) return
-    const next = !app.settings.dark_mode
-    app.settings.dark_mode = next
-    await settingsApi.setDarkMode(next).catch(e => app.showToast(errorMessage(e), true))
-  }
-
   function changeBackground(e: Event) {
     app.setBackgroundFx((e.target as HTMLSelectElement).value as BackgroundFx)
   }
@@ -306,21 +334,29 @@
   async function toggleAutoFetch() {
     if (!app.settings) return
     const next = !app.settings.auto_fetch
-    app.settings.auto_fetch = next
-    await settingsApi.setAutoFetch(next)
+    try {
+      await settingsApi.setAutoFetch(next)
+      app.settings.auto_fetch = next
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
   }
 
   async function toggleProxy() {
     if (!app.settings) return
     const next = !app.settings.proxy_enabled
-    app.settings.proxy_enabled = next
-    await settingsApi.setProxyEnabled(next, app.settings.proxy_url)
+    try {
+      await settingsApi.setProxyEnabled(next)
+      app.settings.proxy_enabled = next
+    } catch (e) {
+      app.showToast(errorMessage(e), true)
+    }
   }
 
   async function updateProxyUrl() {
     if (!app.settings) return
     try {
-      await settingsApi.setProxyUrl(app.settings.proxy_url)
+      app.settings.proxy_url = await settingsApi.setProxyUrl(app.settings.proxy_url)
     } catch (e) {
       app.showToast(errorMessage(e), true)
     }
@@ -494,7 +530,7 @@
           <span class="setting-label">{i18n.t('settings-dark-mode', 'Dark Mode')}</span>
           <span class="setting-desc">{i18n.t('settings-dark-mode-desc', 'Toggle dark/light theme')}</span>
         </div>
-        <button class="toggle-switch" class:on={app.settings.dark_mode} onclick={toggleDarkMode} aria-label="Toggle dark mode">
+        <button class="toggle-switch" class:on={app.settings.dark_mode} onclick={() => app.toggleDarkMode()} aria-label="Toggle dark mode">
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -713,7 +749,7 @@
             />
           </div>
         {:else}
-          <input type="file" accept=".csv" class="hidden-input" bind:this={genericFileInput} onchange={handleGenericFile} />
+          <input type="file" accept=".csv,.json" class="hidden-input" bind:this={genericFileInput} onchange={handleGenericFile} />
           <input type="file" accept=".csv" class="hidden-input" bind:this={exchangeFileInput} onchange={handleExchangeFile} />
           <input type="file" accept=".csv" class="hidden-input" bind:this={customFileInput} onchange={handleCustomFile} />
           <div class="setting-row">
@@ -765,21 +801,68 @@
             {importPreview.inserted} {i18n.t('settings-import-to-add', 'to add')} |
             {importPreview.skipped} {i18n.t('settings-import-to-skip', 'to skip')}
           </p>
+          {#if hasMissing}
+            <div class="wallet-create">
+              <p class="wallet-create-note">{i18n.t('settings-import-missing-note', 'The file uses accounts, wallets or categories that do not exist yet. Create them to import its rows.')}</p>
+              {#each importPreview.missing_accounts as acc}
+                <div class="setting-row">
+                  <span class="setting-label">{acc.name} · {acc.currency}</span>
+                  <select
+                    value={missingAccountTypes[acc.name] ?? 'bank'}
+                    onchange={(e) => missingAccountTypes[acc.name] = (e.target as HTMLSelectElement).value}
+                    aria-label={i18n.t('finances-type', 'Type')}
+                  >
+                    <option value="bank">{i18n.t('finances-account-type-bank', 'Bank')}</option>
+                    <option value="savings">{i18n.t('finances-account-type-savings', 'Savings')}</option>
+                    <option value="credit">{i18n.t('finances-account-type-credit', 'Credit Card')}</option>
+                    <option value="cash">{i18n.t('finances-account-type-cash', 'Cash')}</option>
+                    <option value="other">{i18n.t('finances-account-type-other', 'Other')}</option>
+                  </select>
+                </div>
+              {/each}
+              {#each importPreview.missing_wallets as wallet}
+                <div class="setting-row">
+                  <span class="setting-label">{wallet}</span>
+                  <select
+                    value={missingWalletCategories[wallet] ?? 'exchange'}
+                    onchange={(e) => missingWalletCategories[wallet] = (e.target as HTMLSelectElement).value}
+                    aria-label={i18n.t('crypto-wallet-category', 'Category')}
+                  >
+                    <option value="exchange">Exchange</option>
+                    <option value="hardware">Hardware</option>
+                    <option value="software">Software</option>
+                  </select>
+                </div>
+              {/each}
+              {#each importPreview.missing_categories as cat}
+                <div class="setting-row">
+                  <span class="setting-label">{cat.name}</span>
+                  <span class="setting-desc">{cat.category_type === 'income' ? i18n.t('finances-income', 'Income') : i18n.t('finances-expense', 'Expense')}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
           {#if importPreview.errors.length > 0}
-            <div class="import-errors">
-              <p class="error-heading">{i18n.t('settings-import-errors', 'Errors')} ({importPreview.errors.length}):</p>
+            <details class="import-errors" open={!hasMissing}>
+              <summary class="error-heading">{i18n.t('settings-import-errors', 'Errors')} ({importPreview.errors.length})</summary>
               {#each importPreview.errors as err}
                 <p class="error-line">
                   {#if err.line}{i18n.t('settings-import-line', 'Line')} {err.line}: {/if}{err.message}
                 </p>
               {/each}
-            </div>
+            </details>
           {/if}
           <div class="import-actions">
             <button class="secondary-btn" onclick={resetImport}>{i18n.t('settings-cancel', 'Cancel')}</button>
-            <button class="primary-btn" onclick={confirmImport} disabled={importLoading}>
-              {importLoading ? i18n.t('settings-import-importing', 'Importing...') : i18n.t('settings-import-confirm', 'Confirm Import')}
-            </button>
+            {#if hasMissing}
+              <button class="primary-btn" onclick={createMissingAndPreview} disabled={importLoading}>
+                {i18n.t('settings-import-create-missing', 'Create and preview again')}
+              </button>
+            {:else}
+              <button class="primary-btn" onclick={confirmImport} disabled={importLoading}>
+                {importLoading ? i18n.t('settings-import-importing', 'Importing...') : i18n.t('settings-import-confirm', 'Confirm Import')}
+              </button>
+            {/if}
           </div>
         </div>
 
@@ -814,7 +897,7 @@
       <div class="setting-row" id="setting-auto-fetch" class:setting-highlight={revealed === 'auto-fetch'}>
         <div>
           <span class="setting-label">{i18n.t('settings-auto-fetch', 'Auto-fetch Prices')}</span>
-          <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Automatically fetch crypto prices on sync')}</span>
+          <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Off: Sanctum never goes online on its own. On: refreshes prices every 10 minutes while the window is visible.')}</span>
         </div>
         <button class="toggle-switch" class:on={app.settings.auto_fetch} onclick={toggleAutoFetch} aria-label="Toggle auto-fetch">
           <span class="toggle-knob"></span>
@@ -836,9 +919,12 @@
             type="text"
             bind:value={app.settings.proxy_url}
             onblur={updateProxyUrl}
-            placeholder={i18n.t('settings-proxy-placeholder', 'socks5://127.0.0.1:9050')}
+            placeholder={i18n.t('settings-proxy-placeholder', 'socks5h://127.0.0.1:9050')}
           />
         </div>
+        {#if !app.settings.proxy_url.trim()}
+          <p class="section-note">{i18n.t('settings-proxy-no-url', 'Without a proxy URL, Sanctum makes no network requests.')}</p>
+        {/if}
       {/if}
     </section>
 
@@ -1018,27 +1104,12 @@
   .import-actions {
     display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px;
   }
-  .primary-btn {
-    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
-    background: var(--accent-bg); backdrop-filter: blur(8px);
-    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.2s;
-  }
-  .primary-btn:hover:not(:disabled) { background: var(--accent-border); box-shadow: 0 0 16px var(--accent-glow); }  .primary-btn:disabled, .secondary-btn:disabled {
+  .secondary-btn:disabled {
     opacity: 0.4; cursor: not-allowed;
-  }
-  /* Light mode: dark text on a soft tonal button (white text would vanish). */
-  :global(.light-mode) .primary-btn {
-    background: rgba(139, 92, 246, 0.18);
-    border-color: rgba(139, 92, 246, 0.38);
-    color: var(--text-primary);
-  }
-  :global(.light-mode) .primary-btn:hover:not(:disabled) {
-    background: rgba(139, 92, 246, 0.3);
-    color: var(--text-primary);
   }
   .import-errors { margin-top: 8px; }
   .error-heading { color: var(--danger); font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }
+  summary.error-heading { cursor: pointer; }
   .error-line { color: var(--text-secondary); font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
   .wallet-create { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
   .wallet-create-note { margin: 0 0 8px; font-size: 0.82rem; color: var(--text-secondary); }

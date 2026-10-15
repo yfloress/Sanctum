@@ -147,6 +147,30 @@
       </span>
     </button>
     <button
+      class="nav-item theme-btn"
+      onclick={() => app.toggleDarkMode()}
+      id="toggle-theme"
+      title={app.sidebarCollapsed
+        ? (app.darkMode ? i18n.t('nav-light-mode', 'Light mode') : i18n.t('nav-dark-mode', 'Dark mode'))
+        : undefined}
+    >
+      <div class="nav-icon-wrap">
+        {#if app.darkMode}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+          </svg>
+        {:else}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+          </svg>
+        {/if}
+      </div>
+      <span class="nav-label">
+        {app.darkMode ? i18n.t('nav-light-mode', 'Light mode') : i18n.t('nav-dark-mode', 'Dark mode')}
+      </span>
+    </button>
+    <button
       class="nav-item lock-btn"
       onclick={handleLock}
       id="lock-vault"
@@ -289,10 +313,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     letter-spacing: 0.3em;
-    background: linear-gradient(135deg, #e8eaed 0%, #a855f7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
     white-space: nowrap;
     opacity: 1;
     max-width: 160px;
@@ -515,9 +536,10 @@
      Dark mode is the default above; these overrides only apply
      when the .light-mode class is present on <html>. */
   :global(.light-mode) .sidebar {
-    background: linear-gradient(180deg, #faf8ff 0%, #f1ecfe 55%, #ece4fd 100%);
-    border-right: 1px solid rgba(139, 92, 246, 0.12);
-    box-shadow: inset -1px 0 0 rgba(139, 92, 246, 0.05), 4px 0 24px rgba(100, 60, 180, 0.06);
+    background: var(--sidebar-bg);
+    backdrop-filter: var(--glass-blur-heavy);
+    border-right: 1px solid var(--sidebar-border);
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.7);
   }
 
   /* The white noise overlay reads as grain on dark; hide it on light. */
@@ -525,50 +547,45 @@
     opacity: 0;
   }
 
-  :global(.light-mode) .logo-text {
-    background: linear-gradient(135deg, #1e1b2e 0%, #7c3aed 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-  }
-
   :global(.light-mode) .edge-toggle {
     background: #ffffff;
-    border-color: rgba(139, 92, 246, 0.3);
-    box-shadow: 0 2px 8px rgba(100, 60, 180, 0.15);
+    border-color: var(--glass-border-hover);
+    box-shadow: 0 2px 8px rgba(31, 26, 46, 0.10);
   }
 
   :global(.light-mode) .edge-toggle:hover {
-    background: #f3eefe;
-    border-color: rgba(139, 92, 246, 0.55);
+    background: #faf9fc;
+    border-color: var(--accent-border);
   }
 
   :global(.light-mode) .nav-group-label {
-    color: rgba(108, 92, 150, 0.7);
+    color: var(--text-tertiary);
   }
 
   :global(.light-mode) .nav-item:hover {
-    background: rgba(139, 92, 246, 0.08);
+    background: rgba(33, 31, 38, 0.05);
   }
 
   :global(.light-mode) .nav-item:hover .nav-icon-wrap {
-    color: #7c3aed;
+    color: var(--accent);
   }
 
   :global(.light-mode) .nav-item.active {
-    background: linear-gradient(90deg, rgba(139, 92, 246, 0.16) 0%, rgba(139, 92, 246, 0.05) 100%);
+    background: var(--nav-active-bg);
+    box-shadow: 0 0 0 1px var(--nav-active-border) inset, 0 4px 12px -6px rgba(70, 50, 130, 0.25);
   }
 
   :global(.light-mode) .nav-item.active .nav-icon-wrap {
-    color: #7c3aed;
+    color: var(--accent);
   }
 
   :global(.light-mode) .nav-item.active .nav-label {
-    color: #2a2545;
+    color: var(--text-primary);
   }
 
   :global(.light-mode) .eye-btn.active,
   :global(.light-mode) .eye-btn.active .nav-icon-wrap {
-    color: #7c3aed;
+    color: var(--accent);
   }
 
   /* ── Mobile: sidebar becomes a bottom navigation bar ─────
@@ -596,7 +613,8 @@
     }
 
     :global(.light-mode) .sidebar {
-      background: rgba(250, 248, 255, 0.92);
+      background: rgba(242, 239, 243, 0.94);
+      border-top-color: var(--sidebar-border);
     }
 
     /* Desktop-only chrome and text labels disappear on the bar */

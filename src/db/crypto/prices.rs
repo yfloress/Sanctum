@@ -20,6 +20,7 @@
 //! Exchange rates, crypto prices, and portfolio snapshots.
 
 use crate::db::{Database, DbError};
+use crate::models::CryptoAsset;
 use chrono::Utc;
 use rusqlite::params;
 
@@ -58,23 +59,25 @@ impl Database {
 
     // ==================== Crypto Price Cache ====================
 
-    /// Saves a crypto price to cache
-    pub fn save_crypto_price(
-        &self,
-        coin_id: &str,
-        symbol: &str,
-        name: &str,
-        price_usd: f64,
-        price_change_24h: f64,
-    ) -> Result<(), DbError> {
+    /// Saves several prices in one transaction (a sync brings ~250).
+    pub fn save_crypto_prices(&self, prices: &[CryptoAsset]) -> Result<(), DbError> {
         let now = Utc::now().to_rfc3339();
-        self.write(|conn| {
-            conn.execute(
+        self.with_transaction(|conn| {
+            let mut stmt = conn.prepare(
                 "INSERT OR REPLACE INTO crypto_price_cache
                  (coin_id, symbol, name, price_usd, price_change_24h, updated_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![coin_id, symbol, name, price_usd, price_change_24h, now],
             )?;
+            for p in prices {
+                stmt.execute(params![
+                    p.id,
+                    p.symbol,
+                    p.name,
+                    p.current_price,
+                    p.price_change_percentage_24h,
+                    now
+                ])?;
+            }
             Ok(())
         })
     }

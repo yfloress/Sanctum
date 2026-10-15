@@ -20,6 +20,22 @@ export interface ImportResultsResponse {
   inserted: number
   skipped: number
   errors: ImportErrorDto[]
+  /** Accounts the file refers to that do not exist yet. */
+  missing_accounts: MissingAccountDto[]
+  /** Categories the file refers to that do not exist yet. */
+  missing_categories: MissingCategoryDto[]
+  /** Crypto wallets the file refers to that do not exist yet. */
+  missing_wallets: string[]
+}
+
+export interface MissingAccountDto {
+  name: string
+  currency: string
+}
+
+export interface MissingCategoryDto {
+  name: string
+  category_type: 'income' | 'expense'
 }
 
 export interface ImportErrorDto {

@@ -26,6 +26,7 @@
   import { mask } from '../lib/currency'
   import NetWorthChart from '../components/charts/NetWorthChart.svelte'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
+  import TxAvatar from '../components/TxAvatar.svelte'
   import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../lib/types'
   import { untrack } from 'svelte'
 
@@ -87,6 +88,7 @@
 
   $effect(() => {
     app.settings?.preferred_currency
+    app.pricesVersion
     load()
   })
 </script>
@@ -123,6 +125,9 @@
     <!-- ── Hero ─────────────────────────────────────────────────── -->
     <section class="hero">
       <p class="hero-label">{i18n.t('dashboard-net-worth', 'Net Worth')} · {balance.currency}</p>
+      {#if balance.fx_missing}
+        <p class="fx-missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>{i18n.t('dashboard-fx-missing', 'No exchange rate yet: totals that mix currencies are approximate. Sync prices in Crypto.')}</p>
+      {/if}
       <div class="hero-value-row">
         <h1 class="net-worth" class:negative={balance.total_negative}>{mask(balance.total)}</h1>
         {#if pctChange !== null}
@@ -248,7 +253,7 @@
             <div class="tx-list">
               {#each recent as tx}
                 <div class="tx-row">
-                  <span class="tx-type-dot" class:expense={tx.is_expense}></span>
+                  <TxAvatar isExpense={tx.is_expense} isTransfer={tx.is_transfer} />
                   <div class="tx-main">
                     <span class="tx-desc">{tx.description || tx.category}</span>
                     <div class="tx-meta">
@@ -256,7 +261,7 @@
                       <span class="tx-date">{tx.date}</span>
                     </div>
                   </div>
-                  <span class="tx-amount" class:expense={tx.is_expense}>{mask(tx.amount)}</span>
+                  <span class="tx-amount" class:expense={tx.is_expense && !tx.is_transfer} class:transfer={tx.is_transfer}>{mask(tx.amount)}</span>
                 </div>
               {/each}
             </div>
@@ -342,12 +347,22 @@
     padding: 20px 0 32px;
   }
   .hero-label {
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0;
+    margin: 0 0 10px;
+    font-weight: 500;
+  }
+
+  .fx-missing {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
     margin: 0 0 10px;
   }
+  .fx-missing svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--warning); }
   .hero-value-row {
     display: flex;
     align-items: center;
@@ -365,28 +380,7 @@
   }
   .net-worth.negative { color: var(--danger); }
 
-  .trend-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 4px 10px 4px 7px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    margin-top: 6px;
-  }
-  .trend-badge svg { width: 14px; height: 14px; flex-shrink: 0; }
-  .trend-badge.positive {
-    background: rgba(74, 222, 128, 0.12);
-    color: var(--success);
-    border: 1px solid rgba(74, 222, 128, 0.2);
-  }
-  .trend-badge.negative {
-    background: rgba(248, 113, 113, 0.12);
-    color: var(--danger);
-    border: 1px solid rgba(248, 113, 113, 0.2);
-  }
+  .hero-value-row .trend-badge { margin-top: 6px; }
   .trend-period {
     font-size: 0.68rem;
     font-weight: 400;
@@ -428,10 +422,10 @@
     margin: 10px 0;
   }
   .balance-cell-label {
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0;
+    font-weight: 500;
   }
   .balance-cell-value {
     font-size: 1.2rem;
@@ -459,19 +453,28 @@
     flex-direction: column;
     gap: 4px;
     box-shadow: var(--card-shadow);
-    border-left-width: 3px;
     overflow: hidden;
   }
-  .stat-card.income  { border-left-color: var(--success); }
-  .stat-card.expenses { border-left-color: var(--danger); }
-  .stat-card.net     { border-left-color: var(--accent); }
-  .stat-card.net.negative { border-left-color: var(--danger); }
+  /* Legend dot: ties each card to its colour in the cash-flow chart below. */
+  .stat-label::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 7px;
+    vertical-align: 1px;
+    background: var(--text-tertiary);
+  }
+  .stat-card.income .stat-label::before   { background: var(--success-vivid); }
+  .stat-card.expenses .stat-label::before { background: var(--danger-vivid); }
+  .stat-card.net .stat-label::before      { background: var(--accent); }
 
   .stat-label {
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0;
+    font-weight: 500;
   }
   .stat-value {
     font-size: 1.15rem;
@@ -514,11 +517,11 @@
     margin-bottom: 4px;
   }
   .chart-card-header h4 {
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     margin: 0;
+    font-weight: 500;
   }
   .chart-subtitle {
     font-size: 0.7rem;
@@ -601,11 +604,11 @@
     opacity: 0.5;
   }
   .panel-title {
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     margin: 0 0 16px;
+    font-weight: 500;
   }
   .panel-title-period {
     font-size: 0.65rem;
@@ -639,23 +642,18 @@
   }
 
   /* ── Recent transactions ──────────────────────────────────── */
-  .tx-list { display: flex; flex-direction: column; }
+  .tx-list { display: flex; flex-direction: column; gap: 6px; }
   .tx-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--glass-border);
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
+    transition: background 0.15s ease;
   }
-  .tx-row:last-child { border-bottom: none; }
-  .tx-type-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--success);
-    flex-shrink: 0;
-  }
-  .tx-type-dot.expense { background: var(--danger); }
+  .tx-row:hover { background: var(--row-bg-hover); }
   .tx-main {
     flex: 1;
     min-width: 0;
@@ -690,6 +688,7 @@
     text-align: right;
   }
   .tx-amount.expense { color: var(--danger); }
+  .tx-amount.transfer { color: var(--text-primary); }
 
   /* ── Mobile ───────────────────────────────────────────────── */
   @media (max-width: 640px) {

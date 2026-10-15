@@ -15,11 +15,12 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { formatDate, localIsoDate } from '../../lib/dates'
   import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
   import { dialog } from '../../lib/actions/dialog'
-  import { mask } from '../../lib/currency'
+  import { formatMoney, mask } from '../../lib/currency'
   import * as financeApi from '../../lib/api/finance'
   import type {
     AccountDto, CategoriesResponse, CreditDto, CreditInstallmentDto, CreditKind
@@ -71,10 +72,16 @@
   let chargeDate = $state(today())
   let chargeNote = $state('')
 
+  // Payment being recorded, and the date it goes into the ledger with.
+  let paying = $state<{ credit: CreditDto; row: CreditInstallmentDto } | null>(null)
+  let payDate = $state('')
+  let pendingCatchUp = $state<CreditDto | null>(null)
+  let pendingChargeDelete = $state<string | null>(null)
+
   let categoryOptions = $derived(categories?.expense ?? [])
 
   function today(): string {
-    return new Date().toISOString().slice(0, 10)
+    return localIsoDate()
   }
 
   /** Reads a typed figure, accepting both a comma and a dot decimal. */
@@ -85,8 +92,25 @@
     return Number.isFinite(value) ? value : null
   }
 
+  /** Currency of the account the new credit is paid from. */
+  let formCurrency = $derived(
+    accounts.find(a => a.id === accountId)?.currency ?? app.settings?.preferred_currency ?? 'USD'
+  )
+
   function format(value: number): string {
-    return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+    return formatMoney(value, formCurrency)
+  }
+
+  /** A figure typed into an optional field, or nothing when it is empty or zero. */
+  function optional(raw: string): string | undefined {
+    return (parseNumber(raw) ?? 0) > 0 ? raw : undefined
+  }
+
+  /** Days from today to `iso`: negative once it has passed. */
+  function daysUntil(iso: string): number {
+    const due = new Date(`${iso}T00:00:00`).getTime()
+    const now = new Date(`${today()}T00:00:00`).getTime()
+    return Math.round((due - now) / 86_400_000)
   }
 
   let count = $derived.by(() => {
@@ -129,7 +153,8 @@
   $effect(() => {
     const suggestion = suggestedInstallment
     if (kind === 'loan' && !installmentTouched && suggestion !== null) {
-      installmentAmount = suggestion.toFixed(2)
+      // Pesos have no cents.
+      installmentAmount = formCurrency === 'CLP' ? Math.round(suggestion).toString() : suggestion.toFixed(2)
     }
   })
 
@@ -190,12 +215,12 @@
         name,
         category,
         kind,
-        down_payment: downPayment || undefined,
-        down_payment_date: downPayment ? downPaymentDate : undefined,
+        down_payment: optional(downPayment),
+        down_payment_date: optional(downPayment) ? downPaymentDate : undefined,
         installment_amount: installmentAmount,
         installment_count: count,
         first_due_date: firstDueDate,
-        cash_price: kind === 'installments' ? cashPrice || undefined : undefined,
+        cash_price: kind === 'installments' ? optional(cashPrice) : undefined,
         principal: kind === 'loan' ? principal || undefined : undefined,
         rate: kind === 'loan' ? rate || undefined : undefined,
         rate_period: kind === 'loan' ? ratePeriod : undefined,
@@ -210,16 +235,48 @@
     }
   }
 
-  /** Pays the earliest row still owed, whatever kind it is. */
-  async function payNext(credit: CreditDto) {
+  /** Opens the payment dialog for the earliest row still owed. */
+  function payNext(credit: CreditDto) {
     const next = credit.installments.find(row => !row.is_paid)
-    if (next) await pay(credit, next.id)
+    if (next) startPay(credit, next)
   }
 
-  async function pay(credit: CreditDto, installmentId: string) {
+  function startPay(credit: CreditDto, row: CreditInstallmentDto) {
+    paying = { credit, row }
+    payDate = today()
+  }
+
+  async function confirmPay() {
+    if (!paying) return
+    const { credit, row } = paying
+    paying = null
+    await pay(credit, row.id, payDate)
+  }
+
+  /** Records every overdue row as paid on its own due date: catching up on a
+   *  credit that was already running before it was entered here. */
+  async function catchUp(credit: CreditDto) {
+    const overdue = credit.installments.filter(row => row.is_overdue && !row.is_paid)
     busyId = credit.id
     try {
-      await financeApi.payInstallment(installmentId)
+      for (const row of overdue) {
+        await financeApi.payInstallment(row.id, row.due_date)
+      }
+      await load()
+      await onchange()
+      app.showToast(i18n.tArgs('finances-credit-caught-up', { count: overdue.length }, `${overdue.length} installments recorded`))
+    } catch (e) {
+      await load()
+      app.showToast(errorMessage(e), true)
+    } finally {
+      busyId = ''
+    }
+  }
+
+  async function pay(credit: CreditDto, installmentId: string, date?: string) {
+    busyId = credit.id
+    try {
+      await financeApi.payInstallment(installmentId, date)
       await load()
       await onchange()
       app.showToast(i18n.t('finances-credit-paid', 'Installment paid'))
@@ -378,25 +435,36 @@
         </button>
       </div>
 
-      <input type="text" placeholder={i18n.t('finances-credit-name', 'What did you buy?')} bind:value={name} />
-      <select bind:value={accountId} aria-label={i18n.t('finances-account', 'Account')}>
-        {#each accounts as acc}
-          <option value={acc.id}>{acc.name}</option>
-        {/each}
-      </select>
-      <select bind:value={category} aria-label={i18n.t('finances-category', 'Category')}>
-        <option value="">{i18n.t('finances-select', 'Select...')}</option>
-        {#each categoryOptions as cat}
-          <option value={cat.name}>{cat.label}</option>
-        {/each}
-      </select>
+      <label>
+        <span>{i18n.t('finances-credit-name-label', 'Name')}</span>
+        <input type="text" placeholder={i18n.t('finances-credit-name-placeholder', 'e.g. Laptop, car loan')} bind:value={name} />
+      </label>
+      <div class="credit-pair">
+        <label>
+          <span>{i18n.t('finances-credit-paid-from', 'Paid from')}</span>
+          <select bind:value={accountId}>
+            {#each accounts as acc}
+              <option value={acc.id}>{acc.name} · {acc.currency}</option>
+            {/each}
+          </select>
+        </label>
+        <label>
+          <span>{i18n.t('finances-category', 'Category')}</span>
+          <select bind:value={category}>
+            <option value="">{i18n.t('finances-select', 'Select...')}</option>
+            {#each categoryOptions as cat}
+              <option value={cat.name}>{cat.label}</option>
+            {/each}
+          </select>
+        </label>
+      </div>
 
       <div class="credit-pair">
         <label>
           <span>{i18n.t('finances-credit-down-payment-optional', 'Paid up front (optional)')}</span>
           <input type="text" inputmode="decimal" placeholder="0" bind:value={downPayment} />
         </label>
-        {#if downPayment}
+        {#if (parseNumber(downPayment) ?? 0) > 0}
           <label>
             <span>{i18n.t('finances-credit-down-payment-date', 'Handed over on')}</span>
             <input type="date" bind:value={downPaymentDate} />
@@ -432,7 +500,7 @@
         </label>
         <label>
           <span>{i18n.t('finances-credit-count', 'How many')}</span>
-          <input type="number" min="1" max="120" bind:value={installmentCount} />
+          <input type="number" min="1" max="480" bind:value={installmentCount} />
         </label>
       </div>
 
@@ -515,7 +583,7 @@
             {statusLabel(credit)}
           </span>
           {#if credit.next_due_date}
-            <span class="credit-next">{i18n.t('finances-credit-next', 'Next')}: {credit.next_due_date}</span>
+            <span class="credit-next">{i18n.t('finances-credit-next', 'Next')}: {formatDate(credit.next_due_date)}</span>
           {/if}
           {#if credit.monthly_rate}
             <span class="credit-next">{credit.monthly_rate}% {i18n.t('finances-credit-rate-monthly-short', 'monthly')}</span>
@@ -539,9 +607,11 @@
               {i18n.t('finances-credit-breakdown', 'Breakdown')}
             </button>
           {/if}
-          <button class="glass-btn" onclick={() => startCharge(credit)}>
-            {i18n.t('finances-credit-add-charge', 'Add charge')}
-          </button>
+          {#if credit.overdue_count > 0}
+            <button class="glass-btn" onclick={() => (pendingCatchUp = credit)} disabled={busyId === credit.id}>
+              {i18n.tArgs('finances-credit-catch-up', { count: credit.overdue_count }, `Catch up (${credit.overdue_count})`)}
+            </button>
+          {/if}
           {#if credit.status !== 'done'}
             <button class="primary-btn" onclick={() => payNext(credit)} disabled={busyId === credit.id}>
               {i18n.t('finances-credit-pay-next', 'Pay next')}
@@ -553,9 +623,10 @@
           <div class="credit-schedule">
             {#each credit.installments as row (row.id)}
               <div class="credit-inst" class:paid={row.is_paid} class:overdue={row.is_overdue}
-                class:charge={row.kind === 'charge'}>
+                class:charge={row.kind === 'charge'}
+                class:next={row.id === credit.installments.find(r => !r.is_paid)?.id}>
                 <span class="credit-inst-num">{rowLabel(row, credit)}</span>
-                <span class="credit-inst-date">{row.paid_date ?? row.due_date}</span>
+                <span class="credit-inst-date">{formatDate(row.paid_date ?? row.due_date)}</span>
                 <span class="credit-inst-amount">{mask(row.amount)}</span>
                 <span class="credit-inst-state">
                   {#if row.is_paid}
@@ -574,17 +645,20 @@
                   <button class="credit-inst-btn" onclick={() => startEdit(row)}>
                     {i18n.t('finances-credit-edit', 'Edit')}
                   </button>
-                  <button class="credit-inst-btn" onclick={() => pay(credit, row.id)} disabled={busyId === credit.id}>
+                  <button class="credit-inst-btn" onclick={() => startPay(credit, row)} disabled={busyId === credit.id}>
                     {i18n.t('finances-credit-pay-short', 'Pay')}
                   </button>
                   {#if row.kind === 'charge'}
-                    <button class="credit-inst-btn danger" onclick={() => removeCharge(row.id)}>
+                    <button class="credit-inst-btn danger" onclick={() => (pendingChargeDelete = row.id)}>
                       {i18n.t('action-delete', 'Delete')}
                     </button>
                   {/if}
                 {/if}
               </div>
             {/each}
+            <button class="credit-add-charge" onclick={() => startCharge(credit)}>
+              + {i18n.t('finances-credit-add-charge', 'Add charge')}
+            </button>
           </div>
         {/if}
 
@@ -646,6 +720,72 @@
     </div>
   </div>
 {/if}
+
+{#if paying}
+  {@const due = daysUntil(paying.row.due_date)}
+  <div class="modal-backdrop" role="presentation" onclick={() => (paying = null)}></div>
+  <div class="modal-wrapper">
+    <div class="modal" use:dialog={{ onclose: () => (paying = null) }}>
+      <h3>{i18n.t('finances-credit-pay-title', 'Record a payment')}</h3>
+      <div class="pay-summary">
+        <span class="pay-what">{paying.credit.name} · {rowLabel(paying.row, paying.credit)}</span>
+        <span class="pay-amount">{mask(paying.row.amount)}</span>
+        <span class="pay-due" class:overdue={due < 0}>
+          {#if due < 0}
+            {i18n.tArgs('finances-credit-was-due', { date: formatDate(paying.row.due_date) }, `Was due on ${formatDate(paying.row.due_date)}`)}
+          {:else if due === 0}
+            {i18n.t('finances-credit-due-today', 'Due today')}
+          {:else}
+            {i18n.tArgs('finances-credit-paying-ahead', { date: formatDate(paying.row.due_date) }, `Due on ${formatDate(paying.row.due_date)}: paying ahead`)}
+          {/if}
+        </span>
+      </div>
+      <label class="pay-date">
+        <span>{i18n.t('finances-credit-pay-date', 'Paid on')}</span>
+        <input type="date" bind:value={payDate} max={today()} />
+      </label>
+      <div class="pay-chips">
+        <button class="pay-chip" class:active={payDate === today()} onclick={() => (payDate = today())}>
+          {i18n.t('finances-credit-pay-today', 'Today')}
+        </button>
+        {#if due < 0}
+          <button class="pay-chip" class:active={payDate === paying.row.due_date} onclick={() => paying && (payDate = paying.row.due_date)}>
+            {i18n.tArgs('finances-credit-pay-on-due', { date: formatDate(paying.row.due_date) }, `On its due date (${formatDate(paying.row.due_date)})`)}
+          </button>
+        {/if}
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => (paying = null)}>{i18n.t('finances-cancel', 'Cancel')}</button>
+        <button class="primary-btn" onclick={confirmPay} disabled={!payDate}>
+          {i18n.t('finances-credit-pay-confirm', 'Record payment')}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<ConfirmDialog
+  show={pendingCatchUp !== null}
+  message={pendingCatchUp
+    ? i18n.tArgs('finances-credit-catch-up-confirm', { count: pendingCatchUp.overdue_count }, `Record the ${pendingCatchUp.overdue_count} overdue installments as paid on their due dates?`)
+    : ''}
+  onconfirm={async () => {
+    if (pendingCatchUp) await catchUp(pendingCatchUp)
+    pendingCatchUp = null
+  }}
+  onclose={() => (pendingCatchUp = null)}
+/>
+
+<ConfirmDialog
+  show={pendingChargeDelete !== null}
+  message={i18n.t('finances-credit-charge-delete-confirm', 'Delete this charge?')}
+  danger
+  onconfirm={async () => {
+    if (pendingChargeDelete) await removeCharge(pendingChargeDelete)
+    pendingChargeDelete = null
+  }}
+  onclose={() => (pendingChargeDelete = null)}
+/>
 
 {#if charging}
   <div class="modal-backdrop" role="presentation" onclick={() => (charging = null)}></div>
@@ -759,13 +899,15 @@
 
   .credit-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
-  .credit-schedule { margin-top: 12px; border-top: 1px solid var(--glass-border); }
+  .credit-schedule { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
   .credit-inst {
-    display: flex; align-items: center; gap: 10px; padding: 7px 0;
-    border-bottom: 1px solid var(--glass-border); font-size: 0.78rem;
+    display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+    border-radius: var(--radius-sm); background: var(--row-bg); border: 1px solid var(--row-border);
+    font-size: 0.84rem;
   }
-  .credit-inst:last-child { border-bottom: none; }
-  .credit-inst.paid { opacity: 0.6; }
+  .credit-inst.paid { opacity: 0.55; }
+  /* The one to pay next, so it can be found without reading every row. */
+  .credit-inst.next { background: var(--accent-bg); border-color: var(--accent-border); }
   .credit-inst.charge { background: color-mix(in srgb, var(--danger) 7%, transparent); }
   .credit-inst-num {
     min-width: 64px; flex-shrink: 0;
@@ -783,6 +925,37 @@
   .credit-inst-btn.danger { color: var(--danger); }
   .credit-inst-btn:hover { opacity: 0.75; }
   .credit-inst-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .credit-add-charge {
+    align-self: flex-start; margin-top: 4px; padding: 4px 2px;
+    background: none; border: none; cursor: pointer;
+    font: inherit; font-size: 0.8rem; color: var(--text-secondary);
+  }
+  .credit-add-charge:hover { color: var(--accent); }
+
+  /* Payment dialog */
+  .pay-summary {
+    display: flex; flex-direction: column; gap: 4px; margin: 12px 0 16px;
+    padding: 12px 14px; border-radius: var(--radius-sm);
+    background: var(--row-bg); border: 1px solid var(--row-border);
+  }
+  .pay-what { font-size: 0.82rem; color: var(--text-secondary); }
+  .pay-amount { font-size: 1.35rem; font-weight: 600; color: var(--text-primary); }
+  .pay-due { font-size: 0.8rem; color: var(--text-tertiary); }
+  .pay-due.overdue { color: var(--danger); }
+  .pay-date { display: flex; flex-direction: column; gap: 4px; position: relative; z-index: 10; }
+  .pay-date span { font-size: 0.78rem; color: var(--text-secondary); }
+  .pay-date input {
+    padding: 9px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--select-bg); color: var(--text-primary); font-family: inherit; font-size: 0.9rem;
+  }
+  .pay-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; position: relative; z-index: 10; }
+  .pay-chip {
+    padding: 5px 12px; border-radius: 20px; cursor: pointer;
+    border: 1px solid var(--glass-border); background: var(--glass);
+    font: inherit; font-size: 0.8rem; color: var(--text-secondary);
+  }
+  .pay-chip.active { border-color: var(--accent-border); background: var(--accent-bg); color: var(--text-primary); }
 
   .credit-table-wrap { margin-top: 12px; overflow-x: auto; }
   .credit-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }

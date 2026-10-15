@@ -23,6 +23,7 @@ export interface BalanceOverview {
   crypto_total: string
   crypto_negative: boolean
   currency: string
+  fx_missing: boolean
 }
 
 export interface RecentTransaction {

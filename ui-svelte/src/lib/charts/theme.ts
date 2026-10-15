@@ -24,28 +24,28 @@ import { app } from '../stores/app.svelte'
 /** Light-mode chart "chrome" palette (axes, grid, tooltip, series accents). */
 export const chartLight = {
   tooltipBg: '#ffffff',
-  tooltipBorder: 'rgba(139, 92, 246, 0.22)',
-  tooltipText: '#1e1b2e',
+  tooltipBorder: '#e7e4ea',
+  tooltipText: '#211f26',
   /** Muted inline text inside tooltips (e.g. a date label). */
-  muted: '#8882a0',
+  muted: '#65636d',
   /** Axis baseline hairline. */
-  axisLine: 'rgba(30, 27, 46, 0.14)',
+  axisLine: '#dbd8e0',
   /** Grid split lines. */
-  splitLine: 'rgba(30, 27, 46, 0.07)',
+  splitLine: '#f2eff3',
   /** Bright axis labels. */
-  label: '#4c4665',
+  label: '#65636d',
   /** Dimmed axis / legend labels. */
-  labelDim: '#6f6890',
+  labelDim: '#65636d',
   /** Gap border between pie / donut slices (matches the light card surface). */
   sliceBorder: '#ffffff',
   /** Donut centre emphasis label. */
-  centerLabel: '#1e1b2e',
+  centerLabel: '#211f26',
   /** Series accent (purple). */
-  accent: '#8b5cf6',
+  accent: '#6e56cf',
   /** Positive / income / streak series (green). */
-  positive: '#16a34a',
+  positive: '#29a383',
   /** Negative / expense series (red). */
-  negative: '#dc2626',
+  negative: '#e5484d',
 } as const
 
 /**

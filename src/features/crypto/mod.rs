@@ -22,6 +22,7 @@
 //! ## Module Structure
 //! - `api` - CoinGecko API client
 //! - `catalog` - Coin catalog management (custom coins, favorites, hidden)
+//! - `history` - Portfolio snapshots rebuilt from transactions
 //! - `models` - Domain models
 //! - `repository` - Database operations
 //! - `service` - Core service (wallets, prices, portfolio)
@@ -31,6 +32,7 @@
 pub mod api;
 pub mod catalog;
 pub mod commands;
+mod history;
 pub mod service;
 mod service_tax;
 pub mod tax;
@@ -43,13 +45,13 @@ pub use commands::{
 
 // Re-export API functions
 pub use api::{
-    default_coin_catalog, default_price_allowlist, default_ticker_ids, fetch_crypto_prices,
+    default_coin_catalog, default_ticker_ids, fetch_crypto_prices, fetch_price_universe,
     fetch_usd_fx_rate, validate_coin_id,
 };
 
 // Re-export service
 pub use service::{
-    CryptoError, CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS,
+    CryptoError, CryptoService, PriceSync, SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS,
     SETTING_CRYPTO_FAVORITE_COINS, SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID,
     SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED,
     SETTING_CRYPTO_PROXY_URL, SETTING_CRYPTO_TAX_IPC_DATA, SETTING_CRYPTO_TAX_IPC_UPDATED,

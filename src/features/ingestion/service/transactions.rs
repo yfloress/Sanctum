@@ -26,9 +26,9 @@ use crate::features::ingestion::types::{
     ImportSummary, ImportTransaction, RowError, TransactionDedupKey,
 };
 use crate::features::ingestion::validation::{validate_amount, validate_import_transaction};
-use crate::models::Transaction;
+use crate::models::{Transaction, TransactionCategory};
 use crate::services::i18n::{t, t_args};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 impl IngestionService {
@@ -111,6 +111,15 @@ impl IngestionService {
             let account = match account_lookup.get(&account_key) {
                 Some(a) => a,
                 None => {
+                    // Note everything this row lacks, so one round of creating
+                    // accounts and categories is enough.
+                    summary.note_missing_account(&import_tx.account, &import_tx.currency);
+                    if let Some(dest) = import_tx.transfer_to_account.as_deref()
+                        && !account_lookup.contains_key(&dest.trim().to_lowercase())
+                    {
+                        summary.note_missing_account(dest, &import_tx.currency);
+                    }
+                    note_missing_category(&mut summary, &import_tx, &category_lookup);
                     summary.record_error(RowError::new(
                         line_num,
                         Some("account"),
@@ -153,6 +162,7 @@ impl IngestionService {
                     category_type.to_string(),
                 );
                 if !category_lookup.contains_key(&category_key) {
+                    summary.note_missing_category(&import_tx.category, category_type);
                     summary.record_error(RowError::new(
                         line_num,
                         Some("category"),
@@ -186,6 +196,7 @@ impl IngestionService {
                 let dest_account = match account_lookup.get(&dest_key) {
                     Some(a) => a,
                     None => {
+                        summary.note_missing_account(dest_name, &account.currency);
                         summary.record_error(RowError::new(
                             line_num,
                             Some("transfer_to_account"),
@@ -203,6 +214,22 @@ impl IngestionService {
                         line_num,
                         Some("transfer_to_account"),
                         t("import-error-same-account-transfer"),
+                    ));
+                    continue;
+                }
+
+                // One row holds one amount, so both sides must share a currency.
+                if dest_account.currency.to_uppercase() != account.currency.to_uppercase() {
+                    summary.record_error(RowError::new(
+                        line_num,
+                        Some("transfer_to_account"),
+                        t_args(
+                            "import-error-transfer-currency-mismatch",
+                            &[
+                                ("from", account.currency.as_str()),
+                                ("to", dest_account.currency.as_str()),
+                            ],
+                        ),
                     ));
                     continue;
                 }
@@ -332,5 +359,25 @@ impl IngestionService {
         }
 
         Ok(summary)
+    }
+}
+
+/// Notes the row's category when the vault lacks it. Transfers have none.
+fn note_missing_category(
+    summary: &mut ImportSummary,
+    tx: &ImportTransaction,
+    categories: &HashMap<(String, String), TransactionCategory>,
+) {
+    let tx_type = tx.transaction_type.trim().to_lowercase();
+    if tx_type == "transfer" || tx.category.trim().is_empty() {
+        return;
+    }
+    let category_type = if tx_type == "income" {
+        "income"
+    } else {
+        "expense"
+    };
+    if !categories.contains_key(&(tx.category.trim().to_lowercase(), category_type.to_string())) {
+        summary.note_missing_category(&tx.category, category_type);
     }
 }

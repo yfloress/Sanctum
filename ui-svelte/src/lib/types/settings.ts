@@ -27,6 +27,8 @@ export interface AppSettings {
   login_wallpaper_path: string | null
   /** RFC 3339 timestamp of the last vault export, null if never exported. */
   last_backup_at: string | null
+  /** RFC 3339 timestamp of the last price sync, null if never synced. */
+  prices_updated_at: string | null
 }
 
 export interface AppInfo {

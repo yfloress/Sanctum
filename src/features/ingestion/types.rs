@@ -165,6 +165,20 @@ pub struct PreviewChange {
     pub details: String,     // e.g. "Account: Bank -> Savings"
 }
 
+/// An account the rows refer to that the vault does not have yet.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MissingAccount {
+    pub name: String,
+    pub currency: String,
+}
+
+/// A category the rows refer to that the vault does not have yet.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MissingCategory {
+    pub name: String,
+    pub category_type: String,
+}
+
 /// Summary of the import process
 #[derive(Debug, Default)]
 pub struct ImportSummary {
@@ -177,6 +191,11 @@ pub struct ImportSummary {
     pub error_details: Vec<RowError>,
     pub skipped_reasons: Vec<String>,
     pub preview_changes: Vec<PreviewChange>,
+    /// Accounts and categories to create before the rows can import, so the
+    /// UI can offer to create them instead of listing one error per row.
+    pub missing_accounts: Vec<MissingAccount>,
+    pub missing_categories: Vec<MissingCategory>,
+    pub missing_wallets: Vec<String>,
 }
 
 impl ImportSummary {
@@ -196,6 +215,53 @@ impl ImportSummary {
         self.error_details.extend(other.error_details);
         self.skipped_reasons.extend(other.skipped_reasons);
         self.preview_changes.extend(other.preview_changes);
+        for a in other.missing_accounts {
+            self.note_missing_account(&a.name, &a.currency);
+        }
+        for c in other.missing_categories {
+            self.note_missing_category(&c.name, &c.category_type);
+        }
+        for w in other.missing_wallets {
+            self.note_missing_wallet(&w);
+        }
+    }
+
+    /// Records a missing wallet once per name, ignoring case.
+    pub fn note_missing_wallet(&mut self, name: &str) {
+        let key = name.trim().to_lowercase();
+        if !self.missing_wallets.iter().any(|w| w.to_lowercase() == key) {
+            self.missing_wallets.push(name.trim().to_string());
+        }
+    }
+
+    /// Records a missing account once per name, ignoring case.
+    pub fn note_missing_account(&mut self, name: &str, currency: &str) {
+        let key = name.trim().to_lowercase();
+        if !self
+            .missing_accounts
+            .iter()
+            .any(|a| a.name.to_lowercase() == key)
+        {
+            self.missing_accounts.push(MissingAccount {
+                name: name.trim().to_string(),
+                currency: currency.trim().to_uppercase(),
+            });
+        }
+    }
+
+    /// Records a missing category once per name and type, ignoring case.
+    pub fn note_missing_category(&mut self, name: &str, category_type: &str) {
+        let key = name.trim().to_lowercase();
+        if !self
+            .missing_categories
+            .iter()
+            .any(|c| c.name.to_lowercase() == key && c.category_type == category_type)
+        {
+            self.missing_categories.push(MissingCategory {
+                name: name.trim().to_string(),
+                category_type: category_type.to_string(),
+            });
+        }
     }
 
     pub fn record_error(&mut self, error: RowError) {

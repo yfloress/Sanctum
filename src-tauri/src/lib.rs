@@ -214,6 +214,7 @@ pub fn run() {
             commands::crypto::save_exchange_rate,
             commands::crypto::load_exchange_rate,
             commands::crypto::sync_crypto_data,
+            commands::crypto::allow_price_lookup,
             // Cross-domain
             commands::search::global_search,
         ])

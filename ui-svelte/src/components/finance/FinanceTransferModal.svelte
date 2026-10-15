@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { localIsoDate } from '../../lib/dates'
   import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
@@ -36,7 +37,7 @@
   let toId = $state('')
   let amount = $state('')
   let description = $state('')
-  let date = $state(new Date().toISOString().slice(0, 10))
+  let date = $state(localIsoDate())
 
   $effect(() => {
     show
@@ -53,7 +54,7 @@
       toId = accounts[1]?.id ?? ''
       amount = ''
       description = ''
-      date = new Date().toISOString().slice(0, 10)
+      date = localIsoDate()
     }
   })
 

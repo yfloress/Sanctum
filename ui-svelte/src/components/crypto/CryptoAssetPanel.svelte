@@ -94,5 +94,5 @@
 
   .asset-stats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .asset-stats div { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); }
-  .stat-lbl { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
+  .stat-lbl { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 500; }
 </style>

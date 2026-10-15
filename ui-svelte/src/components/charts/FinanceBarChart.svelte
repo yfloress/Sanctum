@@ -18,14 +18,24 @@
   import BaseChart from './BaseChart.svelte'
   import { chartLight as L, pick } from '../../lib/charts/theme'
   import { i18n } from '../../lib/stores/i18n.svelte'
+  import { formatCurrency } from '../../lib/currency'
 
   interface Props {
     months: string[]
     income: number[]
     expenses: number[]
+    /** Currency of the values; the preferred one when omitted. */
+    currency?: string
   }
 
-  let { months, income, expenses }: Props = $props()
+  let { months, income, expenses, currency }: Props = $props()
+
+  const compact: Intl.NumberFormatOptions = {
+    notation: 'compact',
+    compactDisplay: 'short',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }
 
   let incomeLabel = $derived(i18n.t('finances-income', 'Income'))
   let expensesLabel = $derived(i18n.t('finances-expenses', 'Expenses'))
@@ -38,6 +48,7 @@
       backgroundColor: pick('#1a1a1a', L.tooltipBg),
       borderColor: pick('#333', L.tooltipBorder),
       textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
+      valueFormatter: (v: number) => formatCurrency(v, currency),
     },
     legend: {
       data: [incomeLabel, expensesLabel],
@@ -59,7 +70,11 @@
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: pick('#1e1e1e', L.splitLine) } },
-      axisLabel: { color: pick('#555', L.labelDim), fontSize: 10 },
+      axisLabel: {
+        color: pick('#555', L.labelDim),
+        fontSize: 10,
+        formatter: (v: number) => (v === 0 ? '0' : formatCurrency(v, currency, compact)),
+      },
     },
     series: [
       {

@@ -26,7 +26,7 @@ use crate::models::{
     CreditInstallment, RecurrenceFrequency, RecurringTransaction, Transaction, TransactionCategory,
 };
 use crate::security_log::{SecurityEvent, log_security_event};
-use chrono::Utc;
+use chrono::{Local, Utc};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
@@ -410,7 +410,9 @@ impl FinanceService {
     ) -> Result<String, FinanceError> {
         let date = match date {
             Some(value) if !value.trim().is_empty() => value,
-            _ => Utc::now().format("%Y-%m-%d").to_string(),
+            // Local, not UTC: west of Greenwich the UTC date is already tomorrow
+            // in the evening.
+            _ => Local::now().format("%Y-%m-%d").to_string(),
         };
         self.with_db(|db| CreditOps::pay_installment(db, &installment_id, &date))
     }
@@ -485,7 +487,7 @@ impl FinanceService {
     ) -> Result<Vec<BudgetStatus>, FinanceError> {
         let month = match month {
             Some(value) if !value.trim().is_empty() => value.trim().to_string(),
-            _ => Utc::now().format("%Y-%m").to_string(),
+            _ => Local::now().format("%Y-%m").to_string(),
         };
         self.with_db(|db| db.get_budget_status(&month).map_err(FinanceError::Database))
     }
@@ -579,7 +581,7 @@ impl FinanceService {
     /// Called on unlock, so a vault left closed for a month catches up in one
     /// pass instead of needing the app open on the exact day.
     pub fn apply_due_recurring(&self) -> Result<usize, FinanceError> {
-        let today = Utc::now().format("%Y-%m-%d").to_string();
+        let today = Local::now().format("%Y-%m-%d").to_string();
         self.with_db(|db| {
             db.apply_due_recurring(&today)
                 .map_err(FinanceError::Database)

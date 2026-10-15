@@ -26,6 +26,22 @@ fn validate_proxy_url_accepts_supported_schemes() {
 }
 
 #[test]
+fn validate_proxy_url_resolves_dns_through_socks_proxies() {
+    assert_eq!(
+        validate_proxy_url("socks5://127.0.0.1:9050").unwrap(),
+        "socks5h://127.0.0.1:9050"
+    );
+    assert_eq!(
+        validate_proxy_url("SOCKS5://127.0.0.1:9050").unwrap(),
+        "socks5h://127.0.0.1:9050"
+    );
+    assert_eq!(
+        validate_proxy_url("socks5h://127.0.0.1:9050").unwrap(),
+        "socks5h://127.0.0.1:9050"
+    );
+}
+
+#[test]
 fn validate_proxy_url_rejects_invalid_values() {
     assert!(validate_proxy_url("").is_err());
     assert!(validate_proxy_url("ftp://127.0.0.1:21").is_err());
@@ -136,7 +152,8 @@ fn parse_kraken_ohlc_close_price_reads_close_field() {
                 "last": "1739232000"
             }
         }"#;
-    let price = parse_kraken_ohlc_close_price(body).expect("Kraken close price must parse");
+    let price = parse_kraken_ohlc_close_price(body, &day(2025, 2, 10))
+        .expect("Kraken close price must parse");
     assert_eq!(price, 43500.5);
 }
 
@@ -146,7 +163,8 @@ fn parse_kraken_ohlc_close_price_rejects_api_error_payload() {
             "error": ["EGeneral:Permission denied"],
             "result": {}
         }"#;
-    let err = parse_kraken_ohlc_close_price(body).expect_err("kraken error payload must fail");
+    let err = parse_kraken_ohlc_close_price(body, &day(2025, 2, 10))
+        .expect_err("kraken error payload must fail");
     assert_eq!(err, "Kraken returned historical data errors");
 }
 
@@ -159,8 +177,31 @@ fn parse_kraken_ohlc_close_price_rejects_missing_candles() {
                 "last": "1739232000"
             }
         }"#;
-    let err = parse_kraken_ohlc_close_price(body).expect_err("missing candles must fail");
+    let err = parse_kraken_ohlc_close_price(body, &day(2025, 2, 10))
+        .expect_err("missing candles must fail");
     assert_eq!(err, "Kraken historical close price not available");
+}
+
+#[test]
+fn parse_kraken_ohlc_close_price_rejects_a_candle_from_another_day() {
+    // A date older than Kraken's 720-candle window comes back as the oldest
+    // candle it still has, which must not be taken as that date's price.
+    let body = br#"{
+            "error": [],
+            "result": {
+                "XXBTZUSD": [
+                    [1739145600,"43000.1","44000.1","42000.1","43500.5","0","0","1"]
+                ],
+                "last": "1739232000"
+            }
+        }"#;
+    let err = parse_kraken_ohlc_close_price(body, &day(2022, 6, 1))
+        .expect_err("a candle from another day must not be used");
+    assert_eq!(err, "Kraken historical close price not available");
+}
+
+fn day(y: i32, m: u32, d: u32) -> NaiveDate {
+    NaiveDate::from_ymd_opt(y, m, d).expect("valid test date")
 }
 
 #[test]

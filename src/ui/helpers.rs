@@ -20,7 +20,7 @@
 //! Formatting, parsing, and display utilities for the UI layer.
 
 use crate::models::CryptoTransaction;
-use crate::ui::currency::format_money;
+use crate::ui::currency::{format_money, format_thousands_with_sep};
 use std::collections::HashMap;
 
 pub const GENERIC_BANK_ICON_PATH: &str = "../assets/icons/landmark.svg";
@@ -84,16 +84,30 @@ pub fn format_clp_rate(rate: f64) -> String {
     format_fx_rate(rate, "CLP")
 }
 
-/// Formats crypto amount removing trailing zeros
+/// Formats a crypto amount for reading: four decimals from 1 up, four
+/// significant digits below 1 (at most eight decimals, a satoshi), thousands
+/// separated, no trailing zeros. Edit forms show the exact stored value.
 pub fn format_crypto_amount(amount: f64) -> String {
-    let mut formatted = format!("{:.8}", amount);
-    while formatted.contains('.') && formatted.ends_with('0') {
-        formatted.pop();
+    let abs = amount.abs();
+    let decimals = if abs >= 1.0 || abs == 0.0 {
+        4
+    } else {
+        ((-abs.log10()).floor() as usize + 4).min(8)
+    };
+    let fixed = format!("{abs:.decimals$}");
+    let fixed = fixed.trim_end_matches('0').trim_end_matches('.');
+    let (int, frac) = fixed.split_once('.').unwrap_or((fixed, ""));
+    let int = format_thousands_with_sep(int.parse().unwrap_or(0), ',');
+    let sign = if amount < 0.0 && fixed != "0" {
+        "-"
+    } else {
+        ""
+    };
+    if frac.is_empty() {
+        format!("{sign}{int}")
+    } else {
+        format!("{sign}{int}.{frac}")
     }
-    if formatted.ends_with('.') {
-        formatted.pop();
-    }
-    formatted
 }
 
 /// Parses amount input string to cents
@@ -451,8 +465,13 @@ mod tests {
     }
 
     #[test]
-    fn test_format_crypto_amount_full_precision() {
-        assert_eq!(format_crypto_amount(1.23456789), "1.23456789");
+    fn test_format_crypto_amount_rounds_for_reading() {
+        assert_eq!(format_crypto_amount(1.23456789), "1.2346");
+        assert_eq!(format_crypto_amount(0.00367647), "0.003676");
+        assert_eq!(format_crypto_amount(0.03627), "0.03627");
+        assert_eq!(format_crypto_amount(0.000000014), "0.00000001");
+        assert_eq!(format_crypto_amount(1_234_567.5), "1,234,567.5");
+        assert_eq!(format_crypto_amount(-0.5), "-0.5");
     }
 
     #[test]

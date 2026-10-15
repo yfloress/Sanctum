@@ -22,7 +22,8 @@
 
 use sanctum::error::AppError;
 use sanctum::features::crypto::{
-    CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+    CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_PROXY_ENABLED,
+    SETTING_CRYPTO_PROXY_URL,
 };
 use sanctum::features::settings::{
     SETTING_DARK_MODE, SETTING_LAST_BACKUP_AT, SETTING_PREFERRED_CURRENCY,
@@ -92,6 +93,11 @@ pub fn load_settings(
         .ok()
         .filter(|v| !v.trim().is_empty());
 
+    let prices_updated_at = settings
+        .get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
+        .ok()
+        .filter(|v| !v.trim().is_empty());
+
     Ok(AppSettings {
         dark_mode,
         auto_fetch,
@@ -103,6 +109,7 @@ pub fn load_settings(
         sidebar_collapsed,
         login_wallpaper_path,
         last_backup_at,
+        prices_updated_at,
     })
 }
 
@@ -122,31 +129,28 @@ pub fn set_auto_fetch(settings: State<'_, SettingsService>, enabled: bool) -> Re
 
 /// Toggle crypto API proxy usage.
 ///
-/// When enabling, validates the current proxy URL first.
+/// Saved even without a usable URL: an enabled proxy with no valid URL blocks
+/// every request, whereas refusing the toggle here left requests going direct
+/// while the switch looked on.
 #[tauri::command]
-pub fn set_proxy_enabled(
-    crypto: State<'_, CryptoService>,
-    enabled: bool,
-    current_url: String,
-) -> Result<(), AppError> {
-    if enabled {
-        crypto.validate_proxy_url(&current_url)?;
-    }
+pub fn set_proxy_enabled(crypto: State<'_, CryptoService>, enabled: bool) -> Result<(), AppError> {
     Ok(crypto.set_proxy_enabled(enabled)?)
 }
 
 /// Set the crypto API proxy URL.
 ///
-/// Non-empty URLs are validated before persisting so an enabled proxy never
-/// silently stores an unreachable / malformed value. Empty strings clear the
-/// setting and are allowed through without validation.
+/// Non-empty URLs are validated and normalized before persisting, and the
+/// stored form is returned so the field shows it. Empty strings clear it.
 #[tauri::command]
-pub fn set_proxy_url(crypto: State<'_, CryptoService>, url: String) -> Result<(), AppError> {
-    let trimmed = url.trim().to_string();
-    if !trimmed.is_empty() {
-        crypto.validate_proxy_url(&trimmed)?;
-    }
-    Ok(crypto.set_proxy_url(trimmed)?)
+pub fn set_proxy_url(crypto: State<'_, CryptoService>, url: String) -> Result<String, AppError> {
+    let trimmed = url.trim();
+    let stored = if trimmed.is_empty() {
+        String::new()
+    } else {
+        crypto.validate_proxy_url(trimmed)?
+    };
+    crypto.set_proxy_url(stored.clone())?;
+    Ok(stored)
 }
 
 /// Set the vault auto-lock timeout in seconds (60–3600).

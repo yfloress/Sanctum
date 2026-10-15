@@ -15,6 +15,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
+export interface CoinRef {
+  id: string
+  symbol: string
+  name: string
+}
+
+export interface SyncResult {
+  /** RFC 3339 time of this sync. */
+  updated_at: string
+  /** Coins outside the top 250 that need consent before being requested by name. */
+  needs_consent: CoinRef[]
+}
+
 export interface PortfolioResponse {
   total_value: string
   unrealized_pnl: string
@@ -319,6 +332,8 @@ export interface IpcSummaryDto {
 export interface PortfolioTrendData {
   dates: string[]
   values: number[]
+  /** Currency of `values`: the preferred one when a rate is cached, else USD. */
+  currency: string
 }
 
 export interface CryptoAssetPriceDto {
