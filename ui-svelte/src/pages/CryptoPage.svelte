@@ -650,6 +650,19 @@
     pickedWalletIconGeneric = found ? found.generic : true
   })
 
+  // Largest share first; the backend returns holdings in no fixed order.
+  let sortedAssets = $derived(
+    [...(portfolio?.assets ?? [])].sort((a, b) => b.allocation_pct - a.allocation_pct)
+  )
+
+  // How the portfolio moved over the chart's period, for the summary above it.
+  let trendChange = $derived.by(() => {
+    if (!trend || trend.values.length < 2) return null
+    const first = trend.values[0]
+    const last = trend.values[trend.values.length - 1]
+    return { amount: last - first, pct: first > 0 ? ((last - first) / first) * 100 : null }
+  })
+
   let assetInView = $derived(
     portfolio?.assets.find(a => a.coin_id === assetCoinId)
   )
@@ -1055,35 +1068,52 @@
     {#if portfolio.assets.length === 0}
       <p class="empty">{i18n.t('crypto-no-assets-empty', 'No assets yet. Create a wallet and add transactions to get started.')}</p>
     {:else}
-      <div class="holdings-grid">
-        {#each portfolio.assets as asset}
-          <button class="asset-card" onclick={() => openAssetDetail(asset.coin_id)}>
-            <div class="asset-header">
-              <img src={getCryptoIconPath(asset.symbol)} alt={asset.symbol} class="asset-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-              <div class="asset-top">
-                <span class="asset-symbol">{asset.symbol}</span>
-                <span class="asset-name">{asset.name}</span>
+      <div class="chart-section">
+        <div class="chart-card-header">
+          <h3>{i18n.t('crypto-holdings', 'Holdings')}</h3>
+        </div>
+        <div class="holdings-list">
+          {#each sortedAssets as asset}
+            <button class="holding-row" onclick={() => openAssetDetail(asset.coin_id)}>
+              <img src={getCryptoIconPath(asset.symbol)} alt="" class="tx-crypto-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              <div class="holding-id">
+                <span class="holding-symbol">{asset.symbol}</span>
+                <span class="holding-name">{asset.name}</span>
               </div>
-            </div>
-            <div class="asset-price">
-              <span>{asset.price}</span>
-              <span class="change" class:negative={asset.price_change_24h_negative}>
-                {asset.price_change_24h}
-              </span>
-            </div>
-            <div class="asset-bottom">
-              <span class="asset-amount">{mask(asset.amount)}</span>
-              <span class="asset-value">{mask(asset.value)}</span>
-            </div>
-          </button>
-        {/each}
+              <div class="holding-amount">
+                <span class="holding-qty">{mask(asset.amount)} <span class="holding-unit">{asset.symbol}</span></span>
+                <div class="holding-share">
+                  <span class="holding-bar"><span style="width: {Math.min(100, asset.allocation_pct)}%"></span></span>
+                  <span class="holding-pct">{asset.allocation_pct >= 10 ? asset.allocation_pct.toFixed(0) : asset.allocation_pct.toFixed(1)}%</span>
+                </div>
+              </div>
+              <div class="holding-value">
+                <span class="holding-fiat">{mask(asset.value)}</span>
+                <span class="change" class:negative={asset.price_change_24h_negative}>{asset.price_change_24h} · 24h</span>
+              </div>
+            </button>
+          {/each}
+        </div>
       </div>
 
       <!-- Portfolio Trend Chart -->
       {#if trend && trend.dates.length > 0}
         <div class="chart-section">
           <div class="chart-card-header">
-            <h3>{i18n.t('crypto-portfolio-trend', 'Portfolio Trend')}</h3>
+            <div class="trend-title">
+              <h3>{i18n.t('crypto-portfolio-trend', 'Portfolio Trend')}</h3>
+              {#if trendChange}
+                <span class="trend-badge" class:positive={trendChange.amount >= 0} class:negative={trendChange.amount < 0}>
+                  {#if trendChange.amount >= 0}
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 12V4M4 8l4-4 4 4"/></svg>
+                  {:else}
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 4v8M4 8l4 4 4-4"/></svg>
+                  {/if}
+                  {mask(formatCurrency(Math.abs(trendChange.amount), trend.currency))}{#if trendChange.pct !== null} · {Math.abs(trendChange.pct).toFixed(1)}%{/if}
+                </span>
+                <span class="trend-period">{i18n.tArgs('crypto-trend-period', { days: trendDays }, `in ${trendDays} days`)}</span>
+              {/if}
+            </div>
             <div class="range-picker">
               {#each [30, 90, 180, 365] as d}
                 <button class:active={trendDays === d} onclick={() => changeTrendDays(d)}>{d}d</button>
@@ -1107,6 +1137,9 @@
     <div class="chart-section">
       <div class="chart-card-header">
         <h3>{i18n.t('crypto-recent-transactions', 'Recent Transactions')}</h3>
+        {#if recentTxs.length > 0}
+          <button class="view-all" onclick={() => activeTab = 'activity'}>{i18n.t('crypto-view-all', 'View all')}</button>
+        {/if}
       </div>
       {#if recentTxs.length === 0}
         <p class="empty">{i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
@@ -1905,40 +1938,67 @@
   }
 
   /* Stats bar */
-  .stats-bar { display: flex; gap: 24px; margin-bottom: 24px; }
-  .stats-bar .stat { display: flex; flex-direction: column; }
+  .stats-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .stats-bar .stat {
+    flex: 1 1 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--card-shadow);
+  }
   .stat-lbl { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 500; }
   .stat-val { font-size: 1rem; font-weight: 600; color: var(--text-secondary); }
   .stat-val.positive { color: var(--success); }
   .stat-val.negative { color: var(--danger); }
 
   /* Holdings */
-  .holdings-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px; margin-bottom: 24px;
+  /* Holdings: what you own leads, the market price lives in the ticker. */
+  .holdings-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .holding-row {
+    display: grid;
+    grid-template-columns: 28px minmax(80px, 1fr) minmax(150px, 1.6fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
   }
-  .asset-card {
-    position: relative;
-    display: flex; flex-direction: column; gap: 6px; padding: 14px;
-    background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    cursor: pointer; text-align: left; color: inherit;
-    transition: all 0.2s; box-shadow: var(--card-shadow);
-    overflow: hidden;
-  }
-  .asset-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
-  .asset-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .asset-icon { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; }
-  .asset-top { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-  .asset-symbol { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; }
-  .asset-name { font-size: 0.7rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .asset-price { display: flex; align-items: baseline; gap: 6px; }
-  .asset-price span:first-child { font-size: 0.85rem; color: var(--text-secondary); }
-  .change { font-size: 0.75rem; color: var(--success); }
+  .holding-row:hover { background: var(--row-bg-hover); }
+  .holding-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .holding-symbol { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
+  .holding-name { font-size: 0.75rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .holding-amount { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .holding-qty { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+  .holding-unit { font-size: 0.75rem; font-weight: 500; color: var(--text-tertiary); }
+  .holding-share { display: flex; align-items: center; gap: 8px; }
+  .holding-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--glass-active); overflow: hidden; }
+  .holding-bar > span { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+  .holding-pct { font-size: 0.72rem; color: var(--text-tertiary); min-width: 34px; text-align: right; }
+  .holding-value { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .holding-fiat { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+  .change { font-size: 0.75rem; color: var(--success); white-space: nowrap; }
   .change.negative { color: var(--danger); }
-  .asset-bottom { display: flex; justify-content: space-between; }
-  .asset-amount { font-size: 0.8rem; color: var(--text-secondary); }
-  .asset-value { font-size: 0.85rem; font-weight: 500; color: var(--text-primary); }
+  .trend-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .trend-period { font-size: 0.75rem; color: var(--text-tertiary); }
+  .view-all {
+    background: none; border: none; padding: 2px 4px; cursor: pointer;
+    font-size: 0.78rem; font-weight: 500; color: var(--accent);
+  }
+  .view-all:hover { text-decoration: underline; }
+  @media (max-width: 560px) {
+    .holding-row { grid-template-columns: 28px 1fr auto; }
+    .holding-id { display: none; }
+  }
 
   /* Charts */
   .chart-section {

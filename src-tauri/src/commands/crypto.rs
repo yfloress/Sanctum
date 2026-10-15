@@ -180,8 +180,11 @@ pub fn fetch_portfolio(
 #[tauri::command]
 pub fn fetch_portfolio_trend(
     crypto: State<'_, CryptoService>,
+    settings: State<'_, SettingsService>,
+    finance: State<'_, FinanceService>,
     days: i64,
 ) -> Result<PortfolioTrendData, AppError> {
+    let (currency, rate) = display_currency(None, &settings, &finance);
     let today = Local::now().date_naive();
     let start = today - chrono::Duration::days(days.max(1) - 1);
     let start_str = start.format("%Y-%m-%d").to_string();
@@ -233,14 +236,19 @@ pub fn fetch_portfolio_trend(
         return Ok(PortfolioTrendData {
             dates: vec![],
             values: vec![],
+            currency,
         });
     }
 
     let mut sorted: Vec<(String, f64)> = anchors.into_iter().collect();
     sorted.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let (dates, values): (Vec<_>, Vec<_>) = sorted.into_iter().unzip();
-    Ok(PortfolioTrendData { dates, values })
+    let (dates, values): (Vec<_>, Vec<_>) = sorted.into_iter().map(|(d, v)| (d, v * rate)).unzip();
+    Ok(PortfolioTrendData {
+        dates,
+        values,
+        currency,
+    })
 }
 
 // ==================== Wallets ====================
@@ -1003,24 +1011,33 @@ fn fmt_pref_override(
     settings: &SettingsService,
     finance: &FinanceService,
 ) -> String {
-    let pref = override_curr.map(|s| s.to_string()).unwrap_or_else(|| {
+    let (currency, rate) = display_currency(override_curr, settings, finance);
+    let n = if v == 0.0 { 0.0 } else { v };
+    sanctum::ui::currency::format_preferred(n * rate, &currency)
+}
+
+/// The currency to show USD values in, with its rate from USD: the requested or
+/// preferred one when its rate is cached, otherwise USD itself, so a value is
+/// never labelled with a currency it was not converted to.
+fn display_currency(
+    requested: Option<&str>,
+    settings: &SettingsService,
+    finance: &FinanceService,
+) -> (String, f64) {
+    let pref = requested.map(|s| s.to_string()).unwrap_or_else(|| {
         settings
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
             .unwrap_or_else(|_| "USD".to_string())
             .trim()
             .to_uppercase()
     });
-
-    let n = if v == 0.0 { 0.0 } else { v };
-
-    // Without a cached rate the value stays in USD, labelled as USD.
     if pref != "USD"
         && let Ok(Some((rate, _))) = finance.load_exchange_rate_allow_stale(format!("{pref}_USD"))
         && rate > 0.0
     {
-        return sanctum::ui::currency::format_preferred(n * rate, &pref);
+        return (pref, rate);
     }
-    sanctum::ui::currency::format_preferred(n, "USD")
+    ("USD".to_string(), 1.0)
 }
 
 fn build_fx_rate_badge(settings: &SettingsService, finance: &FinanceService) -> Option<FxRateDto> {

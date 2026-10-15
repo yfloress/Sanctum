@@ -332,6 +332,8 @@ export interface IpcSummaryDto {
 export interface PortfolioTrendData {
   dates: string[]
   values: number[]
+  /** Currency of `values`: the preferred one when a rate is cached, else USD. */
+  currency: string
 }
 
 export interface CryptoAssetPriceDto {
