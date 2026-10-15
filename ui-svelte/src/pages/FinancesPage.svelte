@@ -43,7 +43,7 @@
   import FinanceBudgetPanel from '../components/finance/FinanceBudgetPanel.svelte'
   import ConfirmDialog from '../components/ConfirmDialog.svelte'
 
-  type Tab = 'overview' | 'activity' | 'accounts' | 'credits' | 'settings'
+  type Tab = 'overview' | 'activity' | 'accounts' | 'planning' | 'settings'
 
   let activeTab = $state<Tab>('overview')
   let loading = $state(true)
@@ -737,7 +737,7 @@
       'fin-tab-overview': () => { activeTab = 'overview' },
       'fin-tab-activity': () => { activeTab = 'activity' },
       'fin-tab-accounts': () => { activeTab = 'accounts' },
-      'fin-tab-credits': () => { activeTab = 'credits' },
+      'fin-tab-planning': () => { activeTab = 'planning' },
       'fin-tab-settings': () => { activeTab = 'settings' },
       'fin-new-account': openAddAccount,
       'fin-transfer': openTransfer,
@@ -820,7 +820,7 @@
     <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>{i18n.t('finances-tab-overview', 'Overview')}</button>
     <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('finances-tab-activity', 'Activity')}</button>
     <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>{i18n.t('finances-tab-accounts', 'Accounts')}</button>
-    <button class:active={activeTab === 'credits'} onclick={() => activeTab = 'credits'}>{i18n.t('finances-tab-credits', 'Credits')}</button>
+    <button class:active={activeTab === 'planning'} onclick={() => activeTab = 'planning'}>{i18n.t('finances-tab-planning', 'Planning')}</button>
     <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>{i18n.t('finances-tab-settings', 'Settings')}</button>
   </div>
 
@@ -881,6 +881,15 @@
       {/if}
 
       <!-- Charts row -->
+      <div class="overview-budgets">
+        <FinanceBudgetPanel
+          categories={categories}
+          revision={ledgerRevision}
+          summary
+          onmanage={() => (activeTab = 'planning')}
+        />
+      </div>
+
       <div class="charts-row">
         <div class="chart-card">
           <h4>{i18n.t('finances-monthly-overview', 'Monthly Overview')}</h4>
@@ -1220,15 +1229,23 @@
       {/if}
     </section>
 
-  <!-- CREDITS TAB -->
-  {:else if activeTab === 'credits'}
-    <section class="tab-content">
+  <!-- PLANNING TAB: money already committed ahead -->
+  {:else if activeTab === 'planning'}
+    <div class="settings-stack">
+      <FinanceBudgetPanel categories={categories} revision={ledgerRevision} />
+
+      <FinanceRecurringPanel
+        accounts={accountsData?.accounts ?? []}
+        categories={categories}
+        onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+      />
+
       <FinanceCreditPanel
         accounts={accountsData?.accounts ?? []}
         categories={categories}
         onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
       />
-    </section>
+    </div>
 
   <!-- SETTINGS TAB -->
   {:else if activeTab === 'settings'}
@@ -1237,14 +1254,6 @@
       categories={categories}
       onadd={handleAddCategory}
       ondelete={handleDeleteCat}
-    />
-
-    <FinanceBudgetPanel categories={categories} revision={ledgerRevision} />
-
-    <FinanceRecurringPanel
-      accounts={accountsData?.accounts ?? []}
-      categories={categories}
-      onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
     />
 
     {#if archivedAccounts.length > 0}
@@ -1360,10 +1369,12 @@
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
   /* Give every tab's content breathing room from the tab bar */
-  .tab-content { padding-top: 20px; }
+  /* The tab bar owns the gap below it, so every tab body starts at the same
+     distance whatever wraps it. Tab bodies add no space of their own on top. */
+  .tab-bar { margin-bottom: 20px; }
 
-  /* One rhythm for every block in the settings tab, whatever each panel does
-     internally: the cards themselves carry no outer margin. */
+  /* One rhythm between the cards of a stacked tab (Planning, Settings), whatever
+     each panel does internally: the cards themselves carry no outer margin. */
   .settings-stack {
     display: flex;
     flex-direction: column;
@@ -1711,6 +1722,8 @@
     color: var(--text-secondary);
     margin: -4px 0 12px;
   }
+
+  .overview-budgets { margin-bottom: 14px; }
 
   .overview-stats {
     display: grid;

@@ -74,6 +74,10 @@ finances-tab-overview = Overview
 finances-tab-activity = Activity
 finances-tab-accounts = Accounts
 finances-tab-credits = Credits
+finances-tab-planning = Planning
+finances-budget-this-month = Budget this month
+finances-budget-manage = Manage
+finances-no-budgets-hint = No budgets yet. Set a monthly limit per category in Planning.
 finances-tab-settings = Settings
 
 # Overview stats

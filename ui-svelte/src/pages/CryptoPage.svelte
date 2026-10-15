@@ -1911,6 +1911,7 @@
   .total { font-size: 2.2rem; font-weight: 700; color: var(--text-primary); margin: 0; }
   .label { color: var(--text-tertiary); font-size: 0.8rem; margin-top: 4px; }
 
+  /* Owns the gap below the tabs; tab bodies add no space of their own on top. */
   .tab-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
   .skeleton-page { padding: 8px 0; }
@@ -2508,7 +2509,6 @@
   .tx-amount.transfer { color: #60a5fa; }
 
   /* Transactions tab */
-  .tab-content { padding-top: 20px; }
   .activity-toolbar {
     display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap;
   }

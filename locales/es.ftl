@@ -74,6 +74,10 @@ finances-tab-overview = Resumen
 finances-tab-activity = Actividad
 finances-tab-accounts = Cuentas
 finances-tab-credits = Créditos
+finances-tab-planning = Planificación
+finances-budget-this-month = Presupuesto de este mes
+finances-budget-manage = Gestionar
+finances-no-budgets-hint = Aún no hay presupuestos. Define un tope mensual por categoría en Planificación.
 finances-tab-settings = Configuración
 
 # Overview stats
