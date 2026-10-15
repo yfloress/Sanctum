@@ -15,7 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { localIsoDate } from '../lib/dates'
+  import { formatDate, localIsoDate } from '../lib/dates'
   import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
@@ -29,6 +29,8 @@
   import { setPageActions, consumePendingCommand, consumePendingTarget } from '../lib/shortcuts'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import TxAvatar from '../components/TxAvatar.svelte'
+  import FilterMenu from '../components/FilterMenu.svelte'
+  import FilterChips, { type FilterChip } from '../components/FilterChips.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
   import FinanceTransactionModal from '../components/finance/FinanceTransactionModal.svelte'
@@ -43,7 +45,7 @@
   import FinanceBudgetPanel from '../components/finance/FinanceBudgetPanel.svelte'
   import ConfirmDialog from '../components/ConfirmDialog.svelte'
 
-  type Tab = 'overview' | 'activity' | 'accounts' | 'credits' | 'settings'
+  type Tab = 'overview' | 'activity' | 'accounts' | 'planning' | 'settings'
 
   let activeTab = $state<Tab>('overview')
   let loading = $state(true)
@@ -397,6 +399,61 @@
     loadTransactions()
   }
 
+  /** Filters set in the panel, not counting the search box. */
+  let activeFilterCount = $derived(
+    [filterAccountId, filterCategory, filterTag].filter(Boolean).length +
+    (filterDateRange !== 'all' ? 1 : 0) +
+    (sortBy !== 'date-desc' ? 1 : 0)
+  )
+
+  /** Clears what the panel sets and keeps the search. */
+  function clearPanelFilters() {
+    filterAccountId = ''
+    filterCategory = ''
+    filterTag = ''
+    filterDateRange = 'all'
+    filterDateFrom = ''
+    filterDateTo = ''
+    sortBy = 'date-desc'
+    loadTransactions()
+  }
+
+  const DATE_RANGE_LABELS: Record<string, [string, string]> = {
+    'this-month': ['finances-date-this-month', 'This month'],
+    'last-30': ['finances-date-last-30', 'Last 30 days'],
+    'last-90': ['finances-date-last-90', 'Last 90 days'],
+    'this-year': ['finances-date-this-year', 'This year'],
+  }
+  const SORT_LABELS: Record<string, [string, string]> = {
+    'date-asc': ['finances-sort-date-asc', 'Oldest first'],
+    'amount-desc': ['finances-sort-amount-desc', 'Largest amount'],
+    'amount-asc': ['finances-sort-amount-asc', 'Smallest amount'],
+  }
+
+  let filterChips = $derived.by(() => {
+    const chips: FilterChip[] = []
+    const reload = (reset: () => void) => () => { reset(); loadTransactions() }
+    if (filterAccountId) {
+      const name = accountsData?.accounts.find(a => a.id === filterAccountId)?.name ?? filterAccountId
+      chips.push({ label: name, onremove: reload(() => (filterAccountId = '')) })
+    }
+    if (filterCategory) {
+      const label = allCategories.find(c => c.name === filterCategory)?.label ?? filterCategory
+      chips.push({ label, onremove: reload(() => (filterCategory = '')) })
+    }
+    if (filterTag) chips.push({ label: `#${filterTag}`, onremove: reload(() => (filterTag = '')) })
+    if (filterDateRange !== 'all') {
+      const label = filterDateRange === 'custom'
+        ? [filterDateFrom && formatDate(filterDateFrom), filterDateTo && formatDate(filterDateTo)].filter(Boolean).join(' – ') || i18n.t('finances-date-custom', 'Custom range')
+        : i18n.t(...DATE_RANGE_LABELS[filterDateRange])
+      chips.push({ label, onremove: reload(() => { filterDateRange = 'all'; filterDateFrom = ''; filterDateTo = '' }) })
+    }
+    if (sortBy !== 'date-desc') {
+      chips.push({ label: i18n.t(...SORT_LABELS[sortBy]), onremove: reload(() => (sortBy = 'date-desc')) })
+    }
+    return chips
+  })
+
   // ── Reconciliation ────────────────────────────────────────────────────────
 
   let reconciliation = $state<ReconciliationResponse | null>(null)
@@ -737,7 +794,7 @@
       'fin-tab-overview': () => { activeTab = 'overview' },
       'fin-tab-activity': () => { activeTab = 'activity' },
       'fin-tab-accounts': () => { activeTab = 'accounts' },
-      'fin-tab-credits': () => { activeTab = 'credits' },
+      'fin-tab-planning': () => { activeTab = 'planning' },
       'fin-tab-settings': () => { activeTab = 'settings' },
       'fin-new-account': openAddAccount,
       'fin-transfer': openTransfer,
@@ -815,13 +872,29 @@
     <p class="label">{i18n.t('finances-total-balance', 'Total Balance')}</p>
   </section>
 
-  <!-- Tab selector -->
-  <div class="tab-bar">
-    <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>{i18n.t('finances-tab-overview', 'Overview')}</button>
-    <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('finances-tab-activity', 'Activity')}</button>
-    <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>{i18n.t('finances-tab-accounts', 'Accounts')}</button>
-    <button class:active={activeTab === 'credits'} onclick={() => activeTab = 'credits'}>{i18n.t('finances-tab-credits', 'Credits')}</button>
-    <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>{i18n.t('finances-tab-settings', 'Settings')}</button>
+  <!-- Tabs, with the active tab's actions on the same line -->
+  <div class="tab-row">
+    <div class="tab-bar">
+      <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>{i18n.t('finances-tab-overview', 'Overview')}</button>
+      <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('finances-tab-activity', 'Activity')}</button>
+      <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>{i18n.t('finances-tab-accounts', 'Accounts')}</button>
+      <button class:active={activeTab === 'planning'} onclick={() => activeTab = 'planning'}>{i18n.t('finances-tab-planning', 'Planning')}</button>
+      <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>{i18n.t('finances-tab-settings', 'Settings')}</button>
+    </div>
+    <div class="tab-actions">
+      {#if activeTab === 'overview' || activeTab === 'activity'}
+        <button class="primary-btn activity-add-btn" onclick={openAddTransaction}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          {i18n.t('finances-new-entry', 'New Entry')}
+        </button>
+      {:else if activeTab === 'accounts'}
+        <button class="glass-btn" onclick={openTransfer}>{i18n.t('finances-transfer', 'Transfer')}</button>
+        <button class="primary-btn activity-add-btn" onclick={openAddAccount}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          {i18n.t('finances-new-account', 'New Account')}
+        </button>
+      {/if}
+    </div>
   </div>
 
   {#if loading}
@@ -881,6 +954,15 @@
       {/if}
 
       <!-- Charts row -->
+      <div class="overview-budgets">
+        <FinanceBudgetPanel
+          categories={categories}
+          revision={ledgerRevision}
+          summary
+          onmanage={() => (activeTab = 'planning')}
+        />
+      </div>
+
       <div class="charts-row">
         <div class="chart-card">
           <h4>{i18n.t('finances-monthly-overview', 'Monthly Overview')}</h4>
@@ -913,10 +995,7 @@
       <div class="overview-section">
         <div class="section-header">
           <h3>{i18n.t('finances-accounts', 'Accounts')}</h3>
-          <div class="header-actions">
-            <button class="glass-btn" onclick={openTransfer}>{i18n.t('finances-transfer', 'Transfer')}</button>
-            <button class="glass-btn" onclick={openAddAccount}>{i18n.t('finances-new-account', 'New Account')}</button>
-          </div>
+          <button class="glass-btn" onclick={() => activeTab = 'accounts'}>{i18n.t('finances-view-all', 'View All')}</button>
         </div>
         {#if (accountsData?.accounts ?? []).length === 0}
           <p class="empty">{i18n.t('finances-no-accounts', 'No accounts yet.')}</p>
@@ -1005,82 +1084,87 @@
               oninput={onSearchInput}
             />
           </div>
-          <select bind:value={filterAccountId} onchange={() => loadTransactions()}>
-            <option value="">{i18n.t('finances-all-accounts', 'All Accounts')}</option>
-            {#each accountsData?.accounts ?? [] as acc}
-              <option value={acc.id}>{acc.name}</option>
-            {/each}
-          </select>
-          <select bind:value={filterCategory} onchange={() => loadTransactions()}>
-            <option value="">{i18n.t('finances-all-categories', 'All Categories')}</option>
-            {#each allCategories as cat}
-              <option value={cat.name}>{cat.label}</option>
-            {/each}
-          </select>
-          <!-- Hidden while nothing is tagged: an empty dropdown is a dead
-               control that only makes the toolbar wider. -->
-          {#if tagCatalog.length > 0}
-            <select bind:value={filterTag} aria-label={i18n.t('finances-tags', 'Tags')} onchange={() => loadTransactions()}>
-              <option value="">{i18n.t('finances-all-tags', 'All Tags')}</option>
-              {#each tagCatalog as tag}
-                <option value={tag}>#{tag}</option>
-              {/each}
-            </select>
-          {/if}
-          <select
-            bind:value={filterDateRange}
-            aria-label={i18n.t('finances-date-range', 'Date range')}
-            onchange={() => loadTransactions()}
-          >
-            <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
-            <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
-            <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
-            <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
-            <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
-            <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
-          </select>
-          {#if filterDateRange === 'custom'}
-            <input
-              type="date"
-              class="date-input"
-              aria-label={i18n.t('finances-date-from', 'From')}
-              bind:value={filterDateFrom}
-              onchange={() => loadTransactions()}
-            />
-            <input
-              type="date"
-              class="date-input"
-              aria-label={i18n.t('finances-date-to', 'To')}
-              bind:value={filterDateTo}
-              onchange={() => loadTransactions()}
-            />
-          {/if}
-          <select
-            bind:value={sortBy}
-            aria-label={i18n.t('finances-sort', 'Sort by')}
-            onchange={() => loadTransactions()}
-          >
-            <option value="date-desc">{i18n.t('finances-sort-date-desc', 'Newest first')}</option>
-            <option value="date-asc">{i18n.t('finances-sort-date-asc', 'Oldest first')}</option>
-            <option value="amount-desc">{i18n.t('finances-sort-amount-desc', 'Largest amount')}</option>
-            <option value="amount-asc">{i18n.t('finances-sort-amount-asc', 'Smallest amount')}</option>
-          </select>
-          {#if hasActiveFilters}
-            <button class="clear-btn" onclick={clearFilters}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-              {i18n.t('finances-clear', 'Clear')}
-            </button>
-          {/if}
+          <FilterMenu count={activeFilterCount} onclear={clearPanelFilters}>
+            <label class="filter-field">
+              <span>{i18n.t('finances-account', 'Account')}</span>
+              <select bind:value={filterAccountId} onchange={() => loadTransactions()}>
+                <option value="">{i18n.t('finances-all-accounts', 'All Accounts')}</option>
+                {#each accountsData?.accounts ?? [] as acc}
+                  <option value={acc.id}>{acc.name}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>{i18n.t('finances-category', 'Category')}</span>
+              <select bind:value={filterCategory} onchange={() => loadTransactions()}>
+                <option value="">{i18n.t('finances-all-categories', 'All Categories')}</option>
+                {#each allCategories as cat}
+                  <option value={cat.name}>{cat.label}</option>
+                {/each}
+              </select>
+            </label>
+            {#if tagCatalog.length > 0}
+            <label class="filter-field">
+              <span>{i18n.t('finances-tags', 'Tags')}</span>
+              <select bind:value={filterTag} aria-label={i18n.t('finances-tags', 'Tags')} onchange={() => loadTransactions()}>
+                  <option value="">{i18n.t('finances-all-tags', 'All Tags')}</option>
+                  {#each tagCatalog as tag}
+                    <option value={tag}>#{tag}</option>
+                  {/each}
+                </select>
+            </label>
+            {/if}
+            <label class="filter-field">
+              <span>{i18n.t('finances-date-range', 'Date range')}</span>
+              <select
+                bind:value={filterDateRange}
+                aria-label={i18n.t('finances-date-range', 'Date range')}
+                onchange={() => loadTransactions()}
+              >
+                <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
+                <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
+                <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
+                <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
+                <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
+                <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
+              </select>
+            </label>
+            {#if filterDateRange === 'custom'}
+              <div class="filter-dates">
+                <input
+                  type="date"
+                  class="date-input"
+                  aria-label={i18n.t('finances-date-from', 'From')}
+                  bind:value={filterDateFrom}
+                  onchange={() => loadTransactions()}
+                />
+                <input
+                  type="date"
+                  class="date-input"
+                  aria-label={i18n.t('finances-date-to', 'To')}
+                  bind:value={filterDateTo}
+                  onchange={() => loadTransactions()}
+                />
+              </div>
+            {/if}
+            <label class="filter-field">
+              <span>{i18n.t('finances-sort', 'Sort by')}</span>
+              <select
+                bind:value={sortBy}
+                aria-label={i18n.t('finances-sort', 'Sort by')}
+                onchange={() => loadTransactions()}
+              >
+                <option value="date-desc">{i18n.t('finances-sort-date-desc', 'Newest first')}</option>
+                <option value="date-asc">{i18n.t('finances-sort-date-asc', 'Oldest first')}</option>
+                <option value="amount-desc">{i18n.t('finances-sort-amount-desc', 'Largest amount')}</option>
+                <option value="amount-asc">{i18n.t('finances-sort-amount-asc', 'Smallest amount')}</option>
+              </select>
+            </label>
+          </FilterMenu>
         </div>
-        <button class="primary-btn activity-add-btn" onclick={openAddTransaction}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          {i18n.t('finances-new-entry', 'New Entry')}
-        </button>
       </div>
+
+      <FilterChips chips={filterChips} />
 
       {#if selectedIds.length > 0}
         <div class="bulk-bar">
@@ -1126,7 +1210,12 @@
       {/if}
 
       {#if transactions.length === 0}
-        <p class="empty">{hasActiveFilters ? i18n.t('finances-no-matching', 'No matching transactions') : i18n.t('finances-no-transactions-yet', 'No transactions yet')}</p>
+        <div class="empty">
+          <p>{hasActiveFilters ? i18n.t('finances-no-matching', 'No matching transactions') : i18n.t('finances-no-transactions-yet', 'No transactions yet')}</p>
+          {#if hasActiveFilters}
+            <button class="glass-btn" onclick={clearFilters}>{i18n.t('filters-clear', 'Clear filters')}</button>
+          {/if}
+        </div>
       {:else}
         <div class="tx-list">
           {#each transactions as tx, index}
@@ -1191,13 +1280,6 @@
   <!-- ACCOUNTS TAB -->
   {:else if activeTab === 'accounts'}
     <section class="tab-content">
-      <div class="section-header">
-        <h3>{i18n.t('finances-my-accounts', 'My Accounts')}</h3>
-        <div class="header-actions">
-          <button class="glass-btn" onclick={openTransfer}>{i18n.t('finances-transfer', 'Transfer')}</button>
-          <button class="glass-btn" onclick={openAddAccount}>{i18n.t('finances-new-account', 'New Account')}</button>
-        </div>
-      </div>
 
       {#if (accountsData?.accounts ?? []).length === 0}
         <p class="empty">{i18n.t('finances-no-accounts-create', 'No accounts yet. Create your first account.')}</p>
@@ -1220,15 +1302,23 @@
       {/if}
     </section>
 
-  <!-- CREDITS TAB -->
-  {:else if activeTab === 'credits'}
-    <section class="tab-content">
+  <!-- PLANNING TAB: money already committed ahead -->
+  {:else if activeTab === 'planning'}
+    <div class="settings-stack">
+      <FinanceBudgetPanel categories={categories} revision={ledgerRevision} />
+
+      <FinanceRecurringPanel
+        accounts={accountsData?.accounts ?? []}
+        categories={categories}
+        onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+      />
+
       <FinanceCreditPanel
         accounts={accountsData?.accounts ?? []}
         categories={categories}
         onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
       />
-    </section>
+    </div>
 
   <!-- SETTINGS TAB -->
   {:else if activeTab === 'settings'}
@@ -1237,14 +1327,6 @@
       categories={categories}
       onadd={handleAddCategory}
       ondelete={handleDeleteCat}
-    />
-
-    <FinanceBudgetPanel categories={categories} revision={ledgerRevision} />
-
-    <FinanceRecurringPanel
-      accounts={accountsData?.accounts ?? []}
-      categories={categories}
-      onchange={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
     />
 
     {#if archivedAccounts.length > 0}
@@ -1360,10 +1442,17 @@
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
   /* Give every tab's content breathing room from the tab bar */
-  .tab-content { padding-top: 20px; }
+  /* The tab row owns the gap below it, so every tab body starts at the same
+     distance whatever wraps it. Tab bodies add no space of their own on top.
+     The active tab's actions sit at its right, on the line of the tabs. */
+  .tab-row {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 10px; margin-bottom: 20px;
+  }
+  .tab-actions { display: flex; gap: 8px; }
 
-  /* One rhythm for every block in the settings tab, whatever each panel does
-     internally: the cards themselves carry no outer margin. */
+  /* One rhythm between the cards of a stacked tab (Planning, Settings), whatever
+     each panel does internally: the cards themselves carry no outer margin. */
   .settings-stack {
     display: flex;
     flex-direction: column;
@@ -1378,12 +1467,13 @@
 
   .skeleton-page { padding: 8px 0; }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
+  .empty p { margin: 0; }
+  .empty p + button { margin-top: 12px; }
 
   .section-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
   }
-  .section-header h3 { font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
-  .header-actions { display: flex; gap: 8px; }
+  .section-header h3 { font-size: 0.85rem; color: var(--text-secondary); margin: 0; font-weight: 500; }
 
   /* Activity toolbar */
   .activity-toolbar {
@@ -1482,6 +1572,7 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
+  .activity-add-btn svg { width: 14px; height: 14px; }
 
   /* Bulk selection bar */
   .bulk-bar {
@@ -1711,6 +1802,8 @@
     color: var(--text-secondary);
     margin: -4px 0 12px;
   }
+
+  .overview-budgets { margin-bottom: 14px; }
 
   .overview-stats {
     display: grid;

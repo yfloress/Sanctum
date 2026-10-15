@@ -26,9 +26,16 @@
     categories: CategoriesResponse | null
     /** Bumped by the parent when transactions change, to re-read progress. */
     revision?: number
+    /** Progress only, for the overview: no form and no delete. */
+    summary?: boolean
+    /** Where the summary's "Manage" link leads. */
+    onmanage?: () => void
   }
 
-  let { categories, revision = 0 }: Props = $props()
+  let { categories, revision = 0, summary = false, onmanage }: Props = $props()
+
+  /** Spending past this share of the limit is flagged before it is over. */
+  const NEAR_LIMIT = 80
 
   let budgets = $state<BudgetDto[]>([])
   let showForm = $state(false)
@@ -84,12 +91,18 @@
 <div class="settings-card">
   <div class="budget-head">
     <div>
-      <h3 class="settings-card-title">{i18n.t('finances-budgets', 'Monthly Budgets')}</h3>
-      <p class="budget-note">
-        {i18n.t('finances-budgets-desc', 'A spending limit per category. Progress covers the current month and resets on the 1st.')}
-      </p>
+      <h3 class="settings-card-title">
+        {summary ? i18n.t('finances-budget-this-month', 'Budget this month') : i18n.t('finances-budgets', 'Monthly Budgets')}
+      </h3>
+      {#if !summary}
+        <p class="budget-note">
+          {i18n.t('finances-budgets-desc', 'A spending limit per category. Progress covers the current month and resets on the 1st.')}
+        </p>
+      {/if}
     </div>
-    {#if !showForm && available.length > 0}
+    {#if summary && onmanage}
+      <button class="budget-manage" onclick={onmanage}>{i18n.t('finances-budget-manage', 'Manage')}</button>
+    {:else if !summary && !showForm && available.length > 0}
       <button class="glass-btn" onclick={() => { category = available[0]?.name ?? ''; showForm = true }}>
         {i18n.t('finances-budget-new', 'New')}
       </button>
@@ -116,7 +129,11 @@
   {/if}
 
   {#if budgets.length === 0}
-    <p class="empty">{i18n.t('finances-no-budgets', 'No budgets yet.')}</p>
+    <p class="empty">
+      {summary
+        ? i18n.t('finances-no-budgets-hint', 'No budgets yet. Set a monthly limit per category in Planning.')
+        : i18n.t('finances-no-budgets', 'No budgets yet.')}
+    </p>
   {:else}
     <div class="budget-list">
       {#each budgets as budget (budget.category)}
@@ -131,6 +148,7 @@
             <div
               class="budget-fill"
               class:over={budget.over_budget}
+              class:near={!budget.over_budget && budget.percentage >= NEAR_LIMIT}
               style="width: {budget.percentage}%"
             ></div>
           </div>
@@ -140,9 +158,11 @@
                 ? `${i18n.t('finances-budget-over', 'Over by')} ${mask(budget.remaining)}`
                 : `${mask(budget.remaining)} ${i18n.t('finances-budget-left', 'left')}`}
             </span>
-            <button class="budget-remove" onclick={() => remove(budget)}>
-              {i18n.t('action-delete', 'Delete')}
-            </button>
+            {#if !summary}
+              <button class="budget-remove" onclick={() => remove(budget)}>
+                {i18n.t('action-delete', 'Delete')}
+              </button>
+            {/if}
           </div>
         </div>
       {/each}
@@ -184,7 +204,13 @@
     height: 100%; border-radius: 3px; background: var(--accent);
     transition: width 0.3s ease;
   }
+  .budget-fill.near { background: var(--warning); }
   .budget-fill.over { background: var(--danger); }
+  .budget-manage {
+    background: none; border: none; padding: 2px 4px; cursor: pointer;
+    font: inherit; font-size: 0.8rem; font-weight: 500; color: var(--accent);
+  }
+  .budget-manage:hover { text-decoration: underline; }
   .budget-foot { font-size: 0.75rem; color: var(--text-tertiary); }
   .budget-foot .over { color: var(--danger); }
   .budget-remove {

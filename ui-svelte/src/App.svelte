@@ -221,7 +221,12 @@
     --accent-bg: rgba(168, 85, 247, 0.2);
     --accent-border: rgba(168, 85, 247, 0.3);
     --text-on-accent: #ffffff;
-    --primary-btn-text: var(--text-on-accent);
+    /* Solid fill for the primary button: deeper than --accent so white text
+       clears 4.5:1 on it, which #a855f7 does not. */
+    --accent-solid: #7c3aed;
+    --accent-solid-hover: #6d28d9;
+    --btn-bg: rgba(255, 255, 255, 0.05);
+    --btn-bg-hover: rgba(255, 255, 255, 0.09);
     --card-bg:
       radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.10) 0%, transparent 55%),
       linear-gradient(145deg, rgba(18, 16, 24, 0.70) 0%, rgba(14, 12, 21, 0.70) 100%);
@@ -287,7 +292,10 @@
     --accent-bg: rgba(110, 86, 207, 0.10);
     --accent-border: rgba(110, 86, 207, 0.28);
     --text-on-accent: #ffffff;
-    --primary-btn-text: #5a46b0;
+    --accent-solid: #6e56cf;
+    --accent-solid-hover: #6550b9;
+    --btn-bg: rgba(255, 255, 255, 0.78);
+    --btn-bg-hover: #ffffff;
     --card-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.60) 100%);
     --row-bg: rgba(33, 31, 38, 0.035);
     --row-bg-hover: rgba(33, 31, 38, 0.06);
@@ -546,11 +554,17 @@
     isolation: isolate;
   }
 
+  /* Only on touch screens, where it stops the pull-to-refresh bounce. On the
+     desktop it buys nothing, and WebKitGTK has had bugs where it leaves the
+     mouse wheel unable to scroll. */
+  @media (pointer: coarse) {
+    .content { overscroll-behavior-y: contain; }
+  }
+
   .content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior-y: contain;
     height: 100vh;
     display: flex;
     flex-direction: column;

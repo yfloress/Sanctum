@@ -15,7 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { formatSyncTime, localIsoDate } from '../lib/dates'
+  import { formatDate, formatSyncTime, localIsoDate } from '../lib/dates'
   import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
@@ -29,6 +29,8 @@
   import CryptoTransactionModal from '../components/crypto/CryptoTransactionModal.svelte'
   import CryptoEditModal from '../components/crypto/CryptoEditModal.svelte'
   import ConfirmDialog from '../components/ConfirmDialog.svelte'
+  import FilterMenu from '../components/FilterMenu.svelte'
+  import FilterChips, { type FilterChip } from '../components/FilterChips.svelte'
   import CryptoWalletPanel from '../components/crypto/CryptoWalletPanel.svelte'
   import CryptoAssetPanel from '../components/crypto/CryptoAssetPanel.svelte'
   import CryptoTaxPanel from '../components/crypto/CryptoTaxPanel.svelte'
@@ -144,6 +146,54 @@
     if (txSearchDebounce) clearTimeout(txSearchDebounce)
     txSearchDebounce = setTimeout(() => loadTransactionsList(), 200)
   }
+
+  const TX_TYPES: [string, string, string][] = [
+    ['trade', 'crypto-type-trade', 'Trade'],
+    ['income', 'crypto-type-income', 'Income'],
+    ['expense', 'crypto-type-expense', 'Expense'],
+    ['transfer', 'crypto-type-transfer', 'Transfer'],
+  ]
+  const TX_DATE_LABELS: Record<string, [string, string]> = {
+    'this-month': ['finances-date-this-month', 'This month'],
+    'last-30': ['finances-date-last-30', 'Last 30 days'],
+    'last-90': ['finances-date-last-90', 'Last 90 days'],
+    'this-year': ['finances-date-this-year', 'This year'],
+  }
+
+  /** Filters set in the panel, not counting the search box. */
+  let activeTxFilterCount = $derived(
+    [txFilterWallet, txFilterType].filter(Boolean).length + (txFilterDateRange !== 'all' ? 1 : 0)
+  )
+
+  /** Clears what the panel sets and keeps the search. */
+  function clearTxPanelFilters() {
+    txFilterWallet = ''
+    txFilterType = ''
+    txFilterDateRange = 'all'
+    txFilterFrom = ''
+    txFilterTo = ''
+    loadTransactionsList()
+  }
+
+  let txFilterChips = $derived.by(() => {
+    const chips: FilterChip[] = []
+    const reload = (reset: () => void) => () => { reset(); loadTransactionsList() }
+    if (txFilterWallet) {
+      const name = walletsData?.wallets.find(w => w.id === txFilterWallet)?.name ?? txFilterWallet
+      chips.push({ label: name, onremove: reload(() => (txFilterWallet = '')) })
+    }
+    if (txFilterType) {
+      const t = TX_TYPES.find(([value]) => value === txFilterType)
+      chips.push({ label: t ? i18n.t(t[1], t[2]) : txFilterType, onremove: reload(() => (txFilterType = '')) })
+    }
+    if (txFilterDateRange !== 'all') {
+      const label = txFilterDateRange === 'custom'
+        ? [txFilterFrom && formatDate(txFilterFrom), txFilterTo && formatDate(txFilterTo)].filter(Boolean).join(' – ') || i18n.t('finances-date-custom', 'Custom range')
+        : i18n.t(...TX_DATE_LABELS[txFilterDateRange])
+      chips.push({ label, onremove: reload(() => { txFilterDateRange = 'all'; txFilterFrom = ''; txFilterTo = '' }) })
+    }
+    return chips
+  })
 
   function clearTxFilters() {
     txListFilter = ''
@@ -650,6 +700,19 @@
     pickedWalletIconGeneric = found ? found.generic : true
   })
 
+  // Largest share first; the backend returns holdings in no fixed order.
+  let sortedAssets = $derived(
+    [...(portfolio?.assets ?? [])].sort((a, b) => b.allocation_pct - a.allocation_pct)
+  )
+
+  // How the portfolio moved over the chart's period, for the summary above it.
+  let trendChange = $derived.by(() => {
+    if (!trend || trend.values.length < 2) return null
+    const first = trend.values[0]
+    const last = trend.values[trend.values.length - 1]
+    return { amount: last - first, pct: first > 0 ? ((last - first) / first) * 100 : null }
+  })
+
   let assetInView = $derived(
     portfolio?.assets.find(a => a.coin_id === assetCoinId)
   )
@@ -1000,6 +1063,15 @@
       <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('crypto-tab-activity', 'Activity')}</button>
       <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
+    <div class="tab-actions">
+      {#if activeTab === 'wallets'}
+        <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
+      {/if}
+      <button class="primary-btn tab-action-icon" onclick={openAddTransaction}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        {i18n.t('crypto-new-transaction', 'New Transaction')}
+      </button>
+    </div>
   </div>
 
   {#if loading}
@@ -1023,12 +1095,6 @@
 
   <!-- PORTFOLIO TAB -->
   {:else if activeTab === 'portfolio' && portfolio}
-    <div class="section-header">
-      <span></span>
-      <div class="header-actions">
-        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
-      </div>
-    </div>
     <!-- Stats bar -->
     <div class="stats-bar">
       <div class="stat">
@@ -1055,35 +1121,52 @@
     {#if portfolio.assets.length === 0}
       <p class="empty">{i18n.t('crypto-no-assets-empty', 'No assets yet. Create a wallet and add transactions to get started.')}</p>
     {:else}
-      <div class="holdings-grid">
-        {#each portfolio.assets as asset}
-          <button class="asset-card" onclick={() => openAssetDetail(asset.coin_id)}>
-            <div class="asset-header">
-              <img src={getCryptoIconPath(asset.symbol)} alt={asset.symbol} class="asset-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-              <div class="asset-top">
-                <span class="asset-symbol">{asset.symbol}</span>
-                <span class="asset-name">{asset.name}</span>
+      <div class="chart-section">
+        <div class="chart-card-header">
+          <h3>{i18n.t('crypto-holdings', 'Holdings')}</h3>
+        </div>
+        <div class="holdings-list">
+          {#each sortedAssets as asset}
+            <button class="holding-row" onclick={() => openAssetDetail(asset.coin_id)}>
+              <img src={getCryptoIconPath(asset.symbol)} alt="" class="tx-crypto-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              <div class="holding-id">
+                <span class="holding-symbol">{asset.symbol}</span>
+                <span class="holding-name">{asset.name}</span>
               </div>
-            </div>
-            <div class="asset-price">
-              <span>{asset.price}</span>
-              <span class="change" class:negative={asset.price_change_24h_negative}>
-                {asset.price_change_24h}
-              </span>
-            </div>
-            <div class="asset-bottom">
-              <span class="asset-amount">{mask(asset.amount)}</span>
-              <span class="asset-value">{mask(asset.value)}</span>
-            </div>
-          </button>
-        {/each}
+              <div class="holding-amount">
+                <span class="holding-qty">{mask(asset.amount)} <span class="holding-unit">{asset.symbol}</span></span>
+                <div class="holding-share">
+                  <span class="holding-bar"><span style="width: {Math.min(100, asset.allocation_pct)}%"></span></span>
+                  <span class="holding-pct">{asset.allocation_pct >= 10 ? asset.allocation_pct.toFixed(0) : asset.allocation_pct.toFixed(1)}%</span>
+                </div>
+              </div>
+              <div class="holding-value">
+                <span class="holding-fiat">{mask(asset.value)}</span>
+                <span class="change" class:negative={asset.price_change_24h_negative}>{asset.price_change_24h} · 24h</span>
+              </div>
+            </button>
+          {/each}
+        </div>
       </div>
 
       <!-- Portfolio Trend Chart -->
       {#if trend && trend.dates.length > 0}
         <div class="chart-section">
           <div class="chart-card-header">
-            <h3>{i18n.t('crypto-portfolio-trend', 'Portfolio Trend')}</h3>
+            <div class="trend-title">
+              <h3>{i18n.t('crypto-portfolio-trend', 'Portfolio Trend')}</h3>
+              {#if trendChange}
+                <span class="trend-badge" class:positive={trendChange.amount >= 0} class:negative={trendChange.amount < 0}>
+                  {#if trendChange.amount >= 0}
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 12V4M4 8l4-4 4 4"/></svg>
+                  {:else}
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 4v8M4 8l4 4 4-4"/></svg>
+                  {/if}
+                  {mask(formatCurrency(Math.abs(trendChange.amount), trend.currency))}{#if trendChange.pct !== null} · {Math.abs(trendChange.pct).toFixed(1)}%{/if}
+                </span>
+                <span class="trend-period">{i18n.tArgs('crypto-trend-period', { days: trendDays }, `in ${trendDays} days`)}</span>
+              {/if}
+            </div>
             <div class="range-picker">
               {#each [30, 90, 180, 365] as d}
                 <button class:active={trendDays === d} onclick={() => changeTrendDays(d)}>{d}d</button>
@@ -1107,6 +1190,9 @@
     <div class="chart-section">
       <div class="chart-card-header">
         <h3>{i18n.t('crypto-recent-transactions', 'Recent Transactions')}</h3>
+        {#if recentTxs.length > 0}
+          <button class="view-all" onclick={() => activeTab = 'activity'}>{i18n.t('crypto-view-all', 'View all')}</button>
+        {/if}
       </div>
       {#if recentTxs.length === 0}
         <p class="empty">{i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
@@ -1144,14 +1230,6 @@
 
   <!-- WALLETS TAB -->
   {:else if activeTab === 'wallets'}
-    <div class="section-header">
-      <h3>{i18n.t('crypto-wallets-title', 'Wallets')}</h3>
-      <div class="header-actions">
-        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
-        <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
-      </div>
-    </div>
-
     {#if (walletsData?.wallets ?? []).length === 0}
       <p class="empty">{i18n.t('crypto-no-wallets', 'No wallets yet.')}</p>
     {:else}
@@ -1185,56 +1263,55 @@
               oninput={onTxSearchInput}
             />
           </div>
-          <select bind:value={txFilterWallet} onchange={() => loadTransactionsList()}>
-            <option value="">{i18n.t('crypto-all-wallets', 'All Wallets')}</option>
-            {#each walletsData?.wallets ?? [] as w}
-              <option value={w.id}>{w.name}</option>
-            {/each}
-          </select>
-          <select bind:value={txFilterType} onchange={() => loadTransactionsList()}>
-            <option value="">{i18n.t('crypto-all-types', 'All Types')}</option>
-            <option value="trade">{i18n.t('crypto-type-trade', 'Trade')}</option>
-            <option value="income">{i18n.t('crypto-type-income', 'Income')}</option>
-            <option value="expense">{i18n.t('crypto-type-expense', 'Expense')}</option>
-            <option value="transfer">{i18n.t('crypto-type-transfer', 'Transfer')}</option>
-          </select>
-          <select
-            bind:value={txFilterDateRange}
-            aria-label={i18n.t('finances-date-range', 'Date range')}
-            onchange={() => loadTransactionsList()}
-          >
-            <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
-            <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
-            <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
-            <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
-            <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
-            <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
-          </select>
-          {#if txFilterDateRange === 'custom'}
-            <input
-              type="date"
-              class="date-input"
-              aria-label={i18n.t('finances-date-from', 'From')}
-              bind:value={txFilterFrom}
-              onchange={() => loadTransactionsList()}
-            />
-            <input
-              type="date"
-              class="date-input"
-              aria-label={i18n.t('finances-date-to', 'To')}
-              bind:value={txFilterTo}
-              onchange={() => loadTransactionsList()}
-            />
-          {/if}
-          {#if hasActiveTxFilters}
-            <button class="glass-btn" onclick={clearTxFilters}>{i18n.t('finances-clear', 'Clear')}</button>
-          {/if}
+          <FilterMenu count={activeTxFilterCount} onclear={clearTxPanelFilters}>
+            <label class="filter-field">
+              <span>{i18n.t('crypto-filter-wallet', 'Wallet')}</span>
+              <select bind:value={txFilterWallet} onchange={() => loadTransactionsList()}>
+                <option value="">{i18n.t('crypto-all-wallets', 'All Wallets')}</option>
+                {#each walletsData?.wallets ?? [] as w}
+                  <option value={w.id}>{w.name}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>{i18n.t('crypto-filter-type', 'Type')}</span>
+              <select bind:value={txFilterType} onchange={() => loadTransactionsList()}>
+                <option value="">{i18n.t('crypto-all-types', 'All Types')}</option>
+                {#each TX_TYPES as [value, key, fallback]}
+                  <option {value}>{i18n.t(key, fallback)}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>{i18n.t('finances-date-range', 'Date range')}</span>
+              <select bind:value={txFilterDateRange} onchange={() => loadTransactionsList()}>
+                <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
+                <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
+                <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
+                <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
+                <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
+                <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
+              </select>
+            </label>
+            {#if txFilterDateRange === 'custom'}
+              <div class="filter-dates">
+                <input type="date" class="date-input" aria-label={i18n.t('finances-date-from', 'From')} bind:value={txFilterFrom} onchange={() => loadTransactionsList()} />
+                <input type="date" class="date-input" aria-label={i18n.t('finances-date-to', 'To')} bind:value={txFilterTo} onchange={() => loadTransactionsList()} />
+              </div>
+            {/if}
+          </FilterMenu>
         </div>
-        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
       </div>
 
+      <FilterChips chips={txFilterChips} />
+
       {#if txList.length === 0}
-        <p class="empty">{hasActiveTxFilters ? i18n.t('crypto-no-matching', 'No matching transactions') : i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+        <div class="empty">
+          <p>{hasActiveTxFilters ? i18n.t('crypto-no-matching', 'No matching transactions') : i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+          {#if hasActiveTxFilters}
+            <button class="glass-btn" onclick={clearTxFilters}>{i18n.t('filters-clear', 'Clear filters')}</button>
+          {/if}
+        </div>
       {:else}
         <div class="tx-list">
           {#each txList as tx (tx.id)}
@@ -1878,10 +1955,17 @@
   .total { font-size: 2.2rem; font-weight: 700; color: var(--text-primary); margin: 0; }
   .label { color: var(--text-tertiary); font-size: 0.8rem; margin-top: 4px; }
 
-  .tab-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  /* Owns the gap below the tabs; tab bodies add no space of their own on top. */
+  .tab-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 20px; }
+  /* The active tab's actions, on the line of the tabs. */
+  .tab-actions { display: flex; gap: 8px; }
+  .tab-action-icon { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .tab-action-icon svg { width: 14px; height: 14px; }
 
   .skeleton-page { padding: 8px 0; }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
+  .empty p { margin: 0; }
+  .empty p + button { margin-top: 12px; }
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -1905,40 +1989,67 @@
   }
 
   /* Stats bar */
-  .stats-bar { display: flex; gap: 24px; margin-bottom: 24px; }
-  .stats-bar .stat { display: flex; flex-direction: column; }
+  .stats-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .stats-bar .stat {
+    flex: 1 1 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--card-shadow);
+  }
   .stat-lbl { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 500; }
   .stat-val { font-size: 1rem; font-weight: 600; color: var(--text-secondary); }
   .stat-val.positive { color: var(--success); }
   .stat-val.negative { color: var(--danger); }
 
   /* Holdings */
-  .holdings-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px; margin-bottom: 24px;
+  /* Holdings: what you own leads, the market price lives in the ticker. */
+  .holdings-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .holding-row {
+    display: grid;
+    grid-template-columns: 28px minmax(80px, 1fr) minmax(150px, 1.6fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
   }
-  .asset-card {
-    position: relative;
-    display: flex; flex-direction: column; gap: 6px; padding: 14px;
-    background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    cursor: pointer; text-align: left; color: inherit;
-    transition: all 0.2s; box-shadow: var(--card-shadow);
-    overflow: hidden;
-  }
-  .asset-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
-  .asset-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .asset-icon { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; }
-  .asset-top { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-  .asset-symbol { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; }
-  .asset-name { font-size: 0.7rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .asset-price { display: flex; align-items: baseline; gap: 6px; }
-  .asset-price span:first-child { font-size: 0.85rem; color: var(--text-secondary); }
-  .change { font-size: 0.75rem; color: var(--success); }
+  .holding-row:hover { background: var(--row-bg-hover); }
+  .holding-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .holding-symbol { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
+  .holding-name { font-size: 0.75rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .holding-amount { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .holding-qty { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+  .holding-unit { font-size: 0.75rem; font-weight: 500; color: var(--text-tertiary); }
+  .holding-share { display: flex; align-items: center; gap: 8px; }
+  .holding-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--glass-active); overflow: hidden; }
+  .holding-bar > span { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+  .holding-pct { font-size: 0.72rem; color: var(--text-tertiary); min-width: 34px; text-align: right; }
+  .holding-value { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .holding-fiat { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+  .change { font-size: 0.75rem; color: var(--success); white-space: nowrap; }
   .change.negative { color: var(--danger); }
-  .asset-bottom { display: flex; justify-content: space-between; }
-  .asset-amount { font-size: 0.8rem; color: var(--text-secondary); }
-  .asset-value { font-size: 0.85rem; font-weight: 500; color: var(--text-primary); }
+  .trend-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .trend-period { font-size: 0.75rem; color: var(--text-tertiary); }
+  .view-all {
+    background: none; border: none; padding: 2px 4px; cursor: pointer;
+    font-size: 0.78rem; font-weight: 500; color: var(--accent);
+  }
+  .view-all:hover { text-decoration: underline; }
+  @media (max-width: 560px) {
+    .holding-row { grid-template-columns: 28px 1fr auto; }
+    .holding-id { display: none; }
+  }
 
   /* Charts */
   .chart-section {
@@ -1973,8 +2084,6 @@
   }
 
   /* Wallets */
-  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .section-header h3 { font-size: 0.85rem; color: var(--text-secondary); margin: 0; font-weight: 500; }
 
   .wallet-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
@@ -2302,7 +2411,6 @@
 
   /* Export */
   .export-actions { display: flex; gap: 8px; }
-  .header-actions { display: flex; gap: 8px; }
   .last-updated { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px; }
   .export-btn {
     padding: 8px 14px; border: 1px solid var(--glass-border);
@@ -2448,7 +2556,6 @@
   .tx-amount.transfer { color: #60a5fa; }
 
   /* Transactions tab */
-  .tab-content { padding-top: 20px; }
   .activity-toolbar {
     display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap;
   }

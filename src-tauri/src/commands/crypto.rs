@@ -36,6 +36,7 @@ use sanctum::ui::dto::crypto::{
     PortfolioTrendData, SyncResultDto, TaxReportDto, TaxSettingsDto, TaxSummaryDto,
     WalletDetailResponse, WalletDto, WalletHoldingDto, WalletSimpleDto, WalletsResponse,
 };
+use sanctum::ui::format_crypto_amount;
 use std::collections::HashMap;
 use tauri::State;
 
@@ -97,7 +98,7 @@ pub fn fetch_portfolio(
                 price: fmt_pref(price, &settings, &finance),
                 price_change_24h: format!("{:.2}%", chg),
                 price_change_24h_negative: chg < 0.0,
-                amount: trim_amount(a.total_amount),
+                amount: format_crypto_amount(a.total_amount),
                 value: fmt_pref(val, &settings, &finance),
                 allocation_pct: alloc,
             }
@@ -179,8 +180,11 @@ pub fn fetch_portfolio(
 #[tauri::command]
 pub fn fetch_portfolio_trend(
     crypto: State<'_, CryptoService>,
+    settings: State<'_, SettingsService>,
+    finance: State<'_, FinanceService>,
     days: i64,
 ) -> Result<PortfolioTrendData, AppError> {
+    let (currency, rate) = display_currency(None, &settings, &finance);
     let today = Local::now().date_naive();
     let start = today - chrono::Duration::days(days.max(1) - 1);
     let start_str = start.format("%Y-%m-%d").to_string();
@@ -232,14 +236,19 @@ pub fn fetch_portfolio_trend(
         return Ok(PortfolioTrendData {
             dates: vec![],
             values: vec![],
+            currency,
         });
     }
 
     let mut sorted: Vec<(String, f64)> = anchors.into_iter().collect();
     sorted.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let (dates, values): (Vec<_>, Vec<_>) = sorted.into_iter().unzip();
-    Ok(PortfolioTrendData { dates, values })
+    let (dates, values): (Vec<_>, Vec<_>) = sorted.into_iter().map(|(d, v)| (d, v * rate)).unzip();
+    Ok(PortfolioTrendData {
+        dates,
+        values,
+        currency,
+    })
 }
 
 // ==================== Wallets ====================
@@ -317,7 +326,7 @@ pub fn fetch_wallet_detail(
             WalletHoldingDto {
                 coin_id: h.coin_id.clone(),
                 symbol: h.symbol.clone(),
-                amount: trim_amount(h.total_amount),
+                amount: format_crypto_amount(h.total_amount),
                 value: fmt_pref(h.total_amount * price, &settings, &finance),
                 price: fmt_pref(price, &settings, &finance),
             }
@@ -872,7 +881,7 @@ fn map_tax_report_dto(
                 date: e.date,
                 coin_id: e.coin_id,
                 symbol: e.symbol,
-                amount: e.amount.to_string(),
+                amount: format_crypto_amount(e.amount),
                 proceeds: fmt_pref_override(e.proceeds, override_curr, settings, finance),
                 cost_basis: fmt_pref_override(e.cost_basis, override_curr, settings, finance),
                 gain: fmt_pref_override(e.gain.abs(), override_curr, settings, finance),
@@ -992,13 +1001,6 @@ pub fn load_exchange_rate(
 
 // ==================== Helpers ====================
 
-fn trim_amount(v: f64) -> String {
-    format!("{:.8}", v)
-        .trim_end_matches('0')
-        .trim_end_matches('.')
-        .to_string()
-}
-
 fn fmt_pref(v: f64, settings: &SettingsService, finance: &FinanceService) -> String {
     fmt_pref_override(v, None, settings, finance)
 }
@@ -1009,24 +1011,33 @@ fn fmt_pref_override(
     settings: &SettingsService,
     finance: &FinanceService,
 ) -> String {
-    let pref = override_curr.map(|s| s.to_string()).unwrap_or_else(|| {
+    let (currency, rate) = display_currency(override_curr, settings, finance);
+    let n = if v == 0.0 { 0.0 } else { v };
+    sanctum::ui::currency::format_preferred(n * rate, &currency)
+}
+
+/// The currency to show USD values in, with its rate from USD: the requested or
+/// preferred one when its rate is cached, otherwise USD itself, so a value is
+/// never labelled with a currency it was not converted to.
+fn display_currency(
+    requested: Option<&str>,
+    settings: &SettingsService,
+    finance: &FinanceService,
+) -> (String, f64) {
+    let pref = requested.map(|s| s.to_string()).unwrap_or_else(|| {
         settings
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
             .unwrap_or_else(|_| "USD".to_string())
             .trim()
             .to_uppercase()
     });
-
-    let n = if v == 0.0 { 0.0 } else { v };
-
-    // Without a cached rate the value stays in USD, labelled as USD.
     if pref != "USD"
         && let Ok(Some((rate, _))) = finance.load_exchange_rate_allow_stale(format!("{pref}_USD"))
         && rate > 0.0
     {
-        return sanctum::ui::currency::format_preferred(n * rate, &pref);
+        return (pref, rate);
     }
-    sanctum::ui::currency::format_preferred(n, "USD")
+    ("USD".to_string(), 1.0)
 }
 
 fn build_fx_rate_badge(settings: &SettingsService, finance: &FinanceService) -> Option<FxRateDto> {
@@ -1072,7 +1083,7 @@ fn map_crypto_transactions(
             symbol: tx.symbol.clone(),
             transaction_type: tx.transaction_type.clone(),
             subtype: tx.subtype.clone(),
-            amount: trim_amount(tx.amount),
+            amount: format_crypto_amount(tx.amount),
             price: tx
                 .price_per_coin
                 .map(|p| fmt_pref(p, settings, finance))
@@ -1082,7 +1093,7 @@ fn map_crypto_transactions(
                 .map(|f| fmt_pref(f, settings, finance))
                 .unwrap_or_else(|| fmt_pref(0.0, settings, finance)),
             fee_coin_id: tx.fee_coin_id.clone(),
-            fee_amount: tx.fee_amount.map(trim_amount),
+            fee_amount: tx.fee_amount.map(format_crypto_amount),
             value: fmt_pref(
                 tx.amount * tx.price_per_coin.unwrap_or(0.0),
                 settings,

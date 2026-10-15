@@ -31,3 +31,10 @@ export function formatSyncTime(iso: string): string {
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   return localIsoDate(d) === localIsoDate() ? time : `${d.toLocaleDateString()} ${time}`
 }
+
+/** A `YYYY-MM-DD` date for reading, such as "5 nov 2026", in the local zone. */
+export function formatDate(iso: string): string {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+}

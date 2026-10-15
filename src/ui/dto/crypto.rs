@@ -596,6 +596,8 @@ pub struct IpcSummaryDto {
 pub struct PortfolioTrendData {
     pub dates: Vec<String>,
     pub values: Vec<f64>,
+    /// Currency of `values`: the preferred one when a rate is cached, else USD.
+    pub currency: String,
 }
 
 /// Crypto asset price data for the IPC boundary.
