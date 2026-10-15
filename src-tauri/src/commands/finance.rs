@@ -771,7 +771,7 @@ pub fn fetch_credits(
         .get_app_setting(SETTING_PREFERRED_CURRENCY)
         .unwrap_or_else(|_| "USD".to_string());
 
-    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
 
     Ok(credits
         .into_iter()
