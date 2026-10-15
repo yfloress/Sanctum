@@ -15,7 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { formatSyncTime, localIsoDate } from '../lib/dates'
+  import { formatDate, formatSyncTime, localIsoDate } from '../lib/dates'
   import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
@@ -29,6 +29,8 @@
   import CryptoTransactionModal from '../components/crypto/CryptoTransactionModal.svelte'
   import CryptoEditModal from '../components/crypto/CryptoEditModal.svelte'
   import ConfirmDialog from '../components/ConfirmDialog.svelte'
+  import FilterMenu from '../components/FilterMenu.svelte'
+  import FilterChips, { type FilterChip } from '../components/FilterChips.svelte'
   import CryptoWalletPanel from '../components/crypto/CryptoWalletPanel.svelte'
   import CryptoAssetPanel from '../components/crypto/CryptoAssetPanel.svelte'
   import CryptoTaxPanel from '../components/crypto/CryptoTaxPanel.svelte'
@@ -144,6 +146,54 @@
     if (txSearchDebounce) clearTimeout(txSearchDebounce)
     txSearchDebounce = setTimeout(() => loadTransactionsList(), 200)
   }
+
+  const TX_TYPES: [string, string, string][] = [
+    ['trade', 'crypto-type-trade', 'Trade'],
+    ['income', 'crypto-type-income', 'Income'],
+    ['expense', 'crypto-type-expense', 'Expense'],
+    ['transfer', 'crypto-type-transfer', 'Transfer'],
+  ]
+  const TX_DATE_LABELS: Record<string, [string, string]> = {
+    'this-month': ['finances-date-this-month', 'This month'],
+    'last-30': ['finances-date-last-30', 'Last 30 days'],
+    'last-90': ['finances-date-last-90', 'Last 90 days'],
+    'this-year': ['finances-date-this-year', 'This year'],
+  }
+
+  /** Filters set in the panel, not counting the search box. */
+  let activeTxFilterCount = $derived(
+    [txFilterWallet, txFilterType].filter(Boolean).length + (txFilterDateRange !== 'all' ? 1 : 0)
+  )
+
+  /** Clears what the panel sets and keeps the search. */
+  function clearTxPanelFilters() {
+    txFilterWallet = ''
+    txFilterType = ''
+    txFilterDateRange = 'all'
+    txFilterFrom = ''
+    txFilterTo = ''
+    loadTransactionsList()
+  }
+
+  let txFilterChips = $derived.by(() => {
+    const chips: FilterChip[] = []
+    const reload = (reset: () => void) => () => { reset(); loadTransactionsList() }
+    if (txFilterWallet) {
+      const name = walletsData?.wallets.find(w => w.id === txFilterWallet)?.name ?? txFilterWallet
+      chips.push({ label: name, onremove: reload(() => (txFilterWallet = '')) })
+    }
+    if (txFilterType) {
+      const t = TX_TYPES.find(([value]) => value === txFilterType)
+      chips.push({ label: t ? i18n.t(t[1], t[2]) : txFilterType, onremove: reload(() => (txFilterType = '')) })
+    }
+    if (txFilterDateRange !== 'all') {
+      const label = txFilterDateRange === 'custom'
+        ? [txFilterFrom && formatDate(txFilterFrom), txFilterTo && formatDate(txFilterTo)].filter(Boolean).join(' – ') || i18n.t('finances-date-custom', 'Custom range')
+        : i18n.t(...TX_DATE_LABELS[txFilterDateRange])
+      chips.push({ label, onremove: reload(() => { txFilterDateRange = 'all'; txFilterFrom = ''; txFilterTo = '' }) })
+    }
+    return chips
+  })
 
   function clearTxFilters() {
     txListFilter = ''
@@ -1013,6 +1063,15 @@
       <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('crypto-tab-activity', 'Activity')}</button>
       <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
+    <div class="tab-actions">
+      {#if activeTab === 'wallets'}
+        <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
+      {/if}
+      <button class="primary-btn tab-action-icon" onclick={openAddTransaction}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        {i18n.t('crypto-new-transaction', 'New Transaction')}
+      </button>
+    </div>
   </div>
 
   {#if loading}
@@ -1036,12 +1095,6 @@
 
   <!-- PORTFOLIO TAB -->
   {:else if activeTab === 'portfolio' && portfolio}
-    <div class="section-header">
-      <span></span>
-      <div class="header-actions">
-        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
-      </div>
-    </div>
     <!-- Stats bar -->
     <div class="stats-bar">
       <div class="stat">
@@ -1177,14 +1230,6 @@
 
   <!-- WALLETS TAB -->
   {:else if activeTab === 'wallets'}
-    <div class="section-header">
-      <h3>{i18n.t('crypto-wallets-title', 'Wallets')}</h3>
-      <div class="header-actions">
-        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
-        <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
-      </div>
-    </div>
-
     {#if (walletsData?.wallets ?? []).length === 0}
       <p class="empty">{i18n.t('crypto-no-wallets', 'No wallets yet.')}</p>
     {:else}
@@ -1218,56 +1263,55 @@
               oninput={onTxSearchInput}
             />
           </div>
-          <select bind:value={txFilterWallet} onchange={() => loadTransactionsList()}>
-            <option value="">{i18n.t('crypto-all-wallets', 'All Wallets')}</option>
-            {#each walletsData?.wallets ?? [] as w}
-              <option value={w.id}>{w.name}</option>
-            {/each}
-          </select>
-          <select bind:value={txFilterType} onchange={() => loadTransactionsList()}>
-            <option value="">{i18n.t('crypto-all-types', 'All Types')}</option>
-            <option value="trade">{i18n.t('crypto-type-trade', 'Trade')}</option>
-            <option value="income">{i18n.t('crypto-type-income', 'Income')}</option>
-            <option value="expense">{i18n.t('crypto-type-expense', 'Expense')}</option>
-            <option value="transfer">{i18n.t('crypto-type-transfer', 'Transfer')}</option>
-          </select>
-          <select
-            bind:value={txFilterDateRange}
-            aria-label={i18n.t('finances-date-range', 'Date range')}
-            onchange={() => loadTransactionsList()}
-          >
-            <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
-            <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
-            <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
-            <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
-            <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
-            <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
-          </select>
-          {#if txFilterDateRange === 'custom'}
-            <input
-              type="date"
-              class="date-input"
-              aria-label={i18n.t('finances-date-from', 'From')}
-              bind:value={txFilterFrom}
-              onchange={() => loadTransactionsList()}
-            />
-            <input
-              type="date"
-              class="date-input"
-              aria-label={i18n.t('finances-date-to', 'To')}
-              bind:value={txFilterTo}
-              onchange={() => loadTransactionsList()}
-            />
-          {/if}
-          {#if hasActiveTxFilters}
-            <button class="glass-btn" onclick={clearTxFilters}>{i18n.t('finances-clear', 'Clear')}</button>
-          {/if}
+          <FilterMenu count={activeTxFilterCount} onclear={clearTxPanelFilters}>
+            <label class="filter-field">
+              <span>{i18n.t('crypto-filter-wallet', 'Wallet')}</span>
+              <select bind:value={txFilterWallet} onchange={() => loadTransactionsList()}>
+                <option value="">{i18n.t('crypto-all-wallets', 'All Wallets')}</option>
+                {#each walletsData?.wallets ?? [] as w}
+                  <option value={w.id}>{w.name}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>{i18n.t('crypto-filter-type', 'Type')}</span>
+              <select bind:value={txFilterType} onchange={() => loadTransactionsList()}>
+                <option value="">{i18n.t('crypto-all-types', 'All Types')}</option>
+                {#each TX_TYPES as [value, key, fallback]}
+                  <option {value}>{i18n.t(key, fallback)}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>{i18n.t('finances-date-range', 'Date range')}</span>
+              <select bind:value={txFilterDateRange} onchange={() => loadTransactionsList()}>
+                <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
+                <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
+                <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
+                <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
+                <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
+                <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
+              </select>
+            </label>
+            {#if txFilterDateRange === 'custom'}
+              <div class="filter-dates">
+                <input type="date" class="date-input" aria-label={i18n.t('finances-date-from', 'From')} bind:value={txFilterFrom} onchange={() => loadTransactionsList()} />
+                <input type="date" class="date-input" aria-label={i18n.t('finances-date-to', 'To')} bind:value={txFilterTo} onchange={() => loadTransactionsList()} />
+              </div>
+            {/if}
+          </FilterMenu>
         </div>
-        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
       </div>
 
+      <FilterChips chips={txFilterChips} />
+
       {#if txList.length === 0}
-        <p class="empty">{hasActiveTxFilters ? i18n.t('crypto-no-matching', 'No matching transactions') : i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+        <div class="empty">
+          <p>{hasActiveTxFilters ? i18n.t('crypto-no-matching', 'No matching transactions') : i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+          {#if hasActiveTxFilters}
+            <button class="glass-btn" onclick={clearTxFilters}>{i18n.t('filters-clear', 'Clear filters')}</button>
+          {/if}
+        </div>
       {:else}
         <div class="tx-list">
           {#each txList as tx (tx.id)}
@@ -1912,10 +1956,16 @@
   .label { color: var(--text-tertiary); font-size: 0.8rem; margin-top: 4px; }
 
   /* Owns the gap below the tabs; tab bodies add no space of their own on top. */
-  .tab-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .tab-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 20px; }
+  /* The active tab's actions, on the line of the tabs. */
+  .tab-actions { display: flex; gap: 8px; }
+  .tab-action-icon { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .tab-action-icon svg { width: 14px; height: 14px; }
 
   .skeleton-page { padding: 8px 0; }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
+  .empty p { margin: 0; }
+  .empty p + button { margin-top: 12px; }
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -2034,8 +2084,6 @@
   }
 
   /* Wallets */
-  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .section-header h3 { font-size: 0.85rem; color: var(--text-secondary); margin: 0; font-weight: 500; }
 
   .wallet-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
@@ -2363,7 +2411,6 @@
 
   /* Export */
   .export-actions { display: flex; gap: 8px; }
-  .header-actions { display: flex; gap: 8px; }
   .last-updated { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px; }
   .export-btn {
     padding: 8px 14px; border: 1px solid var(--glass-border);
