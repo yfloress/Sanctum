@@ -80,7 +80,9 @@ export interface StatementRowDto {
   /** Whole pesos; negative is money out. */
   amount: number
   category: string
-  /** The category came from an earlier movement at the same merchant. */
+  /** Suggested transfer with this account, learned from an earlier one. */
+  transfer_account_id: string | null
+  /** The category or transfer came from an earlier movement at the same merchant. */
   learned: boolean
   /** The account already has this movement. */
   duplicate: boolean

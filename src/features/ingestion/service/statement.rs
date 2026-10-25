@@ -67,7 +67,11 @@ pub struct PreviewRow {
     /// The account already has this movement.
     pub duplicate: bool,
     pub category: String,
-    /// The category came from an earlier movement at the same merchant.
+    /// An earlier movement with the same description was a transfer with
+    /// this account, so this one probably is too.
+    pub transfer_account_id: Option<String>,
+    /// The category or transfer came from an earlier movement at the same
+    /// merchant.
     pub learned: bool,
 }
 
@@ -112,7 +116,7 @@ impl IngestionService {
         self.with_db_readonly(|db| {
             let account = statement_account(db, account_id)?;
             let transactions = IngestionRepository::get_all_transactions(db)?;
-            let history = CategoryHistory::new(&transactions);
+            let history = History::new(&transactions);
             let existing = signed_movements(&transactions, &account.id);
             let duplicates = mark_duplicates(&statement.rows, &existing);
             let rows = statement
@@ -120,11 +124,19 @@ impl IngestionService {
                 .into_iter()
                 .zip(duplicates)
                 .map(|(row, duplicate)| {
-                    let learned = history.suggest(&row.description, row.amount < 0);
+                    let learned = history.suggest(&row.description, &account.id, row.amount < 0);
+                    let (category, transfer_account_id) = match &learned {
+                        Some(Suggestion::Category(name)) => (name.clone(), None),
+                        Some(Suggestion::Transfer(other)) => {
+                            (FALLBACK_CATEGORY.to_string(), Some(other.clone()))
+                        }
+                        None => (FALLBACK_CATEGORY.to_string(), None),
+                    };
                     PreviewRow {
                         duplicate,
                         learned: learned.is_some(),
-                        category: learned.unwrap_or_else(|| FALLBACK_CATEGORY.to_string()),
+                        category,
+                        transfer_account_id,
                         row,
                     }
                 })
@@ -324,39 +336,83 @@ fn merchant_key(description: &str) -> String {
     words.join(" ")
 }
 
-/// The latest category given to each merchant, per direction.
-struct CategoryHistory {
-    latest: HashMap<(String, bool), (String, String)>,
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Suggestion {
+    Category(String),
+    /// A transfer with this other account.
+    Transfer(String),
 }
 
-impl CategoryHistory {
+/// What each merchant was last time, per direction. Categories apply to
+/// every account (Uber is transport on the card and on the checking
+/// account); a transfer only to the two accounts it joined.
+struct History {
+    categories: HashMap<(String, bool), (String, String)>,
+    transfers: HashMap<(String, String, bool), (String, String)>,
+}
+
+impl History {
     fn new(transactions: &[Transaction]) -> Self {
-        let mut latest: HashMap<(String, bool), (String, String)> = HashMap::new();
+        fn keep<K: std::hash::Hash + Eq>(
+            map: &mut HashMap<K, (String, String)>,
+            key: K,
+            date: &str,
+            value: &str,
+        ) {
+            let entry = map
+                .entry(key)
+                .or_insert_with(|| (String::new(), String::new()));
+            if date >= entry.0.as_str() {
+                *entry = (date.to_string(), value.to_string());
+            }
+        }
+        let mut categories = HashMap::new();
+        let mut transfers = HashMap::new();
         for tx in transactions {
-            let expense = match tx.transaction_type.as_str() {
-                "expense" => true,
-                "income" => false,
-                _ => continue,
-            };
             let key = merchant_key(&tx.description);
             if key.is_empty() {
                 continue;
             }
-            let entry = latest
-                .entry((key, expense))
-                .or_insert_with(|| (String::new(), String::new()));
-            if tx.date >= entry.0 {
-                *entry = (tx.date.clone(), tx.category.clone());
+            match tx.transaction_type.as_str() {
+                "expense" => keep(&mut categories, (key, true), &tx.date, &tx.category),
+                "income" => keep(&mut categories, (key, false), &tx.date, &tx.category),
+                "transfer" => {
+                    let Some(to) = tx.transfer_account_id.as_deref() else {
+                        continue;
+                    };
+                    keep(
+                        &mut transfers,
+                        (key.clone(), tx.account_id.clone(), true),
+                        &tx.date,
+                        to,
+                    );
+                    keep(
+                        &mut transfers,
+                        (key, to.to_string(), false),
+                        &tx.date,
+                        &tx.account_id,
+                    );
+                }
+                _ => {}
             }
         }
-        Self { latest }
+        Self {
+            categories,
+            transfers,
+        }
     }
 
-    fn suggest(&self, description: &str, expense: bool) -> Option<String> {
+    fn suggest(&self, description: &str, account_id: &str, out: bool) -> Option<Suggestion> {
         let key = merchant_key(description);
-        self.latest
-            .get(&(key, expense))
-            .map(|(_, category)| category.clone())
+        if let Some((_, other)) = self
+            .transfers
+            .get(&(key.clone(), account_id.to_string(), out))
+        {
+            return Some(Suggestion::Transfer(other.clone()));
+        }
+        self.categories
+            .get(&(key, out))
+            .map(|(_, category)| Suggestion::Category(category.clone()))
     }
 }
 
@@ -422,7 +478,7 @@ mod tests {
 
     #[test]
     fn categories_are_learned_per_merchant_and_direction() {
-        let history = CategoryHistory::new(&[
+        let history = History::new(&[
             tx(
                 "2026-01-04",
                 "expense",
@@ -446,19 +502,49 @@ mod tests {
             ),
             tx("2026-02-06", "expense", 100, "FOOD", "Compra LIDER 1234"),
         ]);
+        let category = |name: &str| Some(Suggestion::Category(name.into()));
         assert_eq!(
-            history.suggest("Compra PAYU *UBER TRIP", true).as_deref(),
-            Some("TRANSPORT")
+            history.suggest("Compra PAYU *UBER TRIP", "acc", true),
+            category("TRANSPORT")
         );
         assert_eq!(
-            history.suggest("Compra PAYU *UBER TRIP", false).as_deref(),
-            Some("GIFT")
+            history.suggest("Compra PAYU *UBER TRIP", "acc", false),
+            category("GIFT")
         );
-        // Numbers do not make a different merchant.
+        // Numbers do not make a different merchant, and categories hold on
+        // every account.
         assert_eq!(
-            history.suggest("compra lider 9876", true).as_deref(),
-            Some("FOOD")
+            history.suggest("compra lider 9876", "card", true),
+            category("FOOD")
         );
-        assert_eq!(history.suggest("Compra JUMBO", true), None);
+        assert_eq!(history.suggest("Compra JUMBO", "acc", true), None);
+    }
+
+    #[test]
+    fn transfers_are_learned_for_both_accounts() {
+        let mut payment = tx(
+            "2026-02-05",
+            "transfer",
+            300_000,
+            "",
+            "PAGO TARJETA CREDITO 4321",
+        );
+        payment.transfer_account_id = Some("card".into());
+        let history = History::new(&[payment]);
+        let card = Some(Suggestion::Transfer("card".into()));
+        let checking = Some(Suggestion::Transfer("acc".into()));
+        assert_eq!(
+            history.suggest("PAGO TARJETA CREDITO 9999", "acc", true),
+            card
+        );
+        assert_eq!(
+            history.suggest("PAGO TARJETA CREDITO", "card", false),
+            checking
+        );
+        // Another account paying the same description is not that transfer.
+        assert_eq!(
+            history.suggest("PAGO TARJETA CREDITO", "savings", true),
+            None
+        );
     }
 }

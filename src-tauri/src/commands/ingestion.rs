@@ -305,6 +305,7 @@ fn map_statement_preview(preview: StatementPreview) -> StatementPreviewDto {
                 description: r.row.description,
                 amount: r.row.amount,
                 category: r.category,
+                transfer_account_id: r.transfer_account_id,
                 learned: r.learned,
                 duplicate: r.duplicate,
                 sign_guessed: r.row.sign_from_keyword,

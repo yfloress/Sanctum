@@ -137,7 +137,9 @@
         date: r.date,
         description: r.description,
         amount: r.amount,
-        target: defaultTarget(r.amount, r.category),
+        target: r.transfer_account_id && otherAccounts.some(a => a.id === r.transfer_account_id)
+          ? TRANSFER + r.transfer_account_id
+          : defaultTarget(r.amount, r.category),
         learned: r.learned,
         duplicate: r.duplicate,
         signGuessed: r.sign_guessed,

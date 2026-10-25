@@ -172,7 +172,10 @@ pub struct StatementRowDto {
     /// Whole pesos; negative is money out.
     pub amount: i64,
     pub category: String,
-    /// The category came from an earlier movement at the same merchant.
+    /// Suggested transfer with this account, learned from an earlier one.
+    pub transfer_account_id: Option<String>,
+    /// The category or transfer came from an earlier movement at the same
+    /// merchant.
     pub learned: bool,
     /// The account already has this movement.
     pub duplicate: bool,
