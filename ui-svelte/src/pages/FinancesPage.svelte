@@ -37,6 +37,7 @@
   import type { DescriptionHistoryEntry } from '../components/finance/FinanceTransactionModal.svelte'
   import FinanceAccountModal from '../components/finance/FinanceAccountModal.svelte'
   import FinanceTransferModal from '../components/finance/FinanceTransferModal.svelte'
+  import StatementImportModal from '../components/finance/StatementImportModal.svelte'
   import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
   import ReconcilePanel from '../components/finance/ReconcilePanel.svelte'
   import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
@@ -131,6 +132,7 @@
   let showAddTransaction = $state(false)
   let showAddAccount = $state(false)
   let showTransfer = $state(false)
+  let showStatementImport = $state(false)
   let editingTransaction = $state<TransactionDto | null>(null)
   let duplicatingTransaction = $state<TransactionDto | null>(null)
   let searchInput = $state<HTMLInputElement | undefined>()
@@ -863,7 +865,7 @@
   })
 </script>
 
-<div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || !!selectedAccount}>
+<div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || showStatementImport || !!selectedAccount}>
   <!-- Hero -->
   <section class="hero">
     <h2 class="balance" class:negative={accountsData?.total_balance_negative}>
@@ -883,6 +885,7 @@
     </div>
     <div class="tab-actions">
       {#if activeTab === 'overview' || activeTab === 'activity'}
+        <button class="glass-btn" onclick={() => showStatementImport = true}>{i18n.t('finances-import-statement', 'Import statement')}</button>
         <button class="primary-btn activity-add-btn" onclick={openAddTransaction}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           {i18n.t('finances-new-entry', 'New Entry')}
@@ -1405,6 +1408,15 @@
   accounts={accountsData?.accounts ?? []}
   onsubmit={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
   onclose={() => { showTransfer = false; editingTransfer = null }}
+/>
+
+<!-- Bank statement import -->
+<StatementImportModal
+  bind:show={showStatementImport}
+  accounts={accountsData?.accounts ?? []}
+  categories={categories ?? { expense: [], income: [] }}
+  onimported={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+  onclose={() => showStatementImport = false}
 />
 
 <!-- Delete Transaction Confirm -->

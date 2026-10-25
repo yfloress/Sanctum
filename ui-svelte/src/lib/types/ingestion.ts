@@ -66,3 +66,55 @@ export interface CustomCsvMapping {
   price_col: string | null
   notes_col: string | null
 }
+
+// ==================== Bank statements ====================
+
+export interface StatementFormatDto {
+  id: string
+  label: string
+}
+
+export interface StatementRowDto {
+  date: string
+  description: string
+  /** Whole pesos; negative is money out. */
+  amount: number
+  category: string
+  /** The category came from an earlier movement at the same merchant. */
+  learned: boolean
+  /** The account already has this movement. */
+  duplicate: boolean
+  /** The direction was guessed from the description. */
+  sign_guessed: boolean
+  installment: string | null
+}
+
+export interface StatementProblemDto {
+  text: string
+  reason: string
+}
+
+export interface StatementPreviewDto {
+  format: string
+  format_label: string
+  credit_card: boolean
+  period_start: string | null
+  period_end: string | null
+  rows: StatementRowDto[]
+  problems: StatementProblemDto[]
+  warnings: string[]
+}
+
+export interface StatementPreviewResponse {
+  status: 'ready' | 'needs_password' | 'wrong_password'
+  preview: StatementPreviewDto | null
+}
+
+export interface StatementEntryInput {
+  date: string
+  description: string
+  /** Whole pesos; negative is money out. */
+  amount: number
+  category: string
+  transfer_account_id: string | null
+}
