@@ -33,15 +33,19 @@ mod banks;
 mod clp;
 mod credit;
 mod document;
+mod pdf;
 mod period;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_pdf;
 
 use chrono::NaiveDate;
 
 pub use account::Totals;
 pub use document::{Document, Line, Word};
+pub use pdf::{PdfError, read_pdf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StatementFormat {
