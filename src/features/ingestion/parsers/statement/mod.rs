@@ -39,6 +39,8 @@ mod period;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod tests_local;
+#[cfg(test)]
 mod tests_pdf;
 
 use chrono::NaiveDate;
