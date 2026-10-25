@@ -173,6 +173,9 @@ pub fn run() {
             commands::ingestion::import_exchange_csv,
             commands::ingestion::analyze_custom_csv,
             commands::ingestion::import_custom_csv,
+            commands::ingestion::statement_formats,
+            commands::ingestion::preview_statement,
+            commands::ingestion::import_statement,
             // Crypto domain
             commands::crypto::fetch_portfolio,
             commands::crypto::fetch_portfolio_trend,

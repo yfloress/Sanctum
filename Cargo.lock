@@ -3619,6 +3619,7 @@ dependencies = [
  "directories",
  "log",
  "sanctum",
+ "secrecy",
  "tauri",
  "tauri-build",
  "tauri-plugin-clipboard-manager",

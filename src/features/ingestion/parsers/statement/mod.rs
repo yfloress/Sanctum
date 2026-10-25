@@ -17,6 +17,9 @@
 
 //! Chilean bank statements (cartolas) and credit card statements.
 //!
+//! Account statements: Banco de Chile, BancoEstado (CuentaRUT and others),
+//! Santander, CopecPay and Mercado Pago. Credit cards: Banco de Chile and Santander.
+//!
 //! Input is the statement's text as positioned lines (see [`Document`]);
 //! turning a PDF into that is the extractor's job. Output is one row per
 //! movement in whole pesos, negative for money going out, plus the rows
@@ -52,15 +55,44 @@ pub use pdf::{PdfError, read_pdf};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StatementFormat {
     BancoChileAccount,
+    BancoEstadoAccount,
     BancoChileCredit,
     SantanderAccount,
     SantanderCredit,
     CopecPay,
+    MercadoPago,
 }
 
 impl StatementFormat {
+    pub const ALL: [Self; 7] = [
+        Self::BancoChileAccount,
+        Self::BancoEstadoAccount,
+        Self::BancoChileCredit,
+        Self::SantanderAccount,
+        Self::SantanderCredit,
+        Self::CopecPay,
+        Self::MercadoPago,
+    ];
+
     pub fn is_credit_card(self) -> bool {
         matches!(self, Self::BancoChileCredit | Self::SantanderCredit)
+    }
+
+    /// Stable id for the frontend.
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::BancoChileAccount => "banco_chile_account",
+            Self::BancoEstadoAccount => "banco_estado_account",
+            Self::BancoChileCredit => "banco_chile_credit",
+            Self::SantanderAccount => "santander_account",
+            Self::SantanderCredit => "santander_credit",
+            Self::CopecPay => "copec_pay",
+            Self::MercadoPago => "mercado_pago",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|f| f.id() == id)
     }
 }
 
@@ -174,11 +206,17 @@ pub fn detect_format(doc: &Document) -> Option<StatementFormat> {
     let heading = Document {
         lines: doc.lines.iter().take(DETECTION_LINES).cloned().collect(),
     };
-    let matches: Vec<StatementFormat> = [banks::BANCO_CHILE, banks::SANTANDER, banks::COPEC_PAY]
-        .iter()
-        .filter(|profile| account::has_marker(&heading, profile.markers))
-        .map(|profile| profile.format)
-        .collect();
+    let matches: Vec<StatementFormat> = [
+        banks::BANCO_CHILE,
+        banks::BANCO_ESTADO,
+        banks::SANTANDER,
+        banks::COPEC_PAY,
+        banks::MERCADO_PAGO,
+    ]
+    .iter()
+    .filter(|profile| account::has_marker(&heading, profile.markers))
+    .map(|profile| profile.format)
+    .collect();
     match matches.as_slice() {
         [only] => Some(*only),
         _ => None,
@@ -191,8 +229,10 @@ pub fn parse_statement(
 ) -> Result<ParsedStatement, StatementError> {
     match format {
         StatementFormat::BancoChileAccount => account::parse_account(doc, &banks::BANCO_CHILE),
+        StatementFormat::BancoEstadoAccount => account::parse_account(doc, &banks::BANCO_ESTADO),
         StatementFormat::SantanderAccount => account::parse_account(doc, &banks::SANTANDER),
         StatementFormat::CopecPay => account::parse_account(doc, &banks::COPEC_PAY),
+        StatementFormat::MercadoPago => account::parse_account(doc, &banks::MERCADO_PAGO),
         StatementFormat::BancoChileCredit => credit::parse_banco_chile_credit(doc),
         StatementFormat::SantanderCredit => credit::parse_santander_credit(doc),
     }

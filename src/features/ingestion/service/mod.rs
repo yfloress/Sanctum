@@ -33,7 +33,10 @@ use super::types::{ImportFormat, ImportSummary};
 use super::validation::validate_file_size;
 
 mod crypto;
+mod statement;
 mod transactions;
+
+pub use statement::{PreviewRow, StatementEntry, StatementPreview, StatementRead};
 
 /// Shown when `detect_format` cannot classify a file. Names the columns the
 /// generic CSV parsers look for, since a `.csv` with other headers also fails.

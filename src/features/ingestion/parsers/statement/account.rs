@@ -44,6 +44,13 @@ pub struct ColumnHeaders {
     pub description: &'static [&'static str],
 }
 
+/// Which of the two amount columns comes first, when the empty one holds `0`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColumnOrder {
+    ExpenseFirst,
+    IncomeFirst,
+}
+
 /// Charges and credits declared in a statement's summary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Totals {
@@ -68,9 +75,8 @@ pub struct AccountProfile {
     pub start_markers: &'static [&'static str],
     pub end_markers: &'static [&'static str],
     pub columns: Option<ColumnHeaders>,
-    /// Rows print `0` in the empty one of the charge and credit columns,
-    /// charge first.
-    pub zero_filled: bool,
+    /// Rows print `0` in the empty one of the charge and credit columns.
+    pub zero_filled: Option<ColumnOrder>,
     pub summary: Option<SummaryReader>,
     pub clean_description: Option<DescriptionCleaner>,
 }
@@ -327,6 +333,11 @@ fn amount_by_text(
     let mut index = last;
     while index > 0 && block.len() < 3 {
         index -= 1;
+        // "ID 1111111111111 CLP 7,00": the currency opens the amounts, so
+        // the number before it is a reference, not a charge.
+        if folded[index] == "CLP" {
+            break;
+        }
         if let Some(amount) = parse_amount(&words[index].text) {
             block.insert(0, (index, amount));
         } else if !AMOUNT_LABELS.contains(&folded[index].as_str()) {
@@ -354,9 +365,12 @@ fn amount_by_text(
     {
         return Ok((description_end, amount.signed(), false));
     }
-    if profile.zero_filled && is_zero_filled_pair(movement) {
+    if let Some(order) = profile.zero_filled
+        && is_zero_filled_pair(movement)
+    {
         let value = movement[0].value + movement[1].value;
-        let is_expense = movement[0].value != 0;
+        let first_is_movement = movement[0].value != 0;
+        let is_expense = first_is_movement == (order == ColumnOrder::ExpenseFirst);
         return Ok((
             description_end,
             if is_expense { -value } else { value },

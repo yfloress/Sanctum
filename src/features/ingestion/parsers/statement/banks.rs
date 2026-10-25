@@ -22,7 +22,7 @@
 //! "PAGO".
 
 use super::StatementFormat;
-use super::account::{AccountProfile, ColumnHeaders, Totals, amounts_after};
+use super::account::{AccountProfile, ColumnHeaders, ColumnOrder, Totals, amounts_after};
 use super::clp::is_digits;
 use super::document::fold;
 use super::period::PeriodRule;
@@ -49,7 +49,42 @@ pub const BANCO_CHILE: AccountProfile = AccountProfile {
         balance: &["SALDO"],
         description: &["DETALLE"],
     }),
-    zero_filled: false,
+    zero_filled: None,
+    summary: None,
+    clean_description: None,
+};
+
+/// "FECHA DETALLE CARGOS ABONOS SALDO", with `0` in the empty column.
+pub const BANCO_ESTADO: AccountProfile = AccountProfile {
+    format: StatementFormat::BancoEstadoAccount,
+    markers: &["BANCOESTADO", "BANCO ESTADO", "CUENTARUT"],
+    periods: &[PeriodRule::DesdeHasta],
+    income_keywords: &[
+        "ABONO",
+        "DEPOSITO",
+        "TRANSFERENCIA RECIBIDA",
+        "REMUNERACION",
+        "PAGO RECIBIDO",
+    ],
+    expense_keywords: &[
+        "CARGO",
+        "COMPRA",
+        "PAGO",
+        "GIRO",
+        "COMISION",
+        "TRANSFERENCIA ENVIADA",
+        "PAC",
+    ],
+    continuation_lines: false,
+    start_markers: &[],
+    end_markers: &[],
+    columns: Some(ColumnHeaders {
+        expense: &["CARGOS", "CARGO"],
+        income: &["ABONOS", "ABONO"],
+        balance: &["SALDO"],
+        description: &["DETALLE"],
+    }),
+    zero_filled: Some(ColumnOrder::ExpenseFirst),
     summary: None,
     clean_description: None,
 };
@@ -97,9 +132,54 @@ pub const SANTANDER: AccountProfile = AccountProfile {
         balance: &["SALDO"],
         description: &["DESCRIPCION"],
     }),
-    zero_filled: false,
+    zero_filled: None,
     summary: Some(santander_totals),
     clean_description: Some(clean_santander),
+};
+
+/// Three layouts: signed amounts ("DINERO RECIBIDO +20.000"), income and
+/// expense columns with `0` in the empty one, and the account statement
+/// ("Abono Ganancias <id> CLP 7,00 0,00") whose amount is signed and whose
+/// last figure is "otros conceptos".
+pub const MERCADO_PAGO: AccountProfile = AccountProfile {
+    format: StatementFormat::MercadoPago,
+    markers: &["MERCADO PAGO", "MERCADOPAGO"],
+    periods: &[
+        PeriodRule::DesdeHasta,
+        PeriodRule::PeriodoRange,
+        PeriodRule::AfterHeader(&["DESDE", "HASTA", "FECHA", "DE", "GENERACION"]),
+    ],
+    income_keywords: &[
+        "ABONO",
+        "DINERO RECIBIDO",
+        "PAGO RECIBIDO",
+        "COBRO",
+        "VENTA",
+        "INGRESO",
+        "DEVOLUCION",
+        "RENDIMIENTO",
+    ],
+    expense_keywords: &[
+        "COMPRA",
+        "PAGO",
+        "RETIRO",
+        "COMISION",
+        "TRANSFERENCIA ENVIADA",
+        "DINERO ENVIADO",
+        "CARGO",
+    ],
+    continuation_lines: false,
+    start_markers: &["FECHA DE ACREDITACION"],
+    end_markers: &[],
+    columns: Some(ColumnHeaders {
+        expense: &["EGRESO", "EGRESOS", "CARGO", "CARGOS"],
+        income: &["INGRESO", "INGRESOS", "ABONO", "ABONOS"],
+        balance: &["SALDO"],
+        description: &["DESCRIPCION", "DETALLE", "MOVIMIENTO", "OPERACION"],
+    }),
+    zero_filled: Some(ColumnOrder::IncomeFirst),
+    summary: None,
+    clean_description: Some(clean_mercado_pago),
 };
 
 pub const COPEC_PAY: AccountProfile = AccountProfile {
@@ -134,7 +214,7 @@ pub const COPEC_PAY: AccountProfile = AccountProfile {
         balance: &["SALDO"],
         description: &["DESCRIPCION"],
     }),
-    zero_filled: true,
+    zero_filled: Some(ColumnOrder::ExpenseFirst),
     summary: Some(copec_pay_totals),
     clean_description: None,
 };
@@ -214,4 +294,17 @@ fn clean_santander(words: &[String]) -> Vec<String> {
         0
     };
     words[skip..].to_vec()
+}
+
+/// "Abono Ganancias 1111111111111" → "Ganancias": the movement type is
+/// already in the sign and the transaction id is unique to each row.
+fn clean_mercado_pago(words: &[String]) -> Vec<String> {
+    let mut words = words.to_vec();
+    if words.last().is_some_and(|w| w.len() >= 10 && is_digits(w)) {
+        words.pop();
+    }
+    if words.len() > 1 && matches!(fold(&words[0]).as_str(), "ABONO" | "CARGO") {
+        words.remove(0);
+    }
+    words
 }

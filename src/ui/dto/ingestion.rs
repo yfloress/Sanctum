@@ -141,3 +141,66 @@ pub struct CustomCsvMapping {
     #[serde(default)]
     pub notes_col: Option<String>,
 }
+
+// ==================== Bank Statements ====================
+
+/// Answer to a statement preview. `status` is `ready`, `needs_password` or
+/// `wrong_password`; only `ready` carries a preview.
+#[derive(Debug, Clone, Serialize)]
+pub struct StatementPreviewResponse {
+    pub status: String,
+    pub preview: Option<StatementPreviewDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StatementPreviewDto {
+    pub format: String,
+    pub format_label: String,
+    pub credit_card: bool,
+    pub period_start: Option<String>,
+    pub period_end: Option<String>,
+    pub rows: Vec<StatementRowDto>,
+    pub problems: Vec<StatementProblemDto>,
+    /// Translated, ready to show.
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StatementRowDto {
+    pub date: String,
+    pub description: String,
+    /// Whole pesos; negative is money out.
+    pub amount: i64,
+    pub category: String,
+    /// The category came from an earlier movement at the same merchant.
+    pub learned: bool,
+    /// The account already has this movement.
+    pub duplicate: bool,
+    /// The direction was guessed from the description.
+    pub sign_guessed: bool,
+    /// "2/6" for the second of six installments.
+    pub installment: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StatementProblemDto {
+    pub text: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StatementFormatDto {
+    pub id: String,
+    pub label: String,
+}
+
+/// A reviewed statement row to write.
+#[derive(Debug, Clone, Deserialize)]
+pub struct StatementEntryInput {
+    pub date: String,
+    pub description: String,
+    /// Whole pesos; negative is money out.
+    pub amount: i64,
+    pub category: String,
+    pub transfer_account_id: Option<String>,
+}

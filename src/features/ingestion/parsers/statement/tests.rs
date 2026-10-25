@@ -249,6 +249,15 @@ COMPROBANTE DE PAGO
 III. INFORMACIÓN DE PAGO
 MONTO TOTAL FACTURADO A PAGAR $ 132.000";
 
+const BANCO_ESTADO: &str = "\
+BANCOESTADO
+CARTOLA CUENTARUT
+DESDE 01/05/2026 AL 31/05/2026
+FECHA DETALLE CARGOS ABONOS SALDO
+01/05/2026 COMPRA REDCOMPRA 10.000 0 90.000
+02/05/2026 ABONO REMUNERACION 0 50.000 140.000
+03/05/2026 PAGO RECIBIDO DE TERCERO 0 2.500 142.500";
+
 fn parse(text: &str, format: StatementFormat) -> ParsedStatement {
     parse_statement(&Document::from_pages(&[text]), format).unwrap()
 }
@@ -664,5 +673,70 @@ fn detection_reads_the_heading() {
             "{SANTANDER_SIMPLE}\n03/05 TRANSF A BANCO DE CHILE 1.000"
         )),
         None
+    );
+}
+
+#[test]
+fn banco_estado_zero_filled_columns() {
+    let statement = parse(BANCO_ESTADO, StatementFormat::BancoEstadoAccount);
+    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
+    assert_eq!(amounts(&statement), [-10_000, 50_000, 2_500]);
+    assert_eq!(
+        statement.period,
+        Some((date(2026, 5, 1), date(2026, 5, 31)))
+    );
+    assert_eq!(
+        detect_format(&Document::from_pages(&[BANCO_ESTADO])),
+        Some(StatementFormat::BancoEstadoAccount)
+    );
+}
+
+const MERCADO_PAGO_SIGNED: &str = "\
+MERCADO PAGO
+ESTADO DE CUENTA
+03-05-2026 DINERO RECIBIDO +20.000
+04-05-2026 PAGO CON QR -8.500";
+
+const MERCADO_PAGO_COLUMNS: &str = "\
+MERCADO PAGO
+REPORTE DE MOVIMIENTOS
+Periodo: 01/05/2026 - 31/05/2026
+Fecha Detalle Ingresos Egresos Saldo
+05/05/2026 Venta QR local 35.000 0 135.000
+06/05/2026 Retiro a cuenta bancaria 0 22.500 112.500";
+
+const MERCADO_PAGO_ACCOUNT: &str = "\
+MERCADO PAGO
+DESDE HASTA FECHA DE GENERACION ID DE USUARIO
+01-05-2026 00:00:00 31-05-2026 23:59:59 17-06-2026 03:03:34 123456789
+FECHA DE ACREDITACION TIPO DE MOVIMIENTO TIPO DE TRANSACCION ID DE TRANSACCION MONEDA MONTO DE TRANSACCION OTROS CONCEPTOS
+01-05-2026 01:04:33 Abono Ganancias 1111111111111 CLP 7,00 0,00
+03-05-2026 13:19:34 Cargo Pago 222222222222 CLP -5.490,00 0,00";
+
+#[test]
+fn mercado_pago_layouts() {
+    let signed = parse(MERCADO_PAGO_SIGNED, StatementFormat::MercadoPago);
+    assert!(signed.problems.is_empty(), "{:?}", signed.problems);
+    assert_eq!(amounts(&signed), [20_000, -8_500]);
+
+    // Income comes before expense here, the opposite of the banks.
+    let columns = parse(MERCADO_PAGO_COLUMNS, StatementFormat::MercadoPago);
+    assert!(columns.problems.is_empty(), "{:?}", columns.problems);
+    assert_eq!(amounts(&columns), [35_000, -22_500]);
+    assert_eq!(columns.rows[1].description, "Retiro a cuenta bancaria");
+
+    let account = parse(MERCADO_PAGO_ACCOUNT, StatementFormat::MercadoPago);
+    assert!(account.problems.is_empty(), "{:?}", account.problems);
+    assert_eq!(account.period, Some((date(2026, 5, 1), date(2026, 5, 31))));
+    assert_eq!(amounts(&account), [7, -5_490]);
+    let descriptions: Vec<&str> = account
+        .rows
+        .iter()
+        .map(|r| r.description.as_str())
+        .collect();
+    assert_eq!(descriptions, ["Ganancias", "Pago"]);
+    assert_eq!(
+        detect_format(&Document::from_pages(&[MERCADO_PAGO_ACCOUNT])),
+        Some(StatementFormat::MercadoPago)
     );
 }
