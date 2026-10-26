@@ -1244,6 +1244,9 @@
             <div class="wallet-cat">{w.category}</div>
             <div class="wallet-val">{mask(w.total_value)}</div>
             <div class="wallet-count">{w.assets_count} {w.assets_count !== 1 ? i18n.t('crypto-wallet-assets-other', 'assets') : i18n.t('crypto-wallet-assets-one', 'asset')}</div>
+            {#if w.last_movement}
+              <div class="wallet-count">{i18n.tArgs('crypto-wallet-last-movement', { date: formatDate(w.last_movement) }, `Last movement: ${formatDate(w.last_movement)}`)}</div>
+            {/if}
           </button>
         {/each}
       </div>
