@@ -21,11 +21,20 @@ use sanctum::error::AppError;
 use sanctum::features::crypto::CryptoService;
 use sanctum::features::ingestion::parsers::CustomColumnMapping;
 use sanctum::features::ingestion::parsers::detect_exchange_source as parse_exchange_source;
+use sanctum::features::ingestion::parsers::statement::{
+    RowIssue, StatementFormat, StatementWarning,
+};
+use sanctum::features::ingestion::service::{StatementEntry, StatementPreview, StatementRead};
 use sanctum::features::ingestion::{IngestionService, MAX_FILE_SIZE};
+use sanctum::services::i18n::{t, t_args};
+use sanctum::ui::currency::format_money;
 use sanctum::ui::dto::ingestion::{
     CsvAnalysisResult, CustomCsvMapping, ExchangeDetectionResult, ImportErrorDto,
-    ImportResultsResponse, MissingAccountDto, MissingCategoryDto,
+    ImportResultsResponse, MissingAccountDto, MissingCategoryDto, StatementEntryInput,
+    StatementFormatDto, StatementPreviewDto, StatementPreviewResponse, StatementProblemDto,
+    StatementRowDto,
 };
+use secrecy::SecretString;
 use tauri::State;
 
 #[tauri::command]
@@ -185,5 +194,143 @@ fn map_import_summary(
             })
             .collect(),
         missing_wallets: summary.missing_wallets,
+    }
+}
+
+// ─── Bank statements ─────────────────────────────────────────────────────────
+
+fn format_label(format: StatementFormat) -> String {
+    t(&format!("import-statement-format-{}", format.id()))
+}
+
+#[tauri::command]
+pub fn statement_formats() -> Vec<StatementFormatDto> {
+    StatementFormat::ALL
+        .into_iter()
+        .map(|f| StatementFormatDto {
+            id: f.id().to_string(),
+            label: format_label(f),
+        })
+        .collect()
+}
+
+/// Reads a statement PDF into a reviewable preview. The password, when the
+/// PDF has one, is used for this call only.
+#[tauri::command]
+pub fn preview_statement(
+    ingestion: State<'_, IngestionService>,
+    bytes: Vec<u8>,
+    password: Option<String>,
+    account_id: String,
+    format: Option<String>,
+) -> Result<StatementPreviewResponse, AppError> {
+    let password = password.filter(|p| !p.is_empty()).map(SecretString::from);
+    let format = format.as_deref().and_then(StatementFormat::from_id);
+    let read = ingestion
+        .preview_statement(&bytes, password.as_ref(), &account_id, format)
+        .map_err(AppError::from)?;
+    let (status, preview) = match read {
+        StatementRead::NeedsPassword => ("needs_password", None),
+        StatementRead::WrongPassword => ("wrong_password", None),
+        StatementRead::Ready(preview) => ("ready", Some(map_statement_preview(preview))),
+    };
+    Ok(StatementPreviewResponse {
+        status: status.to_string(),
+        preview,
+    })
+}
+
+#[tauri::command]
+pub fn import_statement(
+    ingestion: State<'_, IngestionService>,
+    account_id: String,
+    rows: Vec<StatementEntryInput>,
+) -> Result<usize, AppError> {
+    let entries = rows
+        .into_iter()
+        .map(|r| StatementEntry {
+            date: r.date,
+            description: r.description,
+            amount: r.amount,
+            category: r.category,
+            transfer_account_id: r.transfer_account_id.filter(|id| !id.is_empty()),
+        })
+        .collect();
+    ingestion
+        .import_statement(&account_id, entries)
+        .map_err(AppError::from)
+}
+
+fn map_statement_preview(preview: StatementPreview) -> StatementPreviewDto {
+    let pesos = |amount: i64| format_money(amount * 100, "CLP");
+    let warnings = preview
+        .warnings
+        .iter()
+        .map(|w| match w {
+            StatementWarning::TotalsMismatch { declared, parsed } => t_args(
+                "import-statement-warning-totals",
+                &[
+                    ("parsed_out", &pesos(parsed.expense)),
+                    ("declared_out", &pesos(declared.expense)),
+                    ("parsed_in", &pesos(parsed.income)),
+                    ("declared_in", &pesos(declared.income)),
+                ],
+            ),
+            StatementWarning::SectionMismatch {
+                section,
+                declared,
+                parsed,
+            } => t_args(
+                "import-statement-warning-section",
+                &[
+                    ("section", section),
+                    ("parsed", &pesos(*parsed)),
+                    ("declared", &pesos(*declared)),
+                ],
+            ),
+            StatementWarning::TotalsUnreadable => t("import-statement-warning-unreadable"),
+        })
+        .collect();
+    StatementPreviewDto {
+        format: preview.format.id().to_string(),
+        format_label: format_label(preview.format),
+        credit_card: preview.format.is_credit_card(),
+        period_start: preview.period.map(|p| p.0.format("%Y-%m-%d").to_string()),
+        period_end: preview.period.map(|p| p.1.format("%Y-%m-%d").to_string()),
+        rows: preview
+            .rows
+            .into_iter()
+            .map(|r| StatementRowDto {
+                date: r.row.date.format("%Y-%m-%d").to_string(),
+                description: r.row.description,
+                amount: r.row.amount,
+                category: r.category,
+                transfer_account_id: r.transfer_account_id,
+                learned: r.learned,
+                duplicate: r.duplicate,
+                sign_guessed: r.row.sign_from_keyword,
+                installment: r.row.installment.map(|(n, c)| format!("{n}/{c}")),
+            })
+            .collect(),
+        problems: preview
+            .problems
+            .into_iter()
+            .map(|p| StatementProblemDto {
+                text: p.text,
+                reason: t(&format!("import-statement-issue-{}", issue_id(p.issue))),
+            })
+            .collect(),
+        warnings,
+    }
+}
+
+fn issue_id(issue: RowIssue) -> &'static str {
+    match issue {
+        RowIssue::MissingAmount | RowIssue::ZeroAmount => "amount",
+        RowIssue::AmbiguousAmount => "ambiguous",
+        RowIssue::UnknownSign => "sign",
+        RowIssue::MissingDescription => "description",
+        RowIssue::MissingYear | RowIssue::OutsidePeriod | RowIssue::InvalidDate => "date",
+        RowIssue::UnreadableRow => "unreadable",
     }
 }

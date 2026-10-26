@@ -23,6 +23,7 @@ pub mod csv;
 pub mod custom;
 pub mod exchange;
 pub mod json;
+pub mod statement;
 
 pub use self::csv::CsvParser;
 pub use self::custom::{CsvStructure, CustomColumnMapping, CustomCsvParser, analyze_csv_structure};

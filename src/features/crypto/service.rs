@@ -24,7 +24,7 @@ use crate::db::{Database, DbError};
 use crate::models::{AggregatedAsset, CryptoAsset, CryptoWallet};
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::Local;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
@@ -372,6 +372,12 @@ impl CryptoService {
 
     pub fn get_wallets(&self) -> Result<Vec<CryptoWallet>, CryptoError> {
         self.with_db(|db| db.get_wallets().map_err(CryptoError::Database))
+    }
+
+    /// When each wallet last had a movement, so the user knows how stale an
+    /// imported exchange history is.
+    pub fn latest_wallet_movements(&self) -> Result<HashMap<String, String>, CryptoError> {
+        self.with_db(|db| db.latest_transaction_dates().map_err(CryptoError::Database))
     }
 
     pub fn delete_wallet(&self, id: String, force: bool) -> Result<(), CryptoError> {

@@ -81,6 +81,8 @@ export interface WalletDto {
   icon_path: string | null
   total_value: string
   assets_count: number
+  /** `YYYY-MM-DD` of the latest transaction, if any. */
+  last_movement: string | null
 }
 
 export interface WalletsResponse {

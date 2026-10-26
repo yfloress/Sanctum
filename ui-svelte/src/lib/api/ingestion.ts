@@ -20,7 +20,10 @@ import type {
   ImportResultsResponse,
   ExchangeDetectionResult,
   CsvAnalysisResult,
-  CustomCsvMapping
+  CustomCsvMapping,
+  StatementFormatDto,
+  StatementPreviewResponse,
+  StatementEntryInput
 } from '../types'
 
 export async function previewImport(content: string, filename: string): Promise<ImportResultsResponse> {
@@ -63,4 +66,25 @@ export async function importCustomCsv(
     mapping,
     walletName: wallet_name
   })
+}
+
+export async function statementFormats(): Promise<StatementFormatDto[]> {
+  return invoke<StatementFormatDto[]>('statement_formats')
+}
+
+/** The password, when the PDF has one, is sent for this call only. */
+export async function previewStatement(
+  bytes: Uint8Array, accountId: string, password: string | null, format: string | null
+): Promise<StatementPreviewResponse> {
+  return invoke<StatementPreviewResponse>('preview_statement', {
+    // A typed array would serialize as an object; the command takes a list.
+    bytes: Array.from(bytes),
+    accountId,
+    password,
+    format,
+  })
+}
+
+export async function importStatement(accountId: string, rows: StatementEntryInput[]): Promise<number> {
+  return invoke<number>('import_statement', { accountId, rows })
 }

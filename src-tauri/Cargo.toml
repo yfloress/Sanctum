@@ -18,6 +18,7 @@ chrono = "0.4"
 directories = "6"
 log = "0.4"
 sanctum = { path = ".." }
+secrecy = "0.10"
 tauri = { version = "2", features = [] }
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-dialog = "2"

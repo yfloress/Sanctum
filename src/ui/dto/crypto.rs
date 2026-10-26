@@ -139,6 +139,8 @@ pub struct WalletDto {
     pub icon_path: Option<String>,
     pub total_value: String,
     pub assets_count: i32,
+    /// `YYYY-MM-DD` of the latest transaction, if any.
+    pub last_movement: Option<String>,
 }
 
 /// Wallets list response.

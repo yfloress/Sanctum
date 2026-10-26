@@ -22,6 +22,7 @@
 use crate::db::{Database, DbError};
 use crate::models::CryptoWallet;
 use rusqlite::{Connection, Error as RusqliteError, params};
+use std::collections::HashMap;
 
 impl Database {
     /// Creates a new crypto wallet
@@ -57,6 +58,20 @@ impl Database {
                 .collect::<Result<Vec<_>, _>>()?;
 
             Ok(wallets)
+        })
+    }
+
+    /// Date of each wallet's most recent transaction, by wallet id. Wallets
+    /// without transactions are absent.
+    pub fn latest_transaction_dates(&self) -> Result<HashMap<String, String>, DbError> {
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT wallet_id, MAX(date) FROM crypto_transactions GROUP BY wallet_id",
+            )?;
+            let dates = stmt
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<Result<HashMap<_, _>, _>>()?;
+            Ok(dates)
         })
     }
 

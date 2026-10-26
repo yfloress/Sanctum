@@ -260,6 +260,7 @@ pub fn fetch_wallets(
     settings: State<'_, SettingsService>,
 ) -> Result<WalletsResponse, AppError> {
     let wallets = crypto.get_wallets().map_err(AppError::from)?;
+    let latest = crypto.latest_wallet_movements().unwrap_or_default();
     let prices = crypto.load_crypto_prices().unwrap_or_default();
     let pm: HashMap<String, f64> = prices
         .into_iter()
@@ -281,6 +282,7 @@ pub fn fetch_wallets(
                 icon_path: w.icon.clone(),
                 total_value: fmt_pref(total, &settings, &finance),
                 assets_count: holdings.len() as i32,
+                last_movement: latest.get(&w.id).map(|d| d.chars().take(10).collect()),
             }
         })
         .collect();

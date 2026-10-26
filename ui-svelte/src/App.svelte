@@ -524,23 +524,16 @@
     transform: scale(0.97);
   }
 
+  /* Flat on purpose: the purple tint and its border mark the tab, no glow. */
   :global(.tab-bar button.active) {
     color: var(--text-primary);
     font-weight: 600;
-    background: linear-gradient(135deg, var(--accent-bg) 0%, rgba(168,85,247,0.08) 100%);
+    background: var(--accent-bg);
     border-color: var(--accent-border);
-    box-shadow:
-      0 0 0 1px var(--accent-border) inset,
-      0 2px 10px var(--accent-glow),
-      inset 0 1px 0 rgba(255,255,255,0.08);
   }
 
   :global(.light-mode .tab-bar button.active) {
     background: rgba(255,255,255,0.92);
-    box-shadow:
-      0 0 0 1px var(--accent-border) inset,
-      0 2px 10px var(--accent-glow),
-      inset 0 1px 0 rgba(255,255,255,0.5);
   }
 
   .shell {
