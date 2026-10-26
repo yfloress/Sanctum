@@ -855,3 +855,5 @@ statement-flip = Invertir sentido
 statement-back = Volver
 statement-import = Importar {$count}
 statement-imported = {$count} movimientos importados
+crypto-import-history = Importar historial
+crypto-import-lead = Descarga el historial desde el exchange o la billetera y elige el archivo aquí. Importar de nuevo el mismo historial no duplica nada.

@@ -855,3 +855,5 @@ statement-flip = Flip direction
 statement-back = Back
 statement-import = Import {$count}
 statement-imported = {$count} movements imported
+crypto-import-history = Import history
+crypto-import-lead = Download the history from the exchange or wallet and choose the file here. Importing the same history again does not duplicate anything.

@@ -34,6 +34,7 @@
   import CryptoWalletPanel from '../components/crypto/CryptoWalletPanel.svelte'
   import CryptoAssetPanel from '../components/crypto/CryptoAssetPanel.svelte'
   import CryptoTaxPanel from '../components/crypto/CryptoTaxPanel.svelte'
+  import DataImport from '../components/DataImport.svelte'
   import type {
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
@@ -253,6 +254,7 @@
 
   // Wallet form
   let showAddWallet = $state(false)
+  let showImport = $state(false)
   let walletName = $state('')
   let walletCategory = $state('exchange')
 
@@ -997,7 +999,7 @@
   )
 </script>
 
-<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
+<div class="page" class:blurred={showAddWallet || showImport || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
   <!-- Ticker Bar -->
   <div class="ticker-bar">
     {#if showFxBadge}
@@ -1064,6 +1066,7 @@
       <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
     <div class="tab-actions">
+      <button class="glass-btn" onclick={() => showImport = true}>{i18n.t('crypto-import-history', 'Import history')}</button>
       {#if activeTab === 'wallets'}
         <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
       {/if}
@@ -1704,6 +1707,21 @@
   onclose={() => showAssetDetail = false}
 />
 
+<!-- Exchange and wallet history import -->
+{#if showImport}
+  <div class="modal-backdrop" role="presentation" onclick={() => showImport = false}></div>
+  <div class="modal-wrapper">
+    <div class="modal wide" use:dialog={{ onclose: () => showImport = false, autofocus: false }}>
+      <h3>{i18n.t('crypto-import-history', 'Import history')}</h3>
+      <p class="import-lead">{i18n.t('crypto-import-lead', 'Download the history from the exchange or wallet and choose the file here. Importing the same history again does not duplicate anything.')}</p>
+      <DataImport cryptoOnly onimported={refreshAfterTxChange} />
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showImport = false}>{i18n.t('crypto-close', 'Close')}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <!-- Add Wallet Modal -->
 {#if showAddWallet}
   <div class="modal-backdrop" role="presentation" onclick={() => showAddWallet = false}></div>
@@ -1959,6 +1977,7 @@
   .tab-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 20px; }
   /* The active tab's actions, on the line of the tabs. */
   .tab-actions { display: flex; gap: 8px; }
+  .import-lead { margin: -8px 0 8px; font-size: 0.82rem; color: var(--text-secondary); }
   .tab-action-icon { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
   .tab-action-icon svg { width: 14px; height: 14px; }
 
