@@ -216,11 +216,11 @@
           {/if}
         </button>
 
-        {#if vaultExists}
-          <button class="restore-link" onclick={restoreFromBackup} disabled={loading} id="restore-backup">
-            {i18n.t('login-restore', 'Restore from backup')}
-          </button>
-        {/if}
+        <!-- Also on a fresh install: moving to a new computer starts by
+             restoring the backup, not by creating an empty vault. -->
+        <button class="restore-link" onclick={restoreFromBackup} disabled={loading} id="restore-backup">
+          {i18n.t('login-restore', 'Restore from backup')}
+        </button>
       </div>
     {/if}
   </div>

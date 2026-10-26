@@ -181,7 +181,11 @@ pub fn import_vault(backup: &Path, destination: &Path) -> Result<(), VaultError>
         create_backup_copy(destination)?;
     }
 
-    // 3. Replace vault file with backup
+    // 3. Replace vault file with backup. On a fresh install the data
+    //    directory may not exist yet: restoring is how a new computer starts.
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent)?;
+    }
     fs::copy(backup, destination)?;
 
     // 4. Set restrictive permissions on Unix
@@ -293,5 +297,49 @@ mod tests {
 
         // Cleanup
         let _ = fs::remove_file(valid_file);
+    }
+
+    /// Moving to another computer: the exported file restores into a fresh
+    /// install (no data directory yet) and opens with the original password,
+    /// because SQLCipher keeps its salt inside the file.
+    #[test]
+    fn backup_restores_on_a_fresh_install_with_the_same_password() {
+        use crate::db::Database;
+        use crate::models::Account;
+        use secrecy::SecretString;
+
+        let root = std::env::temp_dir().join(format!("sanctum-move-test-{}", uuid::Uuid::new_v4()));
+        let old_vault = root.join("old").join("vault.db");
+        let backup = root.join("backup.db");
+        let new_vault = root.join("new").join("data").join("vault.db");
+        let password = SecretString::from("correct horse battery".to_string());
+
+        {
+            let db = Database::init(old_vault.clone(), &password).unwrap();
+            let account = Account::new(
+                "acc".into(),
+                "Cuenta".into(),
+                "bank".into(),
+                "CLP".into(),
+                0,
+                "#8b5cf6".into(),
+                None,
+                "2026-01-01".into(),
+            );
+            db.create_account(&account).unwrap();
+            db.checkpoint().unwrap();
+        }
+        export_vault(&old_vault, &backup).unwrap();
+
+        assert!(!new_vault.parent().unwrap().exists());
+        import_vault(&backup, &new_vault).unwrap();
+
+        let wrong = SecretString::from("not the password".to_string());
+        assert!(Database::init(new_vault.clone(), &wrong).is_err());
+        let db = Database::init(new_vault, &password).unwrap();
+        assert_eq!(db.get_accounts().unwrap().len(), 1);
+
+        drop(db);
+        let _ = fs::remove_dir_all(root);
     }
 }
