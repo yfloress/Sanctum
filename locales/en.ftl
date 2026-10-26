@@ -858,3 +858,4 @@ statement-imported = {$count} movements imported
 crypto-import-history = Import history
 crypto-import-lead = Download the history from the exchange or wallet and choose the file here. Importing the same history again does not duplicate anything.
 crypto-wallet-last-movement = Last movement: {$date}
+import-exchange-hint-monero-view-only = Monero without the spend key: in Feather, Wallet > View-Only creates a wallet from your address and private view key. Import its key images (needs your own node or a trusted one) so outgoing payments count, then export the History CSV.

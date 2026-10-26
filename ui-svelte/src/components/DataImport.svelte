@@ -396,6 +396,7 @@
           <li>{i18n.t('import-exchange-hint-notbank', 'NotBank (CryptoMarket): Exchange Pro > Reports > Single Report > Transaction and Trade Activity (you can upload both together).')}</li>
           <li>{i18n.t('import-exchange-hint-feather', 'Export from Feather Wallet: History > Export CSV')}</li>
           <li>{i18n.t('import-exchange-hint-monero-gui', 'Export from Monero GUI: Wallet > History > Export CSV')}</li>
+          <li>{i18n.t('import-exchange-hint-monero-view-only', 'Monero without the spend key: in Feather, Wallet > View-Only creates a wallet from your address and private view key. Import its key images (needs your own node or a trusted one) so outgoing payments count, then export the History CSV.')}</li>
         </ul>
       </details>
     {/if}

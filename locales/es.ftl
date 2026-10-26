@@ -858,3 +858,4 @@ statement-imported = {$count} movimientos importados
 crypto-import-history = Importar historial
 crypto-import-lead = Descarga el historial desde el exchange o la billetera y elige el archivo aquí. Importar de nuevo el mismo historial no duplica nada.
 crypto-wallet-last-movement = Último movimiento: {$date}
+import-exchange-hint-monero-view-only = Monero sin la clave de gasto: en Feather, Wallet > View-Only crea una billetera con tu dirección y tu clave privada de vista. Importa sus key images (requiere tu propio nodo o uno de confianza) para que cuenten los pagos salientes, y después exporta el historial en CSV.
