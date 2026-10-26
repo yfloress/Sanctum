@@ -723,6 +723,89 @@
     z-index: 0;
   }
 
+  /* ===== Dark theme =====
+     The effects above were tuned on the light theme, where purple on white
+     reads as a tint. On the dark background the same purple turns into
+     glow, so here the glass and the slow background stay and the glows go:
+     a flat solid button like the rest of the app, a still logo, neutral
+     particles and tinted banners instead of dark patches. */
+  :global(html:not(.light-mode)) .login-page::before {
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(74, 222, 128, 0.025) 0%, transparent 50%);
+  }
+
+  :global(html:not(.light-mode)) .particle {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, transparent 70%);
+  }
+
+  :global(html:not(.light-mode)) .login-card {
+    box-shadow: var(--glass-shadow-lg), var(--glass-glow);
+  }
+
+  :global(html:not(.light-mode)) .card-shimmer {
+    display: none;
+  }
+
+  :global(html:not(.light-mode)) .logo-ring::before {
+    background: none;
+    border: 1px solid var(--glass-border);
+    filter: none;
+    animation: none;
+  }
+
+  :global(html:not(.light-mode)) .login-logo {
+    filter: none;
+    animation: none;
+  }
+
+  :global(html:not(.light-mode)) input:focus {
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  :global(html:not(.light-mode)) .submit-btn {
+    background: var(--accent-solid);
+    color: var(--text-on-accent);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.01em;
+  }
+
+  :global(html:not(.light-mode)) .submit-btn::before {
+    display: none;
+  }
+
+  :global(html:not(.light-mode)) .submit-btn:hover:not(:disabled) {
+    background: var(--accent-solid-hover);
+    transform: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  :global(html:not(.light-mode)) .submit-btn:active:not(:disabled) {
+    transform: scale(0.99);
+    box-shadow: none;
+  }
+
+  :global(html:not(.light-mode)) .warning-banner {
+    background: color-mix(in srgb, var(--warning) 10%, transparent);
+    border-color: color-mix(in srgb, var(--warning) 28%, transparent);
+  }
+
+  :global(html:not(.light-mode)) .error-banner {
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 28%, transparent);
+  }
+
+  /* Motion is decoration here; the form works the same without it. */
+  @media (prefers-reduced-motion: reduce) {
+    .login-page::before,
+    .particle,
+    .card-shimmer::before,
+    .logo-ring::before,
+    .login-logo {
+      animation: none;
+    }
+  }
+
   /* ===== Mobile ===== */
   @media (max-width: 480px) {
     .login-card {
