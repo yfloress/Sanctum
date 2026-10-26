@@ -157,7 +157,20 @@
 
   async function handleExchangeFile(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0]
-    if (!file) return
+    if (file) await readExchangeFile(file)
+  }
+
+  let dragging = $state(false)
+
+  function onDrop(event: DragEvent) {
+    event.preventDefault()
+    dragging = false
+    const file = event.dataTransfer?.files?.[0]
+    if (file && !importLoading) void readExchangeFile(file)
+  }
+
+  /** Detects which exchange or wallet wrote the file, then asks for the wallet. */
+  async function readExchangeFile(file: File) {
     try {
       const content = await readFile(file)
       if (maxFileSize > 0 && content.length > maxFileSize) {
@@ -357,6 +370,23 @@
       <input type="file" accept=".csv,.json" class="hidden-input" bind:this={genericFileInput} onchange={handleGenericFile} />
       <input type="file" accept=".csv" class="hidden-input" bind:this={exchangeFileInput} onchange={handleExchangeFile} />
       <input type="file" accept=".csv" class="hidden-input" bind:this={customFileInput} onchange={handleCustomFile} />
+      {#if cryptoOnly}
+        <button
+          type="button"
+          class="dropzone"
+          class:dragging
+          onclick={() => exchangeFileInput.click()}
+          ondragover={(e) => { e.preventDefault(); dragging = true }}
+          ondragleave={() => dragging = false}
+          ondrop={onDrop}
+          disabled={importLoading}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/>
+          </svg>
+          <span>{importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('import-exchange-drop', 'Drop the exchange or wallet CSV here, or click to choose it')}</span>
+        </button>
+      {/if}
       {#if !cryptoOnly}
       <div class="setting-row">
         <div>
@@ -367,7 +397,6 @@
           {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
         </button>
       </div>
-      {/if}
       <div class="setting-row">
         <div>
           <span class="setting-label">{i18n.t('settings-import-exchange', 'Exchange / Wallet CSV')}</span>
@@ -377,6 +406,7 @@
           {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
         </button>
       </div>
+      {/if}
       <div class="setting-row">
         <div>
           <span class="setting-label">{i18n.t('settings-import-custom', 'Custom CSV (manual mapping)')}</span>
@@ -499,6 +529,15 @@
   {/if}
 
 <style>
+  .dropzone {
+    display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 8px;
+    padding: 18px 16px; border: 1px dashed var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--row-bg); color: var(--text-secondary); font-size: 0.85rem;
+    cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
+  }
+  .dropzone svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .dropzone:hover, .dropzone.dragging { border-color: var(--accent-border); background: var(--row-bg-hover); }
+  .dropzone:disabled { cursor: progress; }
   .setting-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; gap: 16px;

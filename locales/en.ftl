@@ -879,3 +879,4 @@ finances-quick-label = Quick add
 finances-quick-add = Add
 statement-mirror = Matches {$account}
 statement-mirror-hint = This movement is already in the other account; it becomes the transfer instead of being added twice.
+import-exchange-drop = Drop the exchange or wallet CSV here, or click to choose it

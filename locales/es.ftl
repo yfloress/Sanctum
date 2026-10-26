@@ -879,3 +879,4 @@ finances-quick-label = Agregar rápido
 finances-quick-add = Agregar
 statement-mirror = Coincide con {$account}
 statement-mirror-hint = Este movimiento ya está en la otra cuenta; se convierte en la transferencia en vez de agregarse dos veces.
+import-exchange-drop = Arrastra aquí el CSV del exchange o la billetera, o haz clic para elegirlo
