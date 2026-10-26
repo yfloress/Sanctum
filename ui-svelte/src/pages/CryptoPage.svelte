@@ -1613,8 +1613,12 @@
             <h4>{i18n.t('crypto-tax-warnings', 'Warnings')} ({taxReport.warnings.length})</h4>
             {#each taxReport.warnings as w}
               <div class="warning-item">
-                <span class="warning-code">{w.code}</span>
-                <span class="warning-msg">{w.message}</span>
+                <span class="warning-msg">{i18n.t(`crypto-tax-warning-${w.code}`, w.message)}</span>
+                {#if w.tx_id}
+                  <button class="warning-action" onclick={() => openEditTransaction(w.tx_id!)}>
+                    {i18n.t('crypto-tax-open-movement', 'Open movement')}
+                  </button>
+                {/if}
                 {#if w.tx_id && RESOLVABLE_PRICE_CODES.has(w.code)}
                   <button class="warning-action" onclick={() => fetchAndFillPrice(w.tx_id)} disabled={taxFillingTxId === w.tx_id}>
                     {taxFillingTxId === w.tx_id
@@ -2393,7 +2397,6 @@
   }
   .warnings h4 { margin: 0 0 12px; color: var(--danger); font-size: 0.85rem; }
   .warning-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(248, 113, 113, 0.1); font-size: 0.85rem; }
-  .warning-code { color: var(--text-secondary); font-weight: 500; min-width: 80px; }
   .warning-msg { color: var(--text-secondary); flex: 1; }
   .warning-action {
     padding: 4px 10px; border: 1px solid var(--glass-border);
