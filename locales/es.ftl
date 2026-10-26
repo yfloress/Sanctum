@@ -874,3 +874,6 @@ crypto-tax-warning-no_lots = Se vendió o envió una moneda sin compras anterior
 crypto-tax-warning-insufficient_lots = Se vendió más de lo que figura comprado. Falta importar parte del historial o una transferencia de entrada.
 crypto-tax-warning-swap_unpaired = Un lado del intercambio no tiene su contraparte.
 crypto-tax-warning-swap_inferred = El intercambio se armó emparejando dos movimientos; revisa que sean los correctos.
+finances-quick-placeholder = Agregar rápido: 5000 almuerzo, +250000 sueldo
+finances-quick-label = Agregar rápido
+finances-quick-add = Agregar

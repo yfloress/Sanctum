@@ -38,6 +38,7 @@
   import FinanceAccountModal from '../components/finance/FinanceAccountModal.svelte'
   import FinanceTransferModal from '../components/finance/FinanceTransferModal.svelte'
   import StatementImportModal from '../components/finance/StatementImportModal.svelte'
+  import QuickEntry from '../components/finance/QuickEntry.svelte'
   import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
   import ReconcilePanel from '../components/finance/ReconcilePanel.svelte'
   import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
@@ -1073,6 +1074,12 @@
   <!-- ACTIVITY TAB -->
   {:else if activeTab === 'activity'}
     <section class="tab-content">
+      <QuickEntry
+        accounts={accountsData?.accounts ?? []}
+        categories={categories ?? { expense: [], income: [] }}
+        {descriptionHistory}
+        onadded={async () => { ledgerRevision += 1; await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+      />
       <div class="activity-toolbar">
         <div class="activity-filters">
           <div class="filter-search">
