@@ -177,6 +177,9 @@ pub struct StatementRowDto {
     /// The category or transfer came from an earlier movement at the same
     /// merchant.
     pub learned: bool,
+    /// A movement in the transfer's other account that mirrors this row;
+    /// importing as that transfer converts it instead of adding another.
+    pub merge_transaction_id: Option<String>,
     /// The account already has this movement.
     pub duplicate: bool,
     /// The direction was guessed from the description.
@@ -206,4 +209,5 @@ pub struct StatementEntryInput {
     pub amount: i64,
     pub category: String,
     pub transfer_account_id: Option<String>,
+    pub merge_transaction_id: Option<String>,
 }

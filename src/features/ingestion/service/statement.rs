@@ -27,9 +27,9 @@
 //! on the same day are two movements, and only as many statement rows as
 //! the account already holds for that day and amount are marked.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate, Weekday};
 use secrecy::{ExposeSecret, SecretString};
 use uuid::Uuid;
 
@@ -73,6 +73,11 @@ pub struct PreviewRow {
     /// The category or transfer came from an earlier movement at the same
     /// merchant.
     pub learned: bool,
+    /// A movement already in the other account mirrors this row (same
+    /// amount, opposite direction, a few days apart). Importing the row as
+    /// a transfer turns that movement into the transfer instead of adding a
+    /// second one.
+    pub merge_transaction_id: Option<String>,
 }
 
 /// A reviewed row, ready to write.
@@ -85,6 +90,9 @@ pub struct StatementEntry {
     /// Makes the row a transfer with this other account (a card payment,
     /// savings) instead of income or spending.
     pub transfer_account_id: Option<String>,
+    /// The other account's movement to turn into this transfer, from the
+    /// preview's `merge_transaction_id`.
+    pub merge_transaction_id: Option<String>,
 }
 
 impl IngestionService {
@@ -119,24 +127,63 @@ impl IngestionService {
             let history = History::new(&transactions);
             let existing = signed_movements(&transactions, &account.id);
             let duplicates = mark_duplicates(&statement.rows, &existing);
+            let others: Vec<Account> = db
+                .get_accounts()?
+                .into_iter()
+                .filter(|a| {
+                    a.id != account.id
+                        && !a.is_archived
+                        && a.currency.eq_ignore_ascii_case(STATEMENT_CURRENCY)
+                })
+                .collect();
+            let suggestions: Vec<Option<Suggestion>> = statement
+                .rows
+                .iter()
+                .map(|row| history.suggest(&row.description, &account.id, row.amount < 0))
+                .collect();
+            // Rows already settled (in the account, or a learned transfer)
+            // must not claim another account's movement.
+            let settled: Vec<bool> = duplicates
+                .iter()
+                .zip(&suggestions)
+                .map(|(dup, s)| *dup || matches!(s, Some(Suggestion::Transfer(_))))
+                .collect();
+            let mirrors = match_mirrors(&statement.rows, &settled, &transactions, &others);
+            let card = card_account(&account, &others);
+
             let rows = statement
                 .rows
                 .into_iter()
                 .zip(duplicates)
-                .map(|(row, duplicate)| {
-                    let learned = history.suggest(&row.description, &account.id, row.amount < 0);
-                    let (category, transfer_account_id) = match &learned {
-                        Some(Suggestion::Category(name)) => (name.clone(), None),
+                .zip(suggestions)
+                .zip(mirrors)
+                .map(|(((row, duplicate), learned), mirror)| {
+                    let mut category = FALLBACK_CATEGORY.to_string();
+                    let mut transfer_account_id = None;
+                    match &learned {
+                        Some(Suggestion::Category(name)) => category = name.clone(),
                         Some(Suggestion::Transfer(other)) => {
-                            (FALLBACK_CATEGORY.to_string(), Some(other.clone()))
+                            transfer_account_id = Some(other.clone())
                         }
-                        None => (FALLBACK_CATEGORY.to_string(), None),
-                    };
+                        None => {}
+                    }
+                    let mut merge_transaction_id = None;
+                    if let Some((tx_id, other)) = mirror {
+                        transfer_account_id = Some(other);
+                        merge_transaction_id = Some(tx_id);
+                    } else if transfer_account_id.is_none()
+                        && !duplicate
+                        && is_card_payment(&row)
+                        && let Some(card) = card
+                    {
+                        transfer_account_id = Some(card.to_string());
+                    }
                     PreviewRow {
                         duplicate,
                         learned: learned.is_some(),
                         category,
                         transfer_account_id,
+                        merge_transaction_id,
                         row,
                     }
                 })
@@ -151,8 +198,9 @@ impl IngestionService {
         })
     }
 
-    /// Writes the reviewed rows into the account. Every row is validated
-    /// before the first one is written, so a bad row writes nothing.
+    /// Writes the reviewed rows into the account, already reconciled. Every
+    /// row is validated before the first one is written, so a bad row writes
+    /// nothing.
     pub fn import_statement(
         &self,
         account_id: &str,
@@ -166,6 +214,12 @@ impl IngestionService {
                 .into_iter()
                 .map(|a| (a.id.clone(), a))
                 .collect();
+            let transactions: HashMap<String, Transaction> =
+                IngestionRepository::get_all_transactions(db)?
+                    .into_iter()
+                    .map(|tx| (tx.id.clone(), tx))
+                    .collect();
+            let mut merged: HashSet<&str> = HashSet::new();
 
             let mut writes = Vec::with_capacity(entries.len());
             for entry in &entries {
@@ -192,6 +246,39 @@ impl IngestionService {
                     } else {
                         (other.id.clone(), account.id.clone())
                     };
+                    if let Some(merge_id) = entry.merge_transaction_id.as_deref() {
+                        // Money into this account left the other one as a
+                        // spending there, and the other way round.
+                        let mirrored_kind = if entry.amount > 0 {
+                            "expense"
+                        } else {
+                            "income"
+                        };
+                        let mirror = transactions
+                            .get(merge_id)
+                            .filter(|tx| {
+                                tx.account_id == other.id
+                                    && tx.transaction_type == mirrored_kind
+                                    && tx.amount == cents
+                            })
+                            .filter(|_| merged.insert(merge_id))
+                            .ok_or_else(|| validation_error("import-statement-invalid-transfer"))?;
+                        // This side is confirmed by the statement; the other
+                        // keeps whatever its own reconciliation said.
+                        let (from_reconciled, to_reconciled) = if entry.amount > 0 {
+                            (mirror.reconciled, true)
+                        } else {
+                            (true, mirror.reconciled)
+                        };
+                        writes.push(Write::Merge {
+                            id: mirror.id.clone(),
+                            from,
+                            to,
+                            from_reconciled,
+                            to_reconciled,
+                        });
+                        continue;
+                    }
                     writes.push(Write::Transfer {
                         from,
                         to,
@@ -226,10 +313,12 @@ impl IngestionService {
                 )));
             }
 
+            let mut written = Vec::with_capacity(writes.len());
             for write in &writes {
                 match write {
                     Write::Movement(transaction) => {
-                        IngestionRepository::create_transaction(db, transaction)?
+                        IngestionRepository::create_transaction(db, transaction)?;
+                        written.push(transaction.id.clone());
                     }
                     Write::Transfer {
                         from,
@@ -238,17 +327,28 @@ impl IngestionService {
                         date,
                         description,
                     } => {
-                        IngestionRepository::create_transfer(
+                        written.push(IngestionRepository::create_transfer(
                             db,
                             from,
                             to,
                             *cents,
                             description,
                             &date.format("%Y-%m-%d").to_string(),
-                        )?;
+                        )?);
                     }
+                    Write::Merge {
+                        id,
+                        from,
+                        to,
+                        from_reconciled,
+                        to_reconciled,
+                    } => db.convert_to_transfer(id, from, to, *from_reconciled, *to_reconciled)?,
                 }
             }
+            // The bank's own statement is what reconciling checks against, so
+            // these rows are confirmed on this account's side. The other side
+            // of a transfer waits for that account's statement.
+            db.set_reconciled(&account.id, &written)?;
             Ok(writes.len())
         })
     }
@@ -263,6 +363,107 @@ enum Write {
         date: NaiveDate,
         description: String,
     },
+    Merge {
+        id: String,
+        from: String,
+        to: String,
+        from_reconciled: bool,
+        to_reconciled: bool,
+    },
+}
+
+/// How far apart, in business days, the two sides of a transfer may be
+/// booked. Banks clear between each other overnight, but weekends and
+/// holidays push it out.
+const MIRROR_WINDOW_BUSINESS_DAYS: u32 = 5;
+
+/// Weekdays after the earlier date up to and including the later one.
+/// Holidays are not known, so a long weekend counts a day short.
+fn business_days_between(a: NaiveDate, b: NaiveDate) -> u32 {
+    let (mut day, end) = if a <= b { (a, b) } else { (b, a) };
+    let mut count = 0;
+    while day < end {
+        day = day.succ_opt().unwrap_or(end);
+        if !matches!(day.weekday(), Weekday::Sat | Weekday::Sun) {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// For each row, the movement in another of the user's accounts that looks
+/// like its other half: an expense there for money that came in here, or an
+/// income there for money that left, with the same amount and close in
+/// time. The nearest one wins and each is used once. Rows marked `settled`
+/// are skipped.
+fn match_mirrors(
+    rows: &[StatementRow],
+    settled: &[bool],
+    transactions: &[Transaction],
+    others: &[Account],
+) -> Vec<Option<(String, String)>> {
+    let eligible: HashSet<&str> = others.iter().map(|a| a.id.as_str()).collect();
+    let mut used: HashSet<&str> = HashSet::new();
+    rows.iter()
+        .zip(settled)
+        .map(|(row, settled)| {
+            if *settled {
+                return None;
+            }
+            let kind = if row.amount > 0 { "expense" } else { "income" };
+            let cents = row.amount.checked_abs()?.checked_mul(100)?;
+            let best = transactions
+                .iter()
+                .filter(|tx| {
+                    eligible.contains(tx.account_id.as_str())
+                        && tx.transaction_type == kind
+                        && tx.amount == cents
+                        && !used.contains(tx.id.as_str())
+                })
+                .filter_map(|tx| {
+                    let date = NaiveDate::parse_from_str(tx.date.get(..10)?, "%Y-%m-%d").ok()?;
+                    let gap = business_days_between(date, row.date);
+                    (gap <= MIRROR_WINDOW_BUSINESS_DAYS).then_some((
+                        gap,
+                        (date - row.date).num_days().abs(),
+                        tx,
+                    ))
+                })
+                .min_by_key(|(gap, days, _)| (*gap, *days))?;
+            used.insert(best.2.id.as_str());
+            Some((best.2.id.clone(), best.2.account_id.clone()))
+        })
+        .collect()
+}
+
+/// The user's only credit card account, when the statement is not from a
+/// card itself. A card payment never shows on the card's own statement
+/// (only purchases do), so it cannot be matched and is guessed instead.
+fn card_account<'a>(account: &Account, others: &'a [Account]) -> Option<&'a str> {
+    if account.account_type == "credit_card" {
+        return None;
+    }
+    let mut cards = others.iter().filter(|a| a.account_type == "credit_card");
+    match (cards.next(), cards.next()) {
+        (Some(card), None) => Some(card.id.as_str()),
+        _ => None,
+    }
+}
+
+/// "PAGO TARJETA CREDITO", "PAGO TC 4321", "PAGO TARJ VISA".
+fn is_card_payment(row: &StatementRow) -> bool {
+    if row.amount >= 0 {
+        return false;
+    }
+    let words: Vec<String> = row
+        .description
+        .split(|c: char| !c.is_alphanumeric())
+        .map(str::to_uppercase)
+        .collect();
+    words.iter().any(|w| w == "PAGO")
+        && words
+            .iter()
+            .any(|w| matches!(w.as_str(), "TARJETA" | "TARJ" | "TC"))
 }
 
 fn parse_error(key: &str) -> IngestionError {
@@ -546,5 +747,220 @@ mod tests {
             history.suggest("PAGO TARJETA CREDITO", "savings", true),
             None
         );
+    }
+
+    fn date(y: i32, m: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, d).unwrap()
+    }
+
+    fn account(id: &str, kind: &str) -> Account {
+        Account::new(
+            id.into(),
+            id.into(),
+            kind.into(),
+            "CLP".into(),
+            0,
+            "#8b5cf6".into(),
+            None,
+            "2026-01-01".into(),
+        )
+    }
+
+    #[test]
+    fn business_days_skip_weekends() {
+        // Friday 2026-03-20 to Monday 2026-03-23 is one business day.
+        assert_eq!(
+            business_days_between(date(2026, 3, 20), date(2026, 3, 23)),
+            1
+        );
+        assert_eq!(
+            business_days_between(date(2026, 3, 23), date(2026, 3, 20)),
+            1
+        );
+        assert_eq!(
+            business_days_between(date(2026, 3, 16), date(2026, 3, 23)),
+            5
+        );
+        assert_eq!(
+            business_days_between(date(2026, 3, 16), date(2026, 3, 16)),
+            0
+        );
+    }
+
+    #[test]
+    fn mirrors_pair_opposite_movements_once() {
+        let mut out_of_savings = tx(
+            "2026-03-20",
+            "expense",
+            5_000_000,
+            "OTHER",
+            "Transf. a cuenta",
+        );
+        out_of_savings.account_id = "savings".into();
+        let mut too_late = tx("2026-04-10", "expense", 5_000_000, "OTHER", "Transf.");
+        too_late.account_id = "savings".into();
+        let mut wrong_side = tx("2026-03-20", "income", 5_000_000, "OTHER", "Transf.");
+        wrong_side.account_id = "savings".into();
+        let others = [account("savings", "savings")];
+        let rows = [
+            row((2026, 3, 23), 50_000),
+            row((2026, 3, 23), 50_000),
+            row((2026, 3, 23), -50_000),
+        ];
+
+        let found = match_mirrors(
+            &rows,
+            &[false, false, false],
+            &[out_of_savings.clone(), too_late, wrong_side.clone()],
+            &others,
+        );
+        // Money in here pairs with the expense there, only once; money out
+        // pairs with the income.
+        assert_eq!(
+            found[0],
+            Some((out_of_savings.id.clone(), "savings".to_string()))
+        );
+        assert_eq!(found[1], None);
+        assert_eq!(
+            found[2],
+            Some((wrong_side.id.clone(), "savings".to_string()))
+        );
+
+        let skipped = match_mirrors(&rows, &[true, true, true], &[out_of_savings], &others);
+        assert!(skipped.iter().all(Option::is_none));
+    }
+
+    #[test]
+    fn card_payments_go_to_the_only_card() {
+        let mut payment = row((2026, 3, 5), -300_000);
+        payment.description = "PAGO TARJETA CREDITO".into();
+        assert!(is_card_payment(&payment));
+        payment.description = "PAGO:GOOGLE PLAY".into();
+        assert!(!is_card_payment(&payment));
+
+        let checking = account("acc", "bank");
+        let one_card = [
+            account("card", "credit_card"),
+            account("savings", "savings"),
+        ];
+        assert_eq!(card_account(&checking, &one_card), Some("card"));
+        let two_cards = [
+            account("card", "credit_card"),
+            account("card2", "credit_card"),
+        ];
+        assert_eq!(card_account(&checking, &two_cards), None);
+        assert_eq!(
+            card_account(&account("card", "credit_card"), &one_card[1..]),
+            None
+        );
+    }
+
+    mod with_vault {
+        use super::*;
+        use std::sync::{Arc, RwLock};
+
+        struct Vault {
+            service: IngestionService,
+            db: Arc<RwLock<Option<Database>>>,
+            dir: std::path::PathBuf,
+        }
+
+        impl Drop for Vault {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.dir);
+            }
+        }
+
+        fn vault() -> Vault {
+            let dir =
+                std::env::temp_dir().join(format!("sanctum-statement-test-{}", Uuid::new_v4()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let password = SecretString::from("test-password-123".to_string());
+            let db = Database::init(dir.join("vault.db"), &password).unwrap();
+            for (id, kind) in [("acc", "bank"), ("savings", "savings")] {
+                db.create_account(&account(id, kind)).unwrap();
+            }
+            let db = Arc::new(RwLock::new(Some(db)));
+            Vault {
+                service: IngestionService::new(db.clone()),
+                db,
+                dir,
+            }
+        }
+
+        fn entry(amount: i64, category: &str) -> StatementEntry {
+            StatementEntry {
+                date: "2026-03-23".into(),
+                description: "Transf. de ahorro".into(),
+                amount,
+                category: category.into(),
+                transfer_account_id: None,
+                merge_transaction_id: None,
+            }
+        }
+
+        #[test]
+        fn imported_rows_are_reconciled_and_mirrors_become_one_transfer() {
+            let v = vault();
+            // The savings statement went in first: the money left as a spending.
+            v.service
+                .import_statement(
+                    "savings",
+                    vec![StatementEntry {
+                        date: "2026-03-20".into(),
+                        ..entry(-50_000, "OTHER")
+                    }],
+                )
+                .unwrap();
+            let spending = {
+                let lock = v.db.read().unwrap();
+                lock.as_ref().unwrap().get_transactions().unwrap().remove(0)
+            };
+            assert!(spending.reconciled);
+
+            // The checking statement shows it arriving, and the user keeps the
+            // suggested transfer with savings.
+            let written = v
+                .service
+                .import_statement(
+                    "acc",
+                    vec![
+                        StatementEntry {
+                            transfer_account_id: Some("savings".into()),
+                            merge_transaction_id: Some(spending.id.clone()),
+                            ..entry(50_000, "")
+                        },
+                        entry(-3_990, "TRANSPORT"),
+                    ],
+                )
+                .unwrap();
+            assert_eq!(written, 2);
+
+            let lock = v.db.read().unwrap();
+            let txs = lock.as_ref().unwrap().get_transactions().unwrap();
+            assert_eq!(txs.len(), 2, "the transfer replaced the spending: {txs:?}");
+            let transfer = txs.iter().find(|t| t.id == spending.id).unwrap();
+            assert_eq!(transfer.transaction_type, "transfer");
+            assert_eq!(transfer.account_id, "savings");
+            assert_eq!(transfer.transfer_account_id.as_deref(), Some("acc"));
+            assert!(transfer.reconciled && transfer.transfer_reconciled);
+            let uber = txs
+                .iter()
+                .find(|t| t.transaction_type == "expense")
+                .unwrap();
+            assert!(uber.reconciled);
+
+            // The same movement cannot be merged twice.
+            drop(lock);
+            let again = v.service.import_statement(
+                "acc",
+                vec![StatementEntry {
+                    transfer_account_id: Some("savings".into()),
+                    merge_transaction_id: Some(spending.id.clone()),
+                    ..entry(50_000, "")
+                }],
+            );
+            assert!(again.is_err());
+        }
     }
 }

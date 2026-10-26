@@ -877,3 +877,5 @@ crypto-tax-warning-swap_inferred = The swap was built by pairing two movements; 
 finances-quick-placeholder = Quick add: 5000 lunch, +250000 salary
 finances-quick-label = Quick add
 finances-quick-add = Add
+statement-mirror = Matches {$account}
+statement-mirror-hint = This movement is already in the other account; it becomes the transfer instead of being added twice.

@@ -254,6 +254,7 @@ pub fn import_statement(
             amount: r.amount,
             category: r.category,
             transfer_account_id: r.transfer_account_id.filter(|id| !id.is_empty()),
+            merge_transaction_id: r.merge_transaction_id.filter(|id| !id.is_empty()),
         })
         .collect();
     ingestion
@@ -307,6 +308,7 @@ fn map_statement_preview(preview: StatementPreview) -> StatementPreviewDto {
                 category: r.category,
                 transfer_account_id: r.transfer_account_id,
                 learned: r.learned,
+                merge_transaction_id: r.merge_transaction_id,
                 duplicate: r.duplicate,
                 sign_guessed: r.row.sign_from_keyword,
                 installment: r.row.installment.map(|(n, c)| format!("{n}/{c}")),

@@ -52,6 +52,8 @@
     /** A category name, or `transfer:<account id>`. */
     target: string
     learned: boolean
+    /** The other account's movement this row mirrors, and that account. */
+    merge: { id: string, accountId: string } | null
     duplicate: boolean
     signGuessed: boolean
     installment: string | null
@@ -141,6 +143,9 @@
           ? TRANSFER + r.transfer_account_id
           : defaultTarget(r.amount, r.category),
         learned: r.learned,
+        merge: r.merge_transaction_id && r.transfer_account_id
+          ? { id: r.merge_transaction_id, accountId: r.transfer_account_id }
+          : null,
         duplicate: r.duplicate,
         signGuessed: r.sign_guessed,
         installment: r.installment,
@@ -174,6 +179,8 @@
           amount: r.amount,
           category: r.target.startsWith(TRANSFER) ? '' : r.target,
           transfer_account_id: r.target.startsWith(TRANSFER) ? r.target.slice(TRANSFER.length) : null,
+          // Only while the row still points at the account it mirrors.
+          merge_transaction_id: r.merge && r.target === TRANSFER + r.merge.accountId ? r.merge.id : null,
         })),
       )
       show = false
@@ -203,6 +210,10 @@
       ? `${formatDate(preview.period_start)} – ${formatDate(preview.period_end)}`
       : ''
   )
+  function accountName(id: string): string {
+    return accounts.find(a => a.id === id)?.name ?? ''
+  }
+
   let duplicateCount = $derived(rows.filter(r => r.duplicate).length)
   let otherAccounts = $derived(accounts.filter(a => a.id !== accountId && !a.is_archived && a.currency.toUpperCase() === 'CLP'))
 </script>
@@ -323,6 +334,11 @@
                 <div class="badges">
                   {#if row.duplicate}<span class="badge">{i18n.t('statement-duplicate', 'Already in the account')}</span>{/if}
                   {#if row.installment}<span class="badge">{i18n.tArgs('statement-installment', { n: row.installment }, `Installment ${row.installment}`)}</span>{/if}
+                  {#if row.merge && row.target === TRANSFER + row.merge.accountId}
+                    <span class="badge soft" title={i18n.t('statement-mirror-hint', 'This movement is already in the other account; it becomes the transfer instead of being added twice.')}>
+                      {i18n.tArgs('statement-mirror', { account: accountName(row.merge.accountId) }, `Matches ${accountName(row.merge.accountId)}`)}
+                    </span>
+                  {/if}
                   {#if row.learned}<span class="badge soft" title={i18n.t('statement-learned', 'Category learned from earlier movements')}>{i18n.t('statement-learned-short', 'Learned')}</span>{/if}
                 </div>
               </div>

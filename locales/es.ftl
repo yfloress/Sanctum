@@ -877,3 +877,5 @@ crypto-tax-warning-swap_inferred = El intercambio se armó emparejando dos movim
 finances-quick-placeholder = Agregar rápido: 5000 almuerzo, +250000 sueldo
 finances-quick-label = Agregar rápido
 finances-quick-add = Agregar
+statement-mirror = Coincide con {$account}
+statement-mirror-hint = Este movimiento ya está en la otra cuenta; se convierte en la transferencia en vez de agregarse dos veces.

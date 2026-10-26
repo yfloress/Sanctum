@@ -395,6 +395,40 @@ impl Database {
         })
     }
 
+    /// Turns an income or expense into a transfer between `from` and `to`,
+    /// keeping its amount, date and description. Used when a statement
+    /// shows that a movement already in one account was money moved to or
+    /// from another of the user's accounts, so the pair is one transfer
+    /// instead of a spending plus an income.
+    pub fn convert_to_transfer(
+        &self,
+        id: &str,
+        from: &str,
+        to: &str,
+        from_reconciled: bool,
+        to_reconciled: bool,
+    ) -> Result<(), DbError> {
+        if from == to {
+            return Err(DbError::SameAccountTransfer);
+        }
+        self.write(|conn| {
+            Self::get_account_on(conn, from)?;
+            Self::get_account_on(conn, to)?;
+            let changed = conn.execute(
+                "UPDATE transactions
+                 SET account_id = ?2, transfer_account_id = ?3, type = 'transfer', category = 'Transfer',
+                     reconciled = ?4, transfer_reconciled = ?5
+                 WHERE id = ?1 AND type IN ('income', 'expense')",
+                params![id, from, to, from_reconciled, to_reconciled],
+            )?;
+            if changed == 1 {
+                Ok(())
+            } else {
+                Err(DbError::InvalidTransactionType)
+            }
+        })
+    }
+
     // ==================== Tags ====================
 
     /// Replaces the tags on a transaction with `tags`.

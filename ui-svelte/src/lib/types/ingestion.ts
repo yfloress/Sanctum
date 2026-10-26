@@ -84,6 +84,8 @@ export interface StatementRowDto {
   transfer_account_id: string | null
   /** The category or transfer came from an earlier movement at the same merchant. */
   learned: boolean
+  /** A movement in the transfer's other account that mirrors this row. */
+  merge_transaction_id: string | null
   /** The account already has this movement. */
   duplicate: boolean
   /** The direction was guessed from the description. */
@@ -119,4 +121,5 @@ export interface StatementEntryInput {
   amount: number
   category: string
   transfer_account_id: string | null
+  merge_transaction_id: string | null
 }
