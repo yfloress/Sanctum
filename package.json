@@ -10,7 +10,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/react": "^6.0.2",
+    "@astrojs/react": "^7.0.0",
     "astro": "7.4.2",
     "clsx": "^2.1.1",
     "react": "^19.2.8",
