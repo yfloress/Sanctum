@@ -62,12 +62,12 @@
     return sum
   }, { inserted: 0, skipped: 0, errors: 0 }))
 
-  async function preview(row: Entry) {
+  async function preview(row: Entry, existingContent?: string) {
     row.error = undefined
     row.preview = undefined
     row.allowPartial = false
     if (!row.wallet || (row.analysis && !row.mapping)) return
-    const content = await row.file.text()
+    const content = existingContent ?? await row.file.text()
     row.preview = row.mapping
       ? await ingestion.previewCustomCsv(content, row.mapping, row.wallet)
       : await ingestion.previewExchangeCsv(content, row.wallet)
@@ -94,7 +94,7 @@
             row.analysis = await ingestion.analyzeCustomCsv(content)
             row.mapping = await ingestion.loadCustomCsvMapping(row.analysis.headers) ?? undefined
           }
-          await preview(row)
+          await preview(row, content)
         } catch (e) {
           row.error = errorMessage(e)
         }
@@ -234,7 +234,7 @@
   {#each entries as row (row.id)}
     {@const summary = row.result ?? row.preview}
     <section>
-      <div class="controls"><strong>{row.file.name}</strong>{row.source}
+      <div class="file-heading"><div><strong>{row.file.name}</strong>{#if row.source}<small>{row.source}</small>{/if}</div>
         {#if !row.result}
           <button class="glass-btn" disabled={busy} onclick={() => { if (activeMapper === row.id) closeMapper(); entries = entries.filter(r => r.id !== row.id) }}>
             {i18n.t('crypto-batch-remove', 'Remove')}
@@ -308,8 +308,7 @@
 </div>
 
 <style>
-  .batch, section { display: grid; gap: 0.65rem; }
-  .batch { max-height: 65vh; overflow-y: auto; }
+  .batch { display: grid; gap: 1rem; }
   .drop {
     position: relative; display: grid; gap: .35rem; justify-items: center; text-align: center;
     padding: 1.5rem 1rem; border: 1px dashed var(--accent); border-radius: var(--radius-md, 12px);
@@ -320,13 +319,19 @@
   .drop.inactive { opacity: .65; }
   .upload-icon { width: 1.65rem; height: 1.65rem; background: var(--accent); mask: url('/assets/icons/upload.svg') center / contain no-repeat; }
   .extensions, small { color: var(--text-secondary); font-size: .875rem; }
-  section { border-top: 1px solid var(--glass-border); padding: 0.75rem 0; }
-  strong { overflow-wrap: anywhere; }
-  .controls, label { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
-  details > .controls { margin-top: 0.5rem; }
+  section, details[open] { display: grid; gap: .75rem; }
+  section, details { padding: 1rem; border: 1px solid var(--glass-border-hover); border-radius: var(--radius-md, 12px); background: var(--row-bg); min-width: 0; }
+  .file-heading { display: flex; align-items: start; justify-content: space-between; gap: .75rem; }
+  .file-heading > div { min-width: 0; display: grid; }
+  strong, p, li { overflow-wrap: anywhere; }
+  .controls { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+  .controls > input, .controls > select { flex: 1 1 10rem; }
+  section > label { display: grid; gap: .35rem; }
+  section > label:has(input[type="checkbox"]) { display: block; }
+  details > .controls { margin-top: .7rem; }
   p, ul { margin: 0; }
-  summary { cursor: pointer; }
-  small { color: var(--text-secondary); }
-  input, select { min-width: 0; max-width: 100%; }
-  ul { max-height: 10rem; overflow-y: auto; }
+  summary { cursor: pointer; font-weight: 600; }
+  [role="alert"] { color: var(--danger); }
+  .batch > .primary-btn { justify-self: end; }
+  @media (max-width: 480px) { .batch > .primary-btn { width: 100%; } }
 </style>

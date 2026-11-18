@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { untrack } from 'svelte'
   import { formatDate, formatSyncTime, localIsoDate } from '../lib/dates'
   import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
@@ -991,7 +992,7 @@
     if (activeTab === 'wallets') loadWallets()
   })
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
-  $effect(() => { if (activeTab === 'activity') loadTransactionsList() })
+  $effect(() => { if (activeTab === 'activity') untrack(loadTransactionsList) })
 
   $effect(() =>
     setPageActions({
@@ -1005,7 +1006,7 @@
   )
 </script>
 
-<div class="page" class:blurred={showAddWallet || showSources || showImport || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
+<div class="page" inert={showSources || showImport} class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
   <!-- Ticker Bar -->
   <div class="ticker-bar">
     {#if showFxBadge}
@@ -1722,14 +1723,16 @@
 />
 
 {#if showSources}
-  <div class="modal-backdrop" role="presentation" onclick={() => showSources = false}></div>
+  <div class="modal-backdrop history-backdrop" role="presentation" onclick={() => showSources = false}></div>
   <div class="modal-wrapper">
-    <div class="modal wide history-sources" role="dialog" aria-modal="true" aria-labelledby="sources-title" use:dialog={{ onclose: () => showSources = false, autofocus: false }}>
+    <div class="modal wide history-dialog" role="dialog" aria-modal="true" aria-labelledby="sources-title" use:dialog={{ onclose: () => showSources = false, autofocus: false }}>
       <h3 id="sources-title">{i18n.t('crypto-sources-title', 'History sources')}</h3>
-      <CryptoSync wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
-      <details><summary>Monero RPC</summary><MoneroLocal wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} /></details>
-      <CryptoTransferReview onchanged={refreshAfterTxChange} />
-      <ExportFolders wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
+      <div class="history-body source-list">
+        <CryptoSync wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
+        <details><summary>Monero RPC</summary><MoneroLocal wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} /></details>
+        <details><summary>{i18n.t('crypto-folders-title', 'CSV export folders')}</summary><ExportFolders wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} /></details>
+        <CryptoTransferReview onchanged={refreshAfterTxChange} />
+      </div>
       <div class="modal-actions"><button class="secondary-btn" onclick={() => showSources = false}>{i18n.t('crypto-close','Close')}</button></div>
     </div>
   </div>
@@ -1737,11 +1740,13 @@
 
 <!-- Exchange and wallet history import -->
 {#if showImport}
-  <div class="modal-backdrop" role="presentation" onclick={() => { if (!importBusy) showImport = false }}></div>
+  <div class="modal-backdrop history-backdrop" role="presentation" onclick={() => { if (!importBusy) showImport = false }}></div>
   <div class="modal-wrapper">
-    <div class="modal wide" use:dialog={{ onclose: () => { if (!importBusy) showImport = false }, autofocus: false }}>
-      <h3>{i18n.t('crypto-import-history', 'Import history')}</h3>
-      <CryptoBatchImport bind:busy={importBusy} onimported={async () => { await refreshAfterTxChange(); await loadWallets() }} />
+    <div class="modal wide history-dialog" role="dialog" aria-modal="true" aria-labelledby="import-history-title" use:dialog={{ onclose: () => { if (!importBusy) showImport = false }, autofocus: false }}>
+      <h3 id="import-history-title">{i18n.t('crypto-import-history', 'Import history')}</h3>
+      <div class="history-body">
+        <CryptoBatchImport bind:busy={importBusy} onimported={async () => { await refreshAfterTxChange(); await loadWallets() }} />
+      </div>
       <div class="modal-actions">
         <button class="secondary-btn" disabled={importBusy} onclick={() => showImport = false}>{i18n.t('crypto-close', 'Close')}</button>
       </div>
@@ -1941,6 +1946,10 @@
   @media (max-width: 640px) {
     .page { padding: 20px 16px; }
   }
+
+  /* Repeated crypto cards share a tinted surface. Blurring the background of
+     every row makes the entire list expensive to scroll in WebKitGTK. */
+  .page { --glass-blur: none; }
 
   /* Ticker Bar */
   .ticker-bar {
@@ -2181,6 +2190,7 @@
 
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; }
+  .modal-backdrop.history-backdrop { backdrop-filter: none; }
   .modal-wrapper {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     z-index: 101; pointer-events: none;
@@ -2198,22 +2208,6 @@
   }
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
   .modal.wide { width: 480px; }
-  .history-sources {
-    max-height: 85dvh;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  .history-sources :global(summary) {
-    cursor: pointer;
-    padding: .65rem 0;
-    font-weight: 600;
-  }
-  .history-sources :global(details) { border-bottom: 1px solid var(--border, #7776); }
-  .history-sources :global(input:not([type="checkbox"])), .history-sources :global(select) {
-    width: 100%;
-    min-width: 0;
-  }
-
   /* Mobile: modals become a bottom sheet. Placed AFTER the base .modal rules
      above so it wins the cascade by source order (CryptoPage defines its own
      .modal styles, so shared.css's global sheet doesn't apply here). */
@@ -2246,6 +2240,66 @@
       border-radius: 99px;
       background: var(--glass-border-hover);
     }
+  }
+
+  .modal.wide.history-dialog {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: min(42rem, calc(100vw - 3rem));
+    max-height: min(86dvh, 52rem);
+    padding: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    background: var(--bg-base);
+    border: 1px solid var(--glass-border-hover);
+    box-shadow: var(--glass-shadow-lg);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .history-dialog h3 {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    font: inherit;
+    font-size: 1.35rem;
+    font-weight: 650;
+    letter-spacing: -.02em;
+    border-bottom: 1px solid var(--glass-border);
+  }
+  .history-body { overflow-y: auto; overscroll-behavior: contain; min-height: 0; padding: 1.25rem 1.5rem; }
+  .history-dialog .modal-actions { margin: 0; padding: .8rem 1.5rem; border-top: 1px solid var(--glass-border); }
+  .history-dialog :global(input:not([type="checkbox"]):not([type="file"])),
+  .history-dialog :global(select) {
+    box-sizing: border-box; width: 100%; min-width: 0; min-height: 2.65rem;
+    padding: .5rem .75rem; border: 1px solid var(--glass-border-hover);
+    border-radius: var(--radius-sm); background: var(--select-bg); color: var(--text-primary); font: inherit;
+  }
+  .history-dialog :global(button) { font-family: inherit; }
+  .history-dialog :global(.glass-btn), .history-dialog :global(.secondary-btn),
+  .history-dialog :global(.primary-btn) {
+    min-height: 2.45rem; padding: .45rem .9rem; border-radius: var(--radius-sm);
+    font-size: .94rem; line-height: 1.4; white-space: normal;
+  }
+  .history-dialog :global(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .source-list { display: grid; align-content: start; gap: .65rem; }
+  .source-list > :global(details) {
+    min-width: 0; padding: 0 1rem; border-radius: var(--radius-md, 12px);
+    background: var(--row-bg); border: 1px solid var(--glass-border-hover);
+  }
+  .source-list > :global(details[open]) { padding-bottom: 1rem; }
+  .source-list > :global(details > summary) {
+    cursor: pointer; padding: .9rem 0; font-size: 1rem; font-weight: 600; color: var(--text-primary);
+  }
+  .source-list :global(summary::marker) { color: var(--accent); }
+  .source-list :global(p) { color: var(--text-secondary); line-height: 1.55; margin: .25rem 0 .9rem; }
+  .source-list :global(fieldset) { display: grid; gap: .75rem; min-width: 0; padding: 0; margin: 0; border: 0; }
+  .source-list :global(label) { font-size: .94rem; line-height: 1.5; }
+  .source-list :global([role="alert"]) { color: var(--danger); }
+  @media (max-width: 640px) {
+    .modal.wide.history-dialog { width: 100%; max-height: 92dvh; }
+    .history-body, .history-dialog h3 { padding: 1rem; }
+    .history-dialog .modal-actions { padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px)); }
   }
 
   .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }

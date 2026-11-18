@@ -46,7 +46,6 @@
   }
 </script>
 
-<h4>{i18n.t('crypto-folders-title', 'CSV export folders')}</h4>
 <p>{i18n.t('crypto-folders-help', 'Choose a dedicated folder for one wallet and format. New CSV exports are imported locally after unlock.')}</p>
 {#each folders as folder}
   <div>
