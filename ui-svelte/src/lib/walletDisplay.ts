@@ -21,7 +21,7 @@
 import type { AccountIcon } from './accountDisplay'
 
 export const WALLET_ICONS: AccountIcon[] = [
-  ...['binance', 'bisq', 'bitget', 'bitmart', 'bitso', 'buda', 'bybit', 'coinbase', 'kraken', 'kucoin', 'mexc', 'okx', 'retoswap', 'uniswap']
+  ...['binance', 'bisq', 'bitget', 'bitmart', 'bitso', 'buda', 'bybit', 'coinbase', 'feather', 'kraken', 'kucoin', 'mexc', 'notbank', 'okx', 'retoswap', 'uniswap']
     .map(n => ({ value: `${n}.svg`, src: `/assets/exchange-icons/${n}.svg`, generic: false })),
   ...['landmark', 'wallet', 'shield', 'shield-check', 'link', 'lock']
     .map(n => ({ value: `/assets/icons/${n}.svg`, src: `/assets/icons/${n}.svg`, generic: true })),
