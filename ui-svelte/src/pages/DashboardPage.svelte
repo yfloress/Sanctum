@@ -38,7 +38,14 @@
   let loading = $state(true)
   let error = $state('')
 
+  let loadRevision = 0
+  let rangeRevision = 0
+  let displayedRange = savedRange
+
   async function load() {
+    const revision = ++loadRevision
+    const chartRevision = ++rangeRevision
+    rangeLoading = false
     const range = untrack(() => selectedRange)
     loading = true
     error = ''
@@ -48,26 +55,37 @@
         dashboardApi.fetchRecent(),
         dashboardApi.fetchAnalytics(range),
       ])
+      if (revision !== loadRevision) return
       balance = b
       recent = r
-      analytics = a
+      if (chartRevision === rangeRevision) {
+        analytics = a
+        displayedRange = range
+      }
     } catch (e) {
-      error = errorMessage(e)
+      if (revision === loadRevision) error = errorMessage(e)
     } finally {
-      loading = false
+      if (revision === loadRevision) loading = false
     }
   }
 
   async function changeRange(range: string) {
-    savedRange = range
+    if (range === selectedRange) return
+    const revision = ++rangeRevision
     selectedRange = range
     rangeLoading = true
     try {
-      analytics = await dashboardApi.fetchAnalytics(range)
+      const result = await dashboardApi.fetchAnalytics(range)
+      if (revision !== rangeRevision) return
+      analytics = result
+      displayedRange = range
+      savedRange = range
     } catch (e) {
+      if (revision !== rangeRevision) return
+      selectedRange = displayedRange
       app.showToast(errorMessage(e), true)
     } finally {
-      rangeLoading = false
+      if (revision === rangeRevision) rangeLoading = false
     }
   }
 
@@ -445,7 +463,6 @@
   .stat-card {
     position: relative;
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: 16px 20px;
@@ -494,7 +511,6 @@
   .chart-card {
     position: relative;
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: 20px 20px 6px;
@@ -588,7 +604,6 @@
   .panel {
     position: relative;
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: 20px;

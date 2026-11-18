@@ -330,6 +330,17 @@ select option { background: var(--option-bg); color: var(--text-primary); }
               box-shadow 0.4s ease !important;
 }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+.mini-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--glass-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
 /* Respect the OS "reduce motion" preference: collapse every animation and
    transition to an instant change. Kept last so it wins the cascade. */
 @media (prefers-reduced-motion: reduce) {
@@ -340,16 +351,7 @@ select option { background: var(--option-bg); color: var(--text-primary); }
     scroll-behavior: auto !important;
   }
 
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .mini-spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--glass-border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    flex-shrink: 0;
-  }
+
 }
 
 /* ── Mobile (phones): global primitives ──────────────────────────── */

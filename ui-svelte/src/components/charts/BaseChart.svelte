@@ -40,8 +40,8 @@
 
   let { option, height = '280px', sensitive = true }: Props = $props()
 
-  let container: HTMLDivElement
-  let chart = $state<echarts.ECharts | null>(null)
+  let container = $state<HTMLDivElement>()
+  let chart = $state.raw<echarts.ECharts | null>(null)
 
   $effect(() => {
     const el = container
@@ -51,7 +51,13 @@
     const c = echarts.init(el, app.darkMode ? 'dark' : undefined)
     chart = c
 
-    const ro = new ResizeObserver(() => c.resize())
+    const ro = new ResizeObserver(([entry]) => {
+      const width = Math.round(entry.contentRect.width)
+      const height = Math.round(entry.contentRect.height)
+      if (width > 0 && height > 0 && (width !== c.getWidth() || height !== c.getHeight())) {
+        c.resize({ width, height })
+      }
+    })
     ro.observe(el)
 
     return () => {
