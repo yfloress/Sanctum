@@ -55,7 +55,7 @@
       }).catch(() => {
         if (active && app.isLoggedIn) app.showToast(i18n.t('crypto-folders-failed','Could not check export folders'), true)
       })
-      const stopSession = startSessionMonitor()
+      const stopSession = untrack(startSessionMonitor)
       const stopShortcuts = startShortcuts({
         openHelp: () => showShortcuts = true,
         openPalette: () => showPalette = true,
