@@ -140,7 +140,7 @@ impl Database {
     /// When `force` is false, blocks deletion if the wallet has transactions.
     /// When `force` is true, deletes regardless (CASCADE removes transactions).
     pub fn delete_wallet(&self, id: &str, force: bool) -> Result<(), DbError> {
-        self.write(|conn| {
+        self.with_transaction(|conn| {
             if !force {
                 let tx_count = Self::wallet_transaction_count_on(conn, id)?;
                 if tx_count > 0 {
@@ -148,6 +148,13 @@ impl Database {
                 }
             }
 
+            // A cross-wallet movement survives its partner's wallet being removed.
+            conn.execute(
+                "UPDATE crypto_transactions SET related_tx_id = NULL
+                 WHERE wallet_id != ?1 AND related_tx_id IN
+                 (SELECT id FROM crypto_transactions WHERE wallet_id = ?1)",
+                [id],
+            )?;
             let rows = conn.execute("DELETE FROM crypto_wallets WHERE id = ?1", params![id])?;
 
             if rows == 0 {

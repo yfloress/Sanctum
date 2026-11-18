@@ -21,7 +21,7 @@
 
 use crate::db::{Database, DbError};
 use crate::models::{CryptoTransaction, CryptoTransactionUpdate, CryptoTxFilter};
-use rusqlite::{Error as RusqliteError, Row, params};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 
 /// Escapes LIKE wildcards so searching for `50%` does not match every row.
 fn escape_like(value: &str) -> String {
@@ -247,30 +247,77 @@ impl Database {
         })
     }
 
-    /// Deletes a crypto transaction by ID
+    pub(crate) fn transfer_movements(&self) -> Result<Vec<CryptoTransaction>, DbError> {
+        let sql = format!(
+            "SELECT {CRYPTO_TX_COLUMNS} FROM crypto_transactions WHERE type = 'transfer' ORDER BY date DESC, id"
+        );
+        self.read(|conn| {
+            let mut stmt = conn.prepare(&sql)?;
+            Ok(stmt
+                .query_map([], row_to_crypto_transaction)?
+                .collect::<Result<Vec<_>, _>>()?)
+        })
+    }
+
+    pub(crate) fn set_transfer_link(
+        &self,
+        outgoing: &str,
+        incoming: &str,
+        linked: bool,
+        eligible: impl FnOnce(&CryptoTransaction, &CryptoTransaction) -> bool,
+    ) -> Result<bool, DbError> {
+        self.with_transaction(|conn| {
+            let out = Self::transaction_on(conn, outgoing)?.ok_or(DbError::TransactionNotFound)?;
+            let inc = Self::transaction_on(conn, incoming)?.ok_or(DbError::TransactionNotFound)?;
+            let paired = out.related_tx_id.as_deref() == Some(incoming)
+                && inc.related_tx_id.as_deref() == Some(outgoing);
+            let free = out.related_tx_id.is_none() && inc.related_tx_id.is_none();
+            if out.mechanical_type() != "transfer_out"
+                || inc.mechanical_type() != "transfer_in"
+                || (!paired && !free)
+                || (linked && !paired && !eligible(&out, &inc))
+            {
+                return Ok(false);
+            }
+            if linked != paired {
+                let update = "UPDATE crypto_transactions SET related_tx_id = ?2 WHERE id = ?1";
+                conn.execute(update, params![outgoing, linked.then_some(incoming)])?;
+                conn.execute(update, params![incoming, linked.then_some(outgoing)])?;
+            }
+            Ok(true)
+        })
+    }
+
+    /// Only swaps are deleted together. A confirmed transfer has two independently
+    /// sourced movements; unlink it before removing either movement.
     pub fn delete_crypto_transaction(&self, id: &str) -> Result<(), DbError> {
-        self.write(|conn| {
-            conn.execute("DELETE FROM crypto_transactions WHERE id = ?1", params![id])?;
+        self.with_transaction(|conn| {
+            let Some(tx) = Self::transaction_on(conn, id)? else {
+                return Ok(());
+            };
+            if let Some(other) = tx.related_tx_id.as_deref()
+                && let Some(counter) = Self::transaction_on(conn, other)?
+                && counter.related_tx_id.as_deref() == Some(id)
+            {
+                if tx.mechanical_type() != "swap" || counter.mechanical_type() != "swap" {
+                    return Err(DbError::LinkedCryptoTransaction);
+                }
+                conn.execute("DELETE FROM crypto_transactions WHERE id = ?1", [other])?;
+            }
+            conn.execute("DELETE FROM crypto_transactions WHERE id = ?1", [id])?;
             Ok(())
         })
     }
 
-    /// Gets a crypto transaction by ID
+    fn transaction_on(conn: &Connection, id: &str) -> Result<Option<CryptoTransaction>, DbError> {
+        let sql = format!("SELECT {CRYPTO_TX_COLUMNS} FROM crypto_transactions WHERE id = ?1");
+        Ok(conn
+            .query_row(&sql, [id], row_to_crypto_transaction)
+            .optional()?)
+    }
+
     pub fn get_crypto_transaction(&self, id: &str) -> Result<Option<CryptoTransaction>, DbError> {
-        let sql = format!(
-            "SELECT {} FROM crypto_transactions WHERE id = ?1",
-            CRYPTO_TX_COLUMNS
-        );
-
-        self.read(|conn| {
-            let result = conn.query_row(&sql, params![id], row_to_crypto_transaction);
-
-            match result {
-                Ok(tx) => Ok(Some(tx)),
-                Err(RusqliteError::QueryReturnedNoRows) => Ok(None),
-                Err(e) => Err(DbError::Sqlite(e)),
-            }
-        })
+        self.read(|conn| Self::transaction_on(conn, id))
     }
 
     /// Updates editable fields of a crypto transaction
@@ -293,7 +340,7 @@ impl Database {
         } = update;
 
         self.write(|conn| {
-            conn.execute(
+            let changed = conn.execute(
                 "UPDATE crypto_transactions
                  SET amount = ?1,
                      price_per_coin = ?2,
@@ -305,7 +352,7 @@ impl Database {
                      override_cost_basis = ?8,
                      date = ?9,
                      notes = ?10
-                 WHERE id = ?11",
+                 WHERE id = ?11 AND related_tx_id IS NULL",
                 params![
                     amount,
                     price_per_coin,
@@ -320,6 +367,9 @@ impl Database {
                     id
                 ],
             )?;
+            if changed == 0 {
+                return Err(DbError::LinkedCryptoTransaction);
+            }
             Ok(())
         })
     }

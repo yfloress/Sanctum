@@ -37,6 +37,7 @@
   import CryptoSync from '../components/crypto/CryptoSync.svelte'
   import MoneroLocal from '../components/crypto/MoneroLocal.svelte'
   import ExportFolders from '../components/crypto/ExportFolders.svelte'
+  import CryptoTransferReview from '../components/CryptoTransferReview.svelte'
   import CryptoBatchImport from '../components/CryptoBatchImport.svelte'
   import type {
     PortfolioResponse, PortfolioTrendData,
@@ -1727,6 +1728,7 @@
       <h3 id="sources-title">{i18n.t('crypto-sources-title', 'History sources')}</h3>
       <CryptoSync wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
       <details><summary>Monero RPC</summary><MoneroLocal wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} /></details>
+      <CryptoTransferReview onchanged={refreshAfterTxChange} />
       <ExportFolders wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
       <div class="modal-actions"><button class="secondary-btn" onclick={() => showSources = false}>{i18n.t('crypto-close','Close')}</button></div>
     </div>

@@ -104,6 +104,8 @@ pub fn run() {
             commands::kraken_sync::configure_kraken_sync,
             commands::kraken_sync::disconnect_kraken_sync,
             commands::kraken_sync::run_kraken_sync,
+            commands::transfer_review::list_transfer_reviews,
+            commands::transfer_review::set_transfer_link,
             commands::export_folders::read_monero_history,
             commands::export_folders::list_export_folders,
             commands::export_folders::choose_export_folder,

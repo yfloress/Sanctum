@@ -107,6 +107,9 @@ pub enum DbError {
     #[error("Cannot transfer to the same account")]
     SameAccountTransfer,
 
+    #[error("Unlink the transfer before editing or deleting either movement")]
+    LinkedCryptoTransaction,
+
     #[error("Transaction not found")]
     TransactionNotFound,
 

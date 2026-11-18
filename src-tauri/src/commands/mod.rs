@@ -29,3 +29,5 @@ pub mod kraken_sync;
 pub mod search;
 pub mod settings;
 pub mod vault;
+
+pub mod transfer_review;

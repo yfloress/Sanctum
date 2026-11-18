@@ -763,12 +763,6 @@ impl CryptoService {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;
 
-            if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id)
-                && let Some(related_id) = tx.related_tx_id
-            {
-                let _ = db.delete_crypto_transaction(&related_id);
-            }
-
             db.delete_crypto_transaction(&validated_id)?;
             Ok(())
         })
