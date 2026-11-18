@@ -56,7 +56,7 @@
   <aside class="detail-panel" use:dialog={{ onclose: close, autofocus: false }}>
     <div class="panel-header">
       <h3>{account.name}</h3>
-      <button class="close-panel" aria-label="Close panel" onclick={close}>
+      <button class="close-panel" aria-label={i18n.t('finances-close', 'Close')} onclick={close}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -74,7 +74,7 @@
               <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
             </button>
           {/each}
-          <button class="icon-option icon-reset" onclick={() => changeAccountIcon('')} title="Default">
+          <button class="icon-option icon-reset" onclick={() => changeAccountIcon('')} title={i18n.t('icon-default', 'Default icon')} aria-label={i18n.t('icon-default', 'Default icon')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
           </button>
         </div>

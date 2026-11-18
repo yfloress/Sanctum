@@ -114,8 +114,8 @@
   async function restoreFromBackup() {
     try {
       const path = await open({
-        title: 'Select Vault Backup',
-        filters: [{ name: 'Sanctum Backup', extensions: ['db'] }],
+        title: i18n.t('login-restore-pick', 'Choose the vault backup'),
+        filters: [{ name: i18n.t('login-restore-filter', 'Sanctum backup'), extensions: ['db'] }],
       })
       if (!path) return
       loading = true

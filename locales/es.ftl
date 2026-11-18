@@ -960,3 +960,6 @@ history-added = Añadidos
 history-to-add = Por añadir
 ticker-up = Subir
 ticker-down = Bajar
+login-restore-pick = Elige el respaldo de la bóveda
+login-restore-filter = Respaldo de Sanctum
+icon-default = Ícono por defecto

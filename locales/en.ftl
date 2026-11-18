@@ -960,3 +960,6 @@ history-added = Added
 history-to-add = To add
 ticker-up = Move up
 ticker-down = Move down
+login-restore-pick = Choose the vault backup
+login-restore-filter = Sanctum backup
+icon-default = Default icon

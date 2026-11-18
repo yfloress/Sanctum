@@ -1002,7 +1002,12 @@
           <button class="glass-btn" onclick={() => activeTab = 'accounts'}>{i18n.t('finances-view-all', 'View All')}</button>
         </div>
         {#if (accountsData?.accounts ?? []).length === 0}
-          <p class="empty">{i18n.t('finances-no-accounts', 'No accounts yet.')}</p>
+          <div class="empty">
+            <p>{i18n.t('finances-no-accounts', 'No accounts yet.')}</p>
+            <div class="empty-actions">
+              <button class="primary-btn" onclick={openAddAccount}>{i18n.t('finances-new-account', 'New Account')}</button>
+            </div>
+          </div>
         {:else}
           <div class="account-strips">
             {#each accountsData?.accounts ?? [] as acc}
@@ -1038,7 +1043,13 @@
           <button class="glass-btn" onclick={() => activeTab = 'activity'}>{i18n.t('finances-view-all', 'View All')}</button>
         </div>
         {#if chartTransactions.length === 0}
-          <p class="empty">{i18n.t('finances-no-transactions', 'No transactions yet.')}</p>
+          <div class="empty">
+            <p>{i18n.t('finances-no-transactions', 'No transactions yet.')}</p>
+            <div class="empty-actions">
+              <button class="glass-btn" onclick={() => showStatementImport = true}>{i18n.t('finances-import-statement', 'Import statement')}</button>
+              <button class="primary-btn" onclick={openAddTransaction}>{i18n.t('finances-new-entry', 'New Entry')}</button>
+            </div>
+          </div>
         {:else}
           <div class="tx-list">
             {#each chartTransactions.slice(0, 6) as tx}
@@ -1488,6 +1499,8 @@
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty p { margin: 0; }
   .empty p + button { margin-top: 12px; }
+  /* An empty list offers the action that fills it. */
+  .empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
 
   .section-header {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
@@ -1580,7 +1593,7 @@
     color: var(--text-tertiary);
     cursor: pointer;
     font-size: 0.78rem;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
     white-space: nowrap;
   }
   .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
@@ -1651,7 +1664,7 @@
     cursor: pointer;
     font-size: 0.78rem;
     white-space: nowrap;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .bulk-delete-btn:hover { background: var(--danger); color: #fff; }
   /* Pushes Clear to the far end so it never sits next to the destructive one. */
@@ -1770,7 +1783,7 @@
   .load-more-btn {
     display: block; margin: 16px auto; padding: 8px 24px;
     border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: none;
-    color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+    color: var(--text-secondary); cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .load-more-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 
@@ -1783,7 +1796,7 @@
     background: var(--card-bg);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
-    transition: all 0.2s; box-shadow: var(--card-shadow);
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s; box-shadow: var(--card-shadow);
     overflow: hidden;
   }
   .account-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
@@ -1801,7 +1814,7 @@
     display: flex; flex-direction: column; gap: 12px; padding: 16px;
     background: var(--card-bg);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    cursor: pointer; text-align: left; color: inherit; transition: all 0.2s;
+    cursor: pointer; text-align: left; color: inherit; transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s;
     box-shadow: var(--card-shadow);
     overflow: hidden;
   }
@@ -1926,7 +1939,7 @@
     width: 100%;
     text-align: left;
     color: inherit;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .account-strip:hover {
     background: var(--glass-hover);

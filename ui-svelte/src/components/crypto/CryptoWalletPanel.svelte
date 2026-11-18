@@ -114,7 +114,7 @@
       {:else}
         <button class="clickable-name" onclick={startEditWalletName} title={i18n.t('crypto-click-rename', 'Click to rename')}>{wallet.name}</button>
       {/if}
-      <button class="close-panel" aria-label="Close panel" onclick={close}>
+      <button class="close-panel" aria-label={i18n.t('finances-close', 'Close')} onclick={close}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -135,7 +135,7 @@
             <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
           </button>
         {/each}
-        <button class="icon-option icon-reset" onclick={() => changeWalletIcon('')} title="Default">
+        <button class="icon-option icon-reset" onclick={() => changeWalletIcon('')} title={i18n.t('icon-default', 'Default icon')} aria-label={i18n.t('icon-default', 'Default icon')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
         </button>
       </div>
@@ -186,7 +186,7 @@
   .icon-btn-sm {
     padding: 4px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.75rem;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .icon-btn-sm:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
   .clickable-name {

@@ -356,7 +356,7 @@
   .tx-type-btn {
     flex: 1; min-width: 60px; padding: 8px 4px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem; text-align: center;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .tx-type-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
   .tx-type-btn.active {

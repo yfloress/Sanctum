@@ -273,7 +273,7 @@
           <span class="setting-label">{i18n.t('settings-dark-mode', 'Dark Mode')}</span>
           <span class="setting-desc">{i18n.t('settings-dark-mode-desc', 'Toggle dark/light theme')}</span>
         </div>
-        <button class="toggle-switch" role="switch" aria-checked={app.settings.dark_mode} class:on={app.settings.dark_mode} onclick={() => app.toggleDarkMode()} aria-label="Toggle dark mode">
+        <button class="toggle-switch" role="switch" aria-checked={app.settings.dark_mode} class:on={app.settings.dark_mode} onclick={() => app.toggleDarkMode()} aria-label={i18n.t('settings-dark-mode', 'Dark Mode')}>
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -447,7 +447,7 @@
           <span class="setting-label">{i18n.t('settings-auto-fetch', 'Auto-fetch Prices')}</span>
           <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Off: Sanctum never goes online on its own. On: refreshes prices every 10 minutes while the window is visible.')}</span>
         </div>
-        <button class="toggle-switch" role="switch" aria-checked={app.settings.auto_fetch} class:on={app.settings.auto_fetch} onclick={toggleAutoFetch} aria-label="Toggle auto-fetch">
+        <button class="toggle-switch" role="switch" aria-checked={app.settings.auto_fetch} class:on={app.settings.auto_fetch} onclick={toggleAutoFetch} aria-label={i18n.t('settings-auto-fetch', 'Auto-fetch Prices')}>
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -456,7 +456,7 @@
           <span class="setting-label">{i18n.t('settings-use-proxy', 'Use Proxy')}</span>
           <span class="setting-desc">{i18n.t('settings-use-proxy-desc', 'Route API calls through a proxy')}</span>
         </div>
-        <button class="toggle-switch" role="switch" aria-checked={app.settings.proxy_enabled} class:on={app.settings.proxy_enabled} onclick={toggleProxy} aria-label="Toggle proxy">
+        <button class="toggle-switch" role="switch" aria-checked={app.settings.proxy_enabled} class:on={app.settings.proxy_enabled} onclick={toggleProxy} aria-label={i18n.t('settings-use-proxy', 'Use Proxy')}>
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -626,14 +626,14 @@
   .secondary-btn {
     padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .secondary-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 
   .danger-btn {
     padding: 8px 18px; border: 1px solid var(--danger-border); border-radius: var(--radius-sm);
     background: var(--danger-bg); color: var(--danger); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .danger-btn:hover { background: var(--danger-border); }
 

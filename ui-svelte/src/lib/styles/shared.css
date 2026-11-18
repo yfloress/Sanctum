@@ -86,7 +86,7 @@
 .toggle-btn {
   flex: 1; padding: 8px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
   background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
 }
 .toggle-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 .toggle-btn.active {
@@ -101,7 +101,7 @@
 .date-shortcut {
   padding: 0 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
   background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
-  white-space: nowrap; transition: all 0.15s;
+  white-space: nowrap; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
 }
 .date-shortcut:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 .date-shortcut.active {
@@ -132,7 +132,7 @@
 .secondary-btn {
   padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
   background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
 }
 .secondary-btn:hover { border-color: var(--glass-border-hover); }
 
@@ -178,7 +178,7 @@
 .icon-btn {
   padding: 4px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
   background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.75rem;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
 }
 .icon-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 .icon-btn.danger:hover { border-color: rgba(248, 113, 113, 0.3); color: var(--danger); }
@@ -186,7 +186,7 @@
 .secondary-btn.small {
   padding: 6px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
   background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.75rem;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
 }
 .secondary-btn.small:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 
@@ -237,8 +237,8 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 
 .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .panel-header h3 { margin: 0; color: var(--text-primary); font-size: 1rem; }
-.close-panel { background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 4px; display: flex; transition: color 0.15s, transform 0.2s ease; }
-.close-panel:hover { color: var(--text-primary); transform: rotate(90deg); }
+.close-panel { background: none; border: none; border-radius: var(--radius-sm); color: var(--text-tertiary); cursor: pointer; padding: 4px; display: flex; transition: color 0.15s, background 0.15s; }
+.close-panel:hover { color: var(--text-primary); background: var(--row-bg-hover); }
 .close-panel svg { width: 20px; height: 20px; }
 
 .panel-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 0.9rem; color: var(--text-secondary); }
@@ -299,7 +299,7 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 .change-icon-btn {
   background: none; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
   color: var(--text-secondary); cursor: pointer; font-size: 0.75rem; padding: 4px 10px;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
 }
 .change-icon-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 

@@ -164,7 +164,7 @@
       {#if analytics && (analytics.net_worth_min || analytics.net_worth_max)}
         <p class="net-worth-range">
           {mask(analytics.net_worth_min)}
-          <span class="range-sep">——</span>
+          <span class="range-sep">–</span>
           {mask(analytics.net_worth_max)}
           <span class="range-period">({selectedRange})</span>
         </p>
@@ -330,7 +330,7 @@
     color: var(--text-primary);
     cursor: pointer;
     font-size: 0.85rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s;
   }
   .error-state button:hover {
     background: var(--glass-hover);

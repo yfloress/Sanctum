@@ -233,8 +233,8 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #1a1728;
-    border: 1px solid rgba(168, 85, 247, 0.25);
+    background: var(--row-solid);
+    border: 1px solid var(--glass-border-hover);
     color: var(--text-secondary);
     cursor: pointer;
     display: flex;
@@ -243,7 +243,7 @@
     padding: 0;
     z-index: 50;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
     opacity: 0;
   }
 
@@ -252,10 +252,9 @@
   }
 
   .edge-toggle:hover {
-    background: #221b33;
-    border-color: rgba(168, 85, 247, 0.5);
+    background: var(--row-solid-hover);
+    border-color: var(--accent-border);
     color: var(--text-primary);
-    transform: scale(1.08);
   }
 
   .edge-toggle-icon {
@@ -433,12 +432,11 @@
 
   /* ── Hover ───────────────────────────────────────────── */
   .nav-item:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--row-bg-hover);
     color: var(--text-primary);
   }
 
   .nav-item:hover .nav-icon-wrap {
-    transform: scale(1.08);
     color: var(--accent-hover);
   }
 
@@ -629,7 +627,6 @@
 
     .nav-item.active .nav-icon-wrap {
       color: var(--accent-hover);
-      transform: scale(1.06);
     }
 
     /* Active marker moves to a short underline at the top of the cell */

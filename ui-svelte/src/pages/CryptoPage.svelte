@@ -1130,7 +1130,13 @@
 
     <!-- Holdings -->
     {#if portfolio.assets.length === 0}
-      <p class="empty">{i18n.t('crypto-no-assets-empty', 'No assets yet. Create a wallet and add transactions to get started.')}</p>
+      <div class="empty">
+        <p>{i18n.t('crypto-no-assets-empty', 'No assets yet. Create a wallet and add transactions to get started.')}</p>
+        <div class="empty-actions">
+          <button class="glass-btn" onclick={() => showImport = true}>{i18n.t('crypto-import-history', 'Import history')}</button>
+          <button class="primary-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
+        </div>
+      </div>
     {:else}
       <div class="chart-section">
         <div class="chart-card-header">
@@ -1206,7 +1212,13 @@
         {/if}
       </div>
       {#if recentTxs.length === 0}
-        <p class="empty">{i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+        <div class="empty">
+          <p>{i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+          <div class="empty-actions">
+            <button class="glass-btn" onclick={() => showImport = true}>{i18n.t('crypto-import-history', 'Import history')}</button>
+            <button class="primary-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
+          </div>
+        </div>
       {:else}
         <div class="tx-list">
           {#each recentTxs as tx}
@@ -1237,12 +1249,21 @@
       </svg>
       <h3>{i18n.t('crypto-welcome', 'Welcome to Crypto')}</h3>
       <p>{i18n.t('crypto-welcome-desc', 'Add wallets and transactions in the Wallets tab to start tracking your portfolio.')}</p>
+      <div class="empty-actions">
+        <button class="glass-btn" onclick={() => showImport = true}>{i18n.t('crypto-import-history', 'Import history')}</button>
+        <button class="primary-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
+      </div>
     </div>
 
   <!-- WALLETS TAB -->
   {:else if activeTab === 'wallets'}
     {#if (walletsData?.wallets ?? []).length === 0}
-      <p class="empty">{i18n.t('crypto-no-wallets', 'No wallets yet.')}</p>
+      <div class="empty">
+        <p>{i18n.t('crypto-no-wallets', 'No wallets yet.')}</p>
+        <div class="empty-actions">
+          <button class="primary-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
+        </div>
+      </div>
     {:else}
       <div class="wallet-grid">
         {#each walletsData?.wallets ?? [] as w}
@@ -1424,7 +1445,7 @@
           <div class="settings-info">
             <h4 class="tax-card-title">
               {i18n.t('crypto-tax-settings-title', 'Tax Settings')}
-              {#if taxSavedFlash}<span class="saved-flash">✓ {i18n.t('crypto-tax-saved', 'Saved')}</span>{/if}
+              {#if taxSavedFlash}<span class="saved-flash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{i18n.t('crypto-tax-saved', 'Saved')}</span>{/if}
             </h4>
             <div class="quick-settings">
               <label class="quick-field">
@@ -1870,7 +1891,7 @@
                 <span class="catalog-sym">{coin.symbol}</span>
                 <span class="catalog-name">{coin.name}</span>
                 {#if coin.is_custom}
-                  <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin)} aria-label="Delete">
+                  <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin)} aria-label={i18n.t('crypto-delete', 'Delete') + ' · ' + coin.symbol}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
                   </button>
                 {/if}
@@ -1893,7 +1914,7 @@
           </div>
 
           <div class="modal-actions">
-            <button class="secondary-btn" onclick={() => showTickerConfig = false}>Close</button>
+            <button class="secondary-btn" onclick={() => showTickerConfig = false}>{i18n.t('crypto-close', 'Close')}</button>
           </div>
         {/if}
       </div>
@@ -2026,6 +2047,8 @@
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty p { margin: 0; }
   .empty p + button { margin-top: 12px; }
+  /* An empty list offers the action that fills it. */
+  .empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -2152,7 +2175,7 @@
     background: var(--card-bg); backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
-    transition: all 0.2s; box-shadow: var(--card-shadow);
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s; box-shadow: var(--card-shadow);
     overflow: hidden;
   }
   .wallet-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
@@ -2180,7 +2203,7 @@
     display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .change-icon-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
   .selected-icon-preview { width: 20px; height: 20px; margin-right: 6px; vertical-align: middle; }
@@ -2319,7 +2342,7 @@
   .cat-card {
     flex: 1; padding: 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; text-transform: capitalize;
-    font-size: 0.85rem; text-align: center; transition: all 0.15s;
+    font-size: 0.85rem; text-align: center; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .cat-card:hover { border-color: var(--glass-border-hover); }
   .cat-card.selected {
@@ -2331,7 +2354,7 @@
   .secondary-btn {
     padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .secondary-btn:hover { border-color: var(--glass-border-hover); }
 
@@ -2361,7 +2384,8 @@
   .quick-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer; }
   .quick-toggle input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
   .quick-hint { font-size: 0.72rem; color: var(--text-secondary); opacity: 0.85; }
-  .saved-flash { margin-left: 8px; font-size: 0.7rem; font-weight: 600; color: #34d399; }
+  .saved-flash { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 0.7rem; font-weight: 600; color: var(--success); }
+  .saved-flash svg { width: 12px; height: 12px; }
   .report-stale {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     padding: 10px 14px; border-radius: 10px;
@@ -2494,7 +2518,7 @@
     padding: 4px 10px; border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.2);
     color: var(--text-primary); cursor: pointer; font-size: 0.75rem;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .warning-action:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
   .warning-action:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -2533,7 +2557,7 @@
     padding: 8px 14px; border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm); background: var(--row-solid);
     color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s; display: flex; align-items: center; gap: 6px;
   }
   .export-btn:hover { border-color: var(--accent-border); background: var(--row-solid-hover); color: var(--text-primary); }
 
@@ -2710,7 +2734,7 @@
   .load-more-btn {
     display: block; margin: 16px auto; padding: 8px 24px;
     border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: none;
-    color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+    color: var(--text-secondary); cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s;
   }
   .load-more-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 </style>
