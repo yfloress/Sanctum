@@ -422,12 +422,6 @@
     height: 56px;
     z-index: 1;
     filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.3));
-    animation: logoPulse 3s ease-in-out infinite;
-  }
-
-  @keyframes logoPulse {
-    0%, 100% { filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.3)); }
-    50% { filter: drop-shadow(0 0 30px rgba(168, 85, 247, 0.5)); }
   }
 
   .title {

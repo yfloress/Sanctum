@@ -585,7 +585,7 @@
 
   select, input[type="text"] {
     padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    background: var(--glass);
     color: var(--text-primary); font-size: 0.85rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }

@@ -1780,7 +1780,7 @@
   .account-card {
     position: relative;
     display: flex; flex-direction: column; gap: 4px; padding: 16px;
-    background: var(--card-bg); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
     transition: all 0.2s; box-shadow: var(--card-shadow);
@@ -1799,7 +1799,7 @@
   .account-card {
     position: relative;
     display: flex; flex-direction: column; gap: 12px; padding: 16px;
-    background: var(--card-bg); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit; transition: all 0.2s;
     box-shadow: var(--card-shadow);
@@ -1834,7 +1834,6 @@
     position: relative;
     padding: 18px 20px;
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     display: flex;
@@ -1882,7 +1881,6 @@
   .chart-card {
     position: relative;
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: 16px 16px 6px;

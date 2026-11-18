@@ -45,23 +45,23 @@
   .blob {
     position: absolute;
     border-radius: 50%;
-    filter: blur(64px);
+    background: radial-gradient(ellipse at center, var(--blob-color) 0%, transparent 72%);
     opacity: var(--aurora-opacity, 0.55);
     will-change: transform;
   }
   .b1 {
     width: 46vw; height: 46vw; left: -8vw; top: -10vh;
-    background: var(--aurora-1, rgba(168, 85, 247, 0.5));
+    --blob-color: var(--aurora-1, rgba(168, 85, 247, 0.5));
     animation: float1 26s ease-in-out infinite alternate;
   }
   .b2 {
     width: 40vw; height: 40vw; right: -6vw; top: 16vh;
-    background: var(--aurora-2, rgba(99, 102, 241, 0.4));
+    --blob-color: var(--aurora-2, rgba(99, 102, 241, 0.4));
     animation: float2 32s ease-in-out infinite alternate;
   }
   .b3 {
     width: 38vw; height: 38vw; left: 26vw; bottom: -14vh;
-    background: var(--aurora-3, rgba(217, 70, 239, 0.35));
+    --blob-color: var(--aurora-3, rgba(217, 70, 239, 0.35));
     animation: float3 38s ease-in-out infinite alternate;
   }
 
