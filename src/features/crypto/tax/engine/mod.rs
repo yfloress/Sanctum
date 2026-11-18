@@ -102,8 +102,8 @@ pub fn build_tax_report(
 
     let mut report = TaxReport {
         period_id: period.id.clone(),
-        period_start: period.start.format("%Y-%m-%d").to_string(),
-        period_end: period.end.format("%Y-%m-%d").to_string(),
+        period_start: period.start.to_string(),
+        period_end: period.end.to_string(),
         jurisdiction: settings.jurisdiction_str().to_string(),
         method: settings.method_str().to_string(),
         summary: TaxReportSummary {

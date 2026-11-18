@@ -23,7 +23,7 @@ use crate::models::{
     CryptoTransaction, CryptoTransactionType, CryptoTransactionUpdate, CryptoTxFilter,
 };
 use crate::security_log::{SecurityEvent, log_security_event};
-use chrono::Utc;
+use jiff::Timestamp;
 use uuid::Uuid;
 
 use super::commands::{
@@ -526,7 +526,10 @@ impl CryptoService {
             fee: existing.fee,
             fee_coin_id: existing.fee_coin_id,
             fee_amount: existing.fee_amount,
-            date: Utc::now().format("%Y-%m-%d").to_string(),
+            date: Timestamp::now()
+                .to_zoned(jiff::tz::TimeZone::UTC)
+                .date()
+                .to_string(),
             notes: existing.notes,
             subtype: existing.subtype,
             override_proceeds: existing.override_proceeds,

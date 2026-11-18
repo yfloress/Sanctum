@@ -17,7 +17,7 @@
 
 //! Chilean peso amounts and statement dates, one token at a time.
 
-use chrono::NaiveDate;
+use jiff::civil::Date;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Amount {
@@ -107,9 +107,9 @@ fn is_grouped_integer(text: &str) -> bool {
 /// A movement date as printed: the year is often left out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RowDate {
-    pub day: u32,
-    pub month: u32,
-    pub year: Option<i32>,
+    pub day: i8,
+    pub month: i8,
+    pub year: Option<i16>,
 }
 
 /// `dd/mm`, `dd-mm`, `dd/mm/yyyy` or `dd-mm-yyyy`.
@@ -123,25 +123,25 @@ pub fn parse_row_date(token: &str) -> Option<RowDate> {
     if day.len() != 2 || month.len() != 2 {
         return None;
     }
-    let day: u32 = digits(day)?;
-    let month: u32 = digits(month)?;
+    let day: i8 = digits(day)?;
+    let month: i8 = digits(month)?;
     if !(1..=31).contains(&day) || !(1..=12).contains(&month) {
         return None;
     }
     let year = match year {
-        Some(y) => Some(digits::<i32>(y)?),
+        Some(y) => Some(digits::<i16>(y)?),
         None => None,
     };
     Some(RowDate { day, month, year })
 }
 
-pub fn parse_full_date(token: &str) -> Option<NaiveDate> {
+pub fn parse_full_date(token: &str) -> Option<Date> {
     let date = parse_row_date(token)?;
-    NaiveDate::from_ymd_opt(date.year?, date.month, date.day)
+    Date::new(date.year?, date.month, date.day).ok()
 }
 
 /// `dd/mm/yy`, used by credit card statements.
-pub fn parse_short_year_date(token: &str) -> Option<NaiveDate> {
+pub fn parse_short_year_date(token: &str) -> Option<Date> {
     let parts: Vec<&str> = token.split('/').collect();
     let [d, m, y] = parts.as_slice() else {
         return None;
@@ -149,7 +149,7 @@ pub fn parse_short_year_date(token: &str) -> Option<NaiveDate> {
     if d.len() != 2 || m.len() != 2 || y.len() != 2 {
         return None;
     }
-    NaiveDate::from_ymd_opt(2000 + digits::<i32>(y)?, digits(m)?, digits(d)?)
+    Date::new(2000 + digits::<i16>(y)?, digits(m)?, digits(d)?).ok()
 }
 
 /// `hh:mm` or `hh:mm:ss`.

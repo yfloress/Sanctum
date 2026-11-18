@@ -21,7 +21,7 @@
 
 use super::types::{ImportCryptoTransaction, ImportTransaction, RowError};
 use crate::features::crypto::tax::types::normalize_subtype;
-use chrono::NaiveDate;
+use jiff::civil::Date;
 
 /// Valid type categories for crypto transactions.
 const VALID_CRYPTO_TYPES: [&str; 4] = ["trade", "income", "expense", "transfer"];
@@ -38,12 +38,12 @@ pub fn validate_date(date: &str) -> Result<String, String> {
     }
 
     // Accept YYYY-MM-DD
-    if NaiveDate::parse_from_str(trimmed, "%Y-%m-%d").is_ok() {
+    if Date::strptime("%Y-%m-%d", trimmed).is_ok() {
         return Ok(trimmed.to_string());
     }
 
     // Accept YYYY-MM-DD HH:MM:SS (full datetime from exchange imports)
-    if trimmed.len() >= 10 && NaiveDate::parse_from_str(&trimmed[..10], "%Y-%m-%d").is_ok() {
+    if trimmed.len() >= 10 && Date::strptime("%Y-%m-%d", &trimmed[..10]).is_ok() {
         return Ok(trimmed.to_string());
     }
 

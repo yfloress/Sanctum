@@ -14,8 +14,8 @@ name = "sanctum_tauri"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
-chrono = "0.4"
 directories = "6"
+jiff = "0.2"
 log = "0.4"
 sanctum = { path = ".." }
 secrecy = "0.10"

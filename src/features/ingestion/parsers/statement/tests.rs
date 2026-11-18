@@ -18,14 +18,14 @@
 //! Statement parser tests. Every name, account number and amount in the
 //! fixtures is made up.
 
-use chrono::NaiveDate;
+use jiff::civil::Date;
 
 use super::clp::parse_amount;
 use super::period::{PeriodRule, find_period};
 use super::*;
 
-fn date(y: i32, m: u32, d: u32) -> NaiveDate {
-    NaiveDate::from_ymd_opt(y, m, d).unwrap()
+fn date(y: i16, m: i8, d: i8) -> Date {
+    Date::new(y, m, d).unwrap()
 }
 
 fn amounts(statement: &ParsedStatement) -> Vec<i64> {

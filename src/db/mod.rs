@@ -32,7 +32,7 @@ mod finance;
 mod migrations;
 
 use crate::security_log::{SecurityEvent, log_security_event};
-use chrono::{DateTime, Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
@@ -255,7 +255,7 @@ impl Database {
             .build(manager)
             .map_err(|_| DbError::Pool)?;
 
-        let now_ts = Utc::now().timestamp();
+        let now_ts = Timestamp::now().as_second();
         let db = Database {
             writer: Mutex::new(writer),
             readers,
@@ -514,8 +514,8 @@ impl Database {
         conn: &Connection,
         vault_path: &str,
     ) -> Result<(u32, bool), DbError> {
-        let now = Utc::now();
-        let now_str = now.to_rfc3339();
+        let now = Timestamp::now();
+        let now_str = now.to_string();
 
         // Get current state
         let current: Option<(i32, Option<String>, String)> = conn
@@ -530,18 +530,16 @@ impl Database {
             current.unwrap_or((0, None, now_str.clone()));
 
         // Check if we should reset the counter (enough time has passed)
-        if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
-            if now.signed_duration_since(last.with_timezone(&Utc))
-                > Duration::seconds(ATTEMPT_RESET_SECS)
-            {
+        if let Ok(last) = last_attempt.parse::<Timestamp>() {
+            if now.duration_since(last) > SignedDuration::from_secs(ATTEMPT_RESET_SECS) {
                 failed_count = 0;
             }
         }
 
         // Check if currently locked
         if let Some(ref locked_str) = locked_until {
-            if let Ok(locked) = DateTime::parse_from_rfc3339(locked_str) {
-                if now < locked.with_timezone(&Utc) {
+            if let Ok(locked) = locked_str.parse::<Timestamp>() {
+                if now < locked {
                     // Still locked, reject the attempt
                     return Err(DbError::RateLimited);
                 }
@@ -555,7 +553,7 @@ impl Database {
         let is_locked = failed_count >= MAX_FAILED_ATTEMPTS as i32;
 
         let new_locked_until = if is_locked {
-            Some((now + Duration::seconds(LOCKOUT_DURATION_SECS)).to_rfc3339())
+            Some((now + SignedDuration::from_secs(LOCKOUT_DURATION_SECS)).to_string())
         } else {
             None
         };
@@ -585,21 +583,20 @@ impl Database {
             .ok();
 
         if let Some((failed_count, locked_until, last_attempt)) = result {
-            let now = Utc::now();
+            let now = Timestamp::now();
 
             // Check if locked
             if let Some(locked_str) = locked_until {
-                if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
-                    if now < locked.with_timezone(&Utc) {
+                if let Ok(locked) = locked_str.parse::<Timestamp>() {
+                    if now < locked {
                         return Err(DbError::RateLimited);
                     }
                 }
             }
 
             // Check if we should still count previous attempts
-            if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
-                if now.signed_duration_since(last.with_timezone(&Utc))
-                    <= Duration::seconds(ATTEMPT_RESET_SECS)
+            if let Ok(last) = last_attempt.parse::<Timestamp>() {
+                if now.duration_since(last) <= SignedDuration::from_secs(ATTEMPT_RESET_SECS)
                     && failed_count >= MAX_FAILED_ATTEMPTS as i32
                 {
                     return Err(DbError::RateLimited);
@@ -631,10 +628,10 @@ impl Database {
             .flatten();
 
         if let Some(locked_str) = locked_until {
-            if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
-                let now = Utc::now();
-                if now < locked.with_timezone(&Utc) {
-                    return Ok((locked.with_timezone(&Utc) - now).num_seconds() as u64);
+            if let Ok(locked) = locked_str.parse::<Timestamp>() {
+                let now = Timestamp::now();
+                if now < locked {
+                    return Ok(locked.duration_since(now).as_secs() as u64);
                 }
             }
         }
@@ -647,7 +644,7 @@ impl Database {
     /// Updates the last activity timestamp (in memory) and persists it to disk at
     /// most once per [`SESSION_PERSIST_INTERVAL_SECS`], so reads don't trigger a write.
     pub fn touch_session(&self) -> Result<(), DbError> {
-        let now_ts = Utc::now().timestamp();
+        let now_ts = Timestamp::now().as_second();
         self.last_activity.store(now_ts, Ordering::Relaxed);
 
         // Throttle disk persistence so frequent activity doesn't write every time.
@@ -660,12 +657,12 @@ impl Database {
 
     /// Persists the current activity timestamp to `session_info` now.
     fn persist_session(&self) -> Result<(), DbError> {
-        self.persist_session_at(Utc::now().timestamp())
+        self.persist_session_at(Timestamp::now().as_second())
     }
 
     /// Persists the given activity timestamp to `session_info`.
     fn persist_session_at(&self, now_ts: i64) -> Result<(), DbError> {
-        let now = Utc::now().to_rfc3339();
+        let now = Timestamp::now().to_string();
         self.write(|conn| {
             conn.execute(
                 "INSERT INTO session_info (id, last_activity, created_at)
@@ -691,7 +688,7 @@ impl Database {
         }
 
         let last = self.last_activity.load(Ordering::Relaxed);
-        let now = Utc::now().timestamp();
+        let now = Timestamp::now().as_second();
         if now - last > self.session_timeout {
             return Err(DbError::SessionExpired);
         }
@@ -705,7 +702,7 @@ impl Database {
         }
 
         let last = self.last_activity.load(Ordering::Relaxed);
-        let now = Utc::now().timestamp();
+        let now = Timestamp::now().as_second();
         Ok((self.session_timeout - (now - last)).max(0))
     }
 

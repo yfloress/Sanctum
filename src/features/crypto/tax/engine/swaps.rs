@@ -233,7 +233,7 @@ mod tests {
     use super::*;
     use crate::features::crypto::TaxReportSummary;
     use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
-    use chrono::NaiveDate;
+    use jiff::civil::Date;
     use std::collections::BTreeMap;
 
     fn swap_tx(id: &str, amount: f64, price: Option<f64>) -> CryptoTransaction {
@@ -269,8 +269,8 @@ mod tests {
     fn period_2024() -> TaxPeriod {
         TaxPeriod {
             id: "2024".to_string(),
-            start: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
-            end: NaiveDate::from_ymd_opt(2024, 12, 31).expect("valid date"),
+            start: Date::new(2024, 1, 1).expect("valid date"),
+            end: Date::new(2024, 12, 31).expect("valid date"),
         }
     }
 
@@ -337,7 +337,7 @@ mod tests {
             "btc".to_string(),
             vec![Lot {
                 lot_id: "b1".to_string(),
-                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date: Date::new(2024, 1, 1).expect("valid date"),
                 acquired_date_raw: "2024-01-01".to_string(),
                 acquired_prev_month: "2023-12".to_string(),
                 quantity: 1.0,
@@ -375,7 +375,7 @@ mod tests {
             "btc".to_string(),
             vec![Lot {
                 lot_id: "b1".to_string(),
-                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date: Date::new(2024, 1, 1).expect("valid date"),
                 acquired_date_raw: "2024-01-01".to_string(),
                 acquired_prev_month: "2023-12".to_string(),
                 quantity: 1.0,
@@ -416,7 +416,7 @@ mod tests {
             "btc".to_string(),
             vec![Lot {
                 lot_id: "b1".to_string(),
-                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date: Date::new(2024, 1, 1).expect("valid date"),
                 acquired_date_raw: "2024-01-01".to_string(),
                 acquired_prev_month: "2023-12".to_string(),
                 quantity: 1.0,
@@ -458,7 +458,7 @@ mod tests {
             "btc".to_string(),
             vec![Lot {
                 lot_id: "b1".to_string(),
-                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date: Date::new(2024, 1, 1).expect("valid date"),
                 acquired_date_raw: "2024-01-01".to_string(),
                 acquired_prev_month: "2023-12".to_string(),
                 quantity: 1.0,

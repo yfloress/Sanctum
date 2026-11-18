@@ -22,7 +22,7 @@
 //! (cached by [`FinanceService`]), so display-oriented commands also inject
 //! those states. Exchange-rate persistence lives on [`FinanceService`].
 
-use chrono::Local;
+use jiff::Zoned;
 use sanctum::error::AppError;
 use sanctum::features::crypto::{CryptoService, SETTING_CRYPTO_LAST_UPDATED, default_coin_catalog};
 use sanctum::features::finance::FinanceService;
@@ -140,7 +140,7 @@ pub fn fetch_portfolio(
     };
 
     // Calculate realized gains YTD via tax summary
-    let current_year = chrono::Local::now().format("%Y").to_string();
+    let current_year = jiff::Zoned::now().strftime("%Y").to_string();
     let (realized_ytd_val, realized_ytd_neg) = crypto
         .generate_tax_summary(current_year)
         .map(|s| {
@@ -185,10 +185,13 @@ pub fn fetch_portfolio_trend(
     days: i64,
 ) -> Result<PortfolioTrendData, AppError> {
     let (currency, rate) = display_currency(None, &settings, &finance);
-    let today = Local::now().date_naive();
-    let start = today - chrono::Duration::days(days.max(1) - 1);
-    let start_str = start.format("%Y-%m-%d").to_string();
-    let today_str = today.format("%Y-%m-%d").to_string();
+    let today = Zoned::now().date();
+    let start = jiff::Span::new()
+        .try_days(days.max(1) - 1)
+        .and_then(|span| today.checked_sub(span))
+        .unwrap_or(jiff::civil::Date::MIN);
+    let start_str = start.to_string();
+    let today_str = today.to_string();
 
     // Today's value from current spot prices (always the most fresh anchor).
     let assets = crypto.get_aggregated_portfolio().map_err(AppError::from)?;
@@ -685,7 +688,7 @@ pub async fn sync_crypto_data(
         }
     }
 
-    let updated_at = chrono::Utc::now().to_rfc3339();
+    let updated_at = jiff::Timestamp::now().to_string();
     crypto
         .set_app_setting(SETTING_CRYPTO_LAST_UPDATED, &updated_at)
         .map_err(AppError::from)?;

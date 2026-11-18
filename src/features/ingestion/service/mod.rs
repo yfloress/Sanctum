@@ -21,7 +21,7 @@
 
 use crate::db::{Database, DbError};
 use crate::models::CryptoTransaction;
-use chrono::{NaiveDate, NaiveDateTime};
+use jiff::civil::{Date, DateTime};
 
 use std::sync::{Arc, RwLock};
 
@@ -86,18 +86,18 @@ pub(super) fn matches_swap_rollup_duplicate(existing_amounts: &[f64], import_amo
     (summed_amount - import_amount).abs() <= 1e-8
 }
 
-fn parse_ingestion_datetime(raw: &str) -> Option<NaiveDateTime> {
+fn parse_ingestion_datetime(raw: &str) -> Option<DateTime> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return None;
     }
 
-    NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%d %H:%M:%S")
+    DateTime::strptime("%Y-%m-%d %H:%M:%S", trimmed)
         .ok()
         .or_else(|| {
-            NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
+            Date::strptime("%Y-%m-%d", trimmed)
                 .ok()
-                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                .map(|d| d.at(0, 0, 0, 0))
         })
 }
 
@@ -296,7 +296,7 @@ pub(super) fn has_mexc_transfer_overlap_duplicate(
             None => return false,
         };
 
-        let delta = (existing_dt - import_dt).num_seconds().abs();
+        let delta = existing_dt.duration_since(import_dt).as_secs().abs();
         delta <= OVERLAP_WINDOW_SECONDS
     })
 }

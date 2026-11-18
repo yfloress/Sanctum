@@ -20,7 +20,7 @@
 //! Provides secure logging functionality for security-relevant events
 //! without exposing sensitive information.
 
-use chrono::Utc;
+use jiff::Timestamp;
 use log::{info, warn};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -109,7 +109,7 @@ fn generate_event_id() -> u64 {
 /// ```
 pub fn log_security_event(event: SecurityEvent, context: Option<&str>) {
     let event_id = generate_event_id();
-    let timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ");
+    let timestamp = Timestamp::now().strftime("%Y-%m-%dT%H:%M:%S%.3fZ");
     let event_type = event.as_str();
 
     let message = match context {
@@ -136,7 +136,7 @@ pub fn log_security_event(event: SecurityEvent, context: Option<&str>) {
 /// * `locked` - Whether the account is now locked
 pub fn log_auth_failure(attempts: u32, locked: bool) {
     let event_id = generate_event_id();
-    let timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ");
+    let timestamp = Timestamp::now().strftime("%Y-%m-%dT%H:%M:%S%.3fZ");
 
     if locked {
         warn!(
@@ -158,7 +158,7 @@ pub fn log_auth_failure(attempts: u32, locked: bool) {
 /// * `wait_seconds` - Seconds until the limit resets
 pub fn log_rate_limit(source: &str, wait_seconds: u64) {
     let event_id = generate_event_id();
-    let timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ");
+    let timestamp = Timestamp::now().strftime("%Y-%m-%dT%H:%M:%S%.3fZ");
 
     warn!(
         "[SECURITY] id={} ts={} event=RATE_LIMITED source={} wait_seconds={}",
@@ -186,7 +186,7 @@ pub fn init_security_logger() {
 
         info!(
             "[SECURITY] id=0 ts={} event=LOGGER_INITIALIZED version={}",
-            Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ"),
+            Timestamp::now().strftime("%Y-%m-%dT%H:%M:%S%.3fZ"),
             env!("CARGO_PKG_VERSION")
         );
     });

@@ -23,7 +23,7 @@
 use crate::db::{Database, DbError};
 use crate::models::{AggregatedAsset, CryptoAsset, CryptoWallet};
 use crate::security_log::{SecurityEvent, log_security_event};
-use chrono::Local;
+use jiff::Zoned;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
@@ -272,7 +272,7 @@ impl CryptoService {
         total_value: f64,
         total_cost: f64,
     ) -> Result<(), CryptoError> {
-        let date = Local::now().format("%Y-%m-%d").to_string();
+        let date = Zoned::now().date().to_string();
         self.with_db(|db| {
             db.save_crypto_portfolio_snapshot(&date, total_value, total_cost)
                 .map_err(CryptoError::Database)
@@ -282,7 +282,7 @@ impl CryptoService {
     /// Adds snapshots for past days that have transactions but none recorded,
     /// so imported history shows up in the charts. Never overwrites a snapshot.
     pub fn backfill_portfolio_snapshots(&self) -> Result<usize, CryptoError> {
-        let today = Local::now().format("%Y-%m-%d").to_string();
+        let today = Zoned::now().date().to_string();
         self.with_db(|db| {
             let transactions = db
                 .get_all_crypto_transactions(0, i64::MAX)
@@ -307,11 +307,11 @@ impl CryptoService {
         days: i64,
     ) -> Result<Vec<(String, f64, f64)>, CryptoError> {
         let days = days.max(1);
-        let start_date = Local::now()
-            .date_naive()
-            .checked_sub_signed(chrono::Duration::days(days - 1))
-            .unwrap_or_else(|| Local::now().date_naive())
-            .format("%Y-%m-%d")
+        let today = Zoned::now().date();
+        let start_date = jiff::Span::new()
+            .try_days(days - 1)
+            .and_then(|span| today.checked_sub(span))
+            .unwrap_or(today)
             .to_string();
         self.with_db(|db| {
             db.load_crypto_portfolio_snapshots(&start_date)

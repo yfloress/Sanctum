@@ -20,17 +20,17 @@ exclude = [
 ]
 
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
 csv = "1.4"
 env_logger = "0.11"
 fluent-bundle = "0.16"
 futures = "0.3"
+jiff = "0.2"
 log = "0.4"
 pdf-extract = "0.12.1"
 r2d2 = "0.8"
-r2d2_sqlite = { version = "0.35", default-features = false }
+r2d2_sqlite = { version = "0.37", default-features = false }
 reqwest = { version = "0.13", features = ["json", "stream", "socks"] }
-rusqlite = { version = "0.40", features = ["bundled-sqlcipher"] }
+rusqlite = { version = "0.42", features = ["bundled-sqlcipher"] }
 secrecy = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -42,4 +42,4 @@ unic-langid = "0.9"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-rusqlite = { version = "0.40", features = ["bundled-sqlcipher-vendored-openssl"] }
+rusqlite = { version = "0.42", features = ["bundled-sqlcipher-vendored-openssl"] }

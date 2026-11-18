@@ -20,7 +20,7 @@
 //! Common validation functions used across finance, crypto, and other domains.
 //! Centralizing these prevents code duplication and ensures consistent validation rules.
 
-use chrono::NaiveDate;
+use jiff::civil::Date;
 use uuid::Uuid;
 
 /// Validates and trims a field to a maximum length
@@ -131,17 +131,17 @@ pub fn validate_date(date: &str) -> Result<String, String> {
     }
 
     // Try DD-MM-YYYY format first
-    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%d-%m-%Y") {
-        return Ok(parsed.format("%Y-%m-%d").to_string());
+    if let Ok(parsed) = Date::strptime("%d-%m-%Y", trimmed) {
+        return Ok(parsed.to_string());
     }
 
     // Try YYYY-MM-DD format
-    if NaiveDate::parse_from_str(trimmed, "%Y-%m-%d").is_ok() {
+    if Date::strptime("%Y-%m-%d", trimmed).is_ok() {
         return Ok(trimmed.to_string());
     }
 
     // Try YYYY-MM-DD HH:MM:SS (full datetime from exchange imports)
-    if trimmed.len() >= 10 && NaiveDate::parse_from_str(&trimmed[..10], "%Y-%m-%d").is_ok() {
+    if trimmed.len() >= 10 && Date::strptime("%Y-%m-%d", &trimmed[..10]).is_ok() {
         return Ok(trimmed.to_string());
     }
 

@@ -18,7 +18,7 @@
 use super::super::types::TaxPeriod;
 use super::*;
 use crate::features::crypto::TaxReportSummary;
-use chrono::NaiveDate;
+use jiff::civil::Date;
 use std::collections::BTreeMap;
 
 fn approx_eq(a: f64, b: f64) -> bool {
@@ -54,8 +54,8 @@ fn chile_report() -> TaxReport {
 fn test_period() -> TaxPeriod {
     TaxPeriod {
         id: "2024".to_string(),
-        start: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-        end: NaiveDate::from_ymd_opt(2024, 12, 31).unwrap(),
+        start: Date::new(2024, 1, 1).unwrap(),
+        end: Date::new(2024, 12, 31).unwrap(),
     }
 }
 
@@ -134,7 +134,7 @@ fn hifo_uses_highest_cost_lot() {
         &mut report,
         &mut lots,
         &buy1,
-        NaiveDate::from_ymd_opt(2024, 1, 5).unwrap(),
+        Date::new(2024, 1, 5).unwrap(),
         TaxJurisdiction::Usa,
         None,
     );
@@ -142,7 +142,7 @@ fn hifo_uses_highest_cost_lot() {
         &mut report,
         &mut lots,
         &buy2,
-        NaiveDate::from_ymd_opt(2024, 2, 5).unwrap(),
+        Date::new(2024, 2, 5).unwrap(),
         TaxJurisdiction::Usa,
         None,
     );
@@ -157,7 +157,7 @@ fn hifo_uses_highest_cost_lot() {
     let req = DisposalRequest {
         coin_id: "btc",
         amount: 1.0,
-        sale_date: NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+        sale_date: Date::new(2024, 3, 1).unwrap(),
         tx_id: "s1",
         proceeds: 300.0,
         taxable: true,
@@ -191,7 +191,7 @@ fn chile_hifo_uses_highest_ipc_adjusted_cost_lot() {
         &mut report,
         &mut lots,
         &buy1,
-        NaiveDate::from_ymd_opt(2024, 1, 5).expect("valid date"),
+        Date::new(2024, 1, 5).expect("valid date"),
         TaxJurisdiction::Chile,
         None,
     );
@@ -199,7 +199,7 @@ fn chile_hifo_uses_highest_ipc_adjusted_cost_lot() {
         &mut report,
         &mut lots,
         &buy2,
-        NaiveDate::from_ymd_opt(2024, 7, 5).expect("valid date"),
+        Date::new(2024, 7, 5).expect("valid date"),
         TaxJurisdiction::Chile,
         None,
     );
@@ -214,7 +214,7 @@ fn chile_hifo_uses_highest_ipc_adjusted_cost_lot() {
     let req = DisposalRequest {
         coin_id: "btc",
         amount: 1.0,
-        sale_date: NaiveDate::from_ymd_opt(2024, 8, 1).expect("valid date"),
+        sale_date: Date::new(2024, 8, 1).expect("valid date"),
         tx_id: "s1",
         proceeds: 200.0,
         taxable: true,
@@ -244,7 +244,7 @@ fn cpp_uses_weighted_average_cost() {
         &mut report,
         &mut lots,
         &buy1,
-        NaiveDate::from_ymd_opt(2024, 1, 5).unwrap(),
+        Date::new(2024, 1, 5).unwrap(),
         TaxJurisdiction::Usa,
         None,
     );
@@ -252,7 +252,7 @@ fn cpp_uses_weighted_average_cost() {
         &mut report,
         &mut lots,
         &buy2,
-        NaiveDate::from_ymd_opt(2024, 2, 5).unwrap(),
+        Date::new(2024, 2, 5).unwrap(),
         TaxJurisdiction::Usa,
         None,
     );
@@ -267,7 +267,7 @@ fn cpp_uses_weighted_average_cost() {
     let req = DisposalRequest {
         coin_id: "btc",
         amount: 2.0,
-        sale_date: NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+        sale_date: Date::new(2024, 3, 1).unwrap(),
         tx_id: "s1",
         proceeds: 600.0,
         taxable: true,
@@ -346,7 +346,7 @@ fn gain_ipc_adjustment_applies_for_chile() {
         ipc_map: &ipc,
     };
 
-    let sale_date = NaiveDate::from_ymd_opt(2024, 8, 15).unwrap();
+    let sale_date = Date::new(2024, 8, 15).unwrap();
     let adjusted = apply_gain_ipc_adjustment(&mut report, &cfg, sale_date, 354.5, "tx1");
 
     // 354.5 × (122 / 120) = 354.5 × 1.01667 ≈ 360.41
@@ -369,7 +369,7 @@ fn gain_ipc_adjustment_noop_for_december_sale() {
         ipc_map: &ipc,
     };
 
-    let sale_date = NaiveDate::from_ymd_opt(2024, 12, 10).unwrap();
+    let sale_date = Date::new(2024, 12, 10).unwrap();
     let adjusted = apply_gain_ipc_adjustment(&mut report, &cfg, sale_date, 500.0, "tx1");
 
     assert!(approx_eq(adjusted, 500.0));
@@ -388,7 +388,7 @@ fn gain_ipc_adjustment_noop_for_usa() {
         ipc_map: &ipc,
     };
 
-    let sale_date = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
+    let sale_date = Date::new(2024, 6, 15).unwrap();
     let adjusted = apply_gain_ipc_adjustment(&mut report, &cfg, sale_date, 200.0, "tx1");
 
     assert!(approx_eq(adjusted, 200.0));
@@ -409,7 +409,7 @@ fn chile_fee_excluded_from_cost_basis() {
         &mut report,
         &mut lots,
         &buy,
-        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+        Date::new(2024, 1, 10).unwrap(),
         TaxJurisdiction::Chile,
         None,
     );
@@ -430,7 +430,7 @@ fn usa_fee_included_in_cost_basis() {
         &mut report,
         &mut lots,
         &buy,
-        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+        Date::new(2024, 1, 10).unwrap(),
         TaxJurisdiction::Usa,
         None,
     );
@@ -452,7 +452,7 @@ fn chile_sale_fee_does_not_reduce_proceeds() {
         &mut report,
         &mut lots,
         &buy,
-        NaiveDate::from_ymd_opt(2024, 1, 10).expect("valid date"),
+        Date::new(2024, 1, 10).expect("valid date"),
         TaxJurisdiction::Chile,
         None,
     );
@@ -469,7 +469,7 @@ fn chile_sale_fee_does_not_reduce_proceeds() {
         &mut lots,
         &cfg,
         &sell,
-        NaiveDate::from_ymd_opt(2024, 2, 10).expect("valid date"),
+        Date::new(2024, 2, 10).expect("valid date"),
         true,
     );
 
@@ -489,7 +489,7 @@ fn usa_sale_fee_reduces_proceeds() {
         &mut report,
         &mut lots,
         &buy,
-        NaiveDate::from_ymd_opt(2024, 1, 10).expect("valid date"),
+        Date::new(2024, 1, 10).expect("valid date"),
         TaxJurisdiction::Usa,
         None,
     );
@@ -506,7 +506,7 @@ fn usa_sale_fee_reduces_proceeds() {
         &mut lots,
         &cfg,
         &sell,
-        NaiveDate::from_ymd_opt(2024, 2, 10).expect("valid date"),
+        Date::new(2024, 2, 10).expect("valid date"),
         true,
     );
 
@@ -525,7 +525,7 @@ fn swap_fee_in_stablecoin_uses_usd_unit_price() {
         "usdt".to_string(),
         vec![Lot {
             lot_id: "u1".to_string(),
-            acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+            acquired_date: Date::new(2024, 1, 1).expect("valid date"),
             acquired_date_raw: "2024-01-01".to_string(),
             acquired_prev_month: "2023-12".to_string(),
             quantity: 100.0,
@@ -569,7 +569,7 @@ fn swap_fee_in_non_pricing_asset_requires_explicit_usd_price() {
         "btc".to_string(),
         vec![Lot {
             lot_id: "b1".to_string(),
-            acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+            acquired_date: Date::new(2024, 1, 1).expect("valid date"),
             acquired_date_raw: "2024-01-01".to_string(),
             acquired_prev_month: "2023-12".to_string(),
             quantity: 1.0,
@@ -610,7 +610,7 @@ fn swap_fee_uses_fee_usd_when_fee_coin_price_is_missing() {
         "btc".to_string(),
         vec![Lot {
             lot_id: "b1".to_string(),
-            acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+            acquired_date: Date::new(2024, 1, 1).expect("valid date"),
             acquired_date_raw: "2024-01-01".to_string(),
             acquired_prev_month: "2023-12".to_string(),
             quantity: 1.0,
@@ -660,7 +660,7 @@ fn chile_airdrop_has_zero_cost() {
         &mut report,
         &mut lots,
         &airdrop,
-        NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+        Date::new(2024, 3, 1).unwrap(),
         TaxJurisdiction::Chile,
         Some("airdrop"),
     );
@@ -682,7 +682,7 @@ fn chile_staking_has_zero_cost() {
         &mut report,
         &mut lots,
         &staking,
-        NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
+        Date::new(2024, 4, 1).unwrap(),
         TaxJurisdiction::Chile,
         Some("staking"),
     );
@@ -702,7 +702,7 @@ fn usa_airdrop_uses_fmv() {
         &mut report,
         &mut lots,
         &airdrop,
-        NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+        Date::new(2024, 3, 1).unwrap(),
         TaxJurisdiction::Usa,
         Some("airdrop"),
     );
@@ -787,7 +787,7 @@ fn chile_full_example_fifo_with_double_ipc() {
         &mut report,
         &mut lots,
         &buy1,
-        NaiveDate::from_ymd_opt(2024, 1, 5).unwrap(),
+        Date::new(2024, 1, 5).unwrap(),
         TaxJurisdiction::Chile,
         None,
     );
@@ -795,7 +795,7 @@ fn chile_full_example_fifo_with_double_ipc() {
         &mut report,
         &mut lots,
         &buy2,
-        NaiveDate::from_ymd_opt(2024, 2, 21).unwrap(),
+        Date::new(2024, 2, 21).unwrap(),
         TaxJurisdiction::Chile,
         None,
     );
@@ -805,7 +805,7 @@ fn chile_full_example_fifo_with_double_ipc() {
     // Total proceeds = 1.5 × 1333.3333 ≈ 2000
     sell.override_proceeds = Some(2000.0);
 
-    let sale_date = NaiveDate::from_ymd_opt(2024, 8, 15).unwrap();
+    let sale_date = Date::new(2024, 8, 15).unwrap();
     apply_disposal(&mut report, &mut lots, &cfg, &sell, sale_date, true);
 
     assert_eq!(report.disposals.len(), 1);

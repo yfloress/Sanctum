@@ -46,7 +46,7 @@ mod tests_local;
 #[cfg(test)]
 mod tests_pdf;
 
-use chrono::NaiveDate;
+use jiff::civil::Date;
 
 pub use account::Totals;
 pub use document::{Document, Line, Word};
@@ -100,7 +100,7 @@ impl StatementFormat {
 pub struct StatementRow {
     /// Index into [`Document::lines`].
     pub line: usize,
-    pub date: NaiveDate,
+    pub date: Date,
     /// Without the bank's operation codes.
     pub description: String,
     /// As printed, codes included (a transfer's account number says who
@@ -155,14 +155,14 @@ pub enum StatementWarning {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedStatement {
     pub format: StatementFormat,
-    pub period: Option<(NaiveDate, NaiveDate)>,
+    pub period: Option<(Date, Date)>,
     pub rows: Vec<StatementRow>,
     pub problems: Vec<RowProblem>,
     pub warnings: Vec<StatementWarning>,
 }
 
 impl ParsedStatement {
-    fn new(format: StatementFormat, period: Option<(NaiveDate, NaiveDate)>) -> Self {
+    fn new(format: StatementFormat, period: Option<(Date, Date)>) -> Self {
         Self {
             format,
             period,

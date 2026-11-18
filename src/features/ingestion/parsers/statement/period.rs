@@ -17,12 +17,12 @@
 
 //! The period a statement covers, and the year of rows printed as `dd/mm`.
 
-use chrono::{Datelike, NaiveDate};
+use jiff::civil::Date;
 
 use super::StatementError;
 use super::clp::{RowDate, parse_full_date};
 
-pub type Period = (NaiveDate, NaiveDate);
+pub type Period = (Date, Date);
 
 /// How a statement prints its period. Tokens are folded (see `fold`).
 #[derive(Debug, Clone, Copy)]
@@ -57,11 +57,7 @@ pub fn find_period(
 
 /// Reads the date after a keyword at `i`, written as `KW date`, `KW : date`,
 /// `KW: date` or `KW:date`. Returns the date and the index after it.
-fn date_after_keyword(
-    tokens: &[String],
-    i: usize,
-    keywords: &[&str],
-) -> Option<(NaiveDate, usize)> {
+fn date_after_keyword(tokens: &[String], i: usize, keywords: &[&str]) -> Option<(Date, usize)> {
     let token = tokens.get(i)?;
     for keyword in keywords {
         let Some(rest) = token.strip_prefix(keyword) else {
@@ -126,12 +122,12 @@ fn after_header(tokens: &[String], header: &[&str]) -> Option<Period> {
 
 /// Places a `dd/mm` row inside the statement period. A day of slack on each
 /// side covers rows booked the day before or after the declared range.
-pub fn infer_year(date: RowDate, period: Period) -> Option<NaiveDate> {
+pub fn infer_year(date: RowDate, period: Period) -> Option<Date> {
     let (start, end) = period;
     let years = [start.year() - 1, start.year(), end.year(), end.year() + 1];
-    let candidates: Vec<NaiveDate> = years
+    let candidates: Vec<Date> = years
         .iter()
-        .filter_map(|&y| NaiveDate::from_ymd_opt(y, date.month, date.day))
+        .filter_map(|&y| Date::new(y, date.month, date.day).ok())
         .collect();
     if let Some(inside) = candidates.iter().find(|d| (start..=end).contains(*d)) {
         return Some(*inside);
@@ -139,7 +135,6 @@ pub fn infer_year(date: RowDate, period: Period) -> Option<NaiveDate> {
     candidates.into_iter().find(|d| within_period(*d, period))
 }
 
-pub fn within_period(date: NaiveDate, (start, end): Period) -> bool {
-    let slack = chrono::Duration::days(1);
-    date >= start - slack && date <= end + slack
+pub fn within_period(date: Date, (start, end): Period) -> bool {
+    date >= start.yesterday().unwrap_or(start) && date <= end.tomorrow().unwrap_or(end)
 }

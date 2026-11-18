@@ -28,8 +28,8 @@
 
 use crate::models::{CryptoAsset, CryptoCatalogCoin};
 use crate::security_log::{SecurityEvent, log_rate_limit, log_security_event};
-use chrono::NaiveDate;
 use futures::TryStreamExt;
+use jiff::civil::Date;
 use reqwest::{Client, Proxy, Url};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
@@ -530,7 +530,7 @@ pub async fn fetch_historical_price_usd(
 async fn fetch_historical_price_from_coinpaprika(
     client: &Client,
     coingecko_coin_id: &str,
-    normalized_date: &NaiveDate,
+    normalized_date: &Date,
 ) -> Result<f64, String> {
     let query = coingecko_coin_id.replace('-', "%20");
     let search_url = format!("{}/search?c=currencies&q={}", COINPAPRIKA_API_BASE, query);
@@ -554,8 +554,8 @@ async fn fetch_historical_price_from_coinpaprika(
     let search_body = download_response_body(search_response).await?;
     let paprika_id = parse_coinpaprika_id_from_search(&search_body, coingecko_coin_id)?;
 
-    let start = format!("{}T00:00:00Z", normalized_date.format("%Y-%m-%d"));
-    let end = format!("{}T23:59:59Z", normalized_date.format("%Y-%m-%d"));
+    let start = format!("{normalized_date}T00:00:00Z");
+    let end = format!("{normalized_date}T23:59:59Z");
     let historical_url = format!(
         "{}/tickers/{}/historical?start={}&end={}&interval=24h&quote=usd",
         COINPAPRIKA_API_BASE, paprika_id, start, end
@@ -582,17 +582,17 @@ async fn fetch_historical_price_from_coinpaprika(
 async fn fetch_historical_price_from_kraken(
     client: &Client,
     coingecko_coin_id: &str,
-    normalized_date: &NaiveDate,
+    normalized_date: &Date,
 ) -> Result<f64, String> {
     let Some(pair) = kraken_pair_for_coingecko_id(coingecko_coin_id) else {
         return Err("Kraken pair not available for this asset".to_string());
     };
 
     let since = normalized_date
-        .and_hms_opt(0, 0, 0)
-        .ok_or("Invalid date")?
-        .and_utc()
-        .timestamp();
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .map_err(|_| "Invalid date")?
+        .timestamp()
+        .as_second();
     let url = format!(
         "{}/OHLC?pair={}&interval=1440&since={}",
         KRAKEN_API_BASE, pair, since
@@ -801,7 +801,7 @@ fn parse_coinpaprika_historical_price(body: &[u8]) -> Result<f64, String> {
     Ok(price)
 }
 
-fn parse_kraken_ohlc_close_price(body: &[u8], date: &NaiveDate) -> Result<f64, String> {
+fn parse_kraken_ohlc_close_price(body: &[u8], date: &Date) -> Result<f64, String> {
     let payload: serde_json::Value =
         serde_json::from_slice(body).map_err(|_| "Failed to parse Kraken historical data")?;
 
@@ -828,10 +828,10 @@ fn parse_kraken_ohlc_close_price(body: &[u8], date: &NaiveDate) -> Result<f64, S
     // Kraken serves only its latest 720 candles, so for an older date the first
     // candle belongs to another day. Take the one that opens on `date`.
     let day_start = date
-        .and_hms_opt(0, 0, 0)
-        .ok_or("Invalid date")?
-        .and_utc()
-        .timestamp();
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .map_err(|_| "Invalid date")?
+        .timestamp()
+        .as_second();
     let close_value = candles
         .iter()
         .filter_map(|row| row.as_array())
@@ -872,7 +872,7 @@ fn kraken_pair_for_coingecko_id(coin_id: &str) -> Option<&'static str> {
     }
 }
 
-fn normalize_history_date(raw: &str) -> Result<NaiveDate, String> {
+fn normalize_history_date(raw: &str) -> Result<Date, String> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return Err("Date cannot be empty".to_string());
@@ -885,11 +885,15 @@ fn normalize_history_date(raw: &str) -> Result<NaiveDate, String> {
         trimmed
     };
 
-    let parsed = NaiveDate::parse_from_str(date_part, "%Y-%m-%d")
-        .or_else(|_| NaiveDate::parse_from_str(trimmed, "%d-%m-%Y"))
+    let parsed = Date::strptime("%Y-%m-%d", date_part)
+        .or_else(|_| Date::strptime("%d-%m-%Y", trimmed))
         .map_err(|_| "Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string())?;
 
-    if parsed > chrono::Utc::now().date_naive() {
+    if parsed
+        > jiff::Timestamp::now()
+            .to_zoned(jiff::tz::TimeZone::UTC)
+            .date()
+    {
         return Err("Date cannot be in the future".to_string());
     }
 

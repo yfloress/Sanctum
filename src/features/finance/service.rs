@@ -26,7 +26,7 @@ use crate::models::{
     CreditInstallment, RecurrenceFrequency, RecurringTransaction, Transaction, TransactionCategory,
 };
 use crate::security_log::{SecurityEvent, log_security_event};
-use chrono::{Local, Utc};
+use jiff::{Timestamp, Zoned};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
@@ -139,7 +139,7 @@ impl FinanceService {
             };
 
             let id = Uuid::new_v4().to_string();
-            let created_at = Utc::now().to_rfc3339();
+            let created_at = Timestamp::now().to_string();
 
             let account = Account::new(
                 id.clone(),
@@ -412,7 +412,7 @@ impl FinanceService {
             Some(value) if !value.trim().is_empty() => value,
             // Local, not UTC: west of Greenwich the UTC date is already tomorrow
             // in the evening.
-            _ => Local::now().format("%Y-%m-%d").to_string(),
+            _ => Zoned::now().date().to_string(),
         };
         self.with_db(|db| CreditOps::pay_installment(db, &installment_id, &date))
     }
@@ -466,7 +466,7 @@ impl FinanceService {
                 id: Uuid::new_v4().to_string(),
                 category,
                 amount: amount_cents,
-                created_at: Utc::now().to_rfc3339(),
+                created_at: Timestamp::now().to_string(),
             };
             db.upsert_category_budget(&budget)
                 .map_err(FinanceError::Database)
@@ -487,7 +487,7 @@ impl FinanceService {
     ) -> Result<Vec<BudgetStatus>, FinanceError> {
         let month = match month {
             Some(value) if !value.trim().is_empty() => value.trim().to_string(),
-            _ => Local::now().format("%Y-%m").to_string(),
+            _ => Zoned::now().strftime("%Y-%m").to_string(),
         };
         self.with_db(|db| db.get_budget_status(&month).map_err(FinanceError::Database))
     }
@@ -543,7 +543,7 @@ impl FinanceService {
                 next_date: first_date,
                 last_created_date: None,
                 is_active: true,
-                created_at: Utc::now().to_rfc3339(),
+                created_at: Timestamp::now().to_string(),
             };
 
             db.create_recurring_transaction(&rule)
@@ -581,7 +581,7 @@ impl FinanceService {
     /// Called on unlock, so a vault left closed for a month catches up in one
     /// pass instead of needing the app open on the exact day.
     pub fn apply_due_recurring(&self) -> Result<usize, FinanceError> {
-        let today = Local::now().format("%Y-%m-%d").to_string();
+        let today = Zoned::now().date().to_string();
         self.with_db(|db| {
             db.apply_due_recurring(&today)
                 .map_err(FinanceError::Database)
@@ -744,10 +744,11 @@ impl FinanceService {
                 return Ok(None);
             };
 
-            let is_fresh = chrono::DateTime::parse_from_rfc3339(&updated_at)
+            let is_fresh = updated_at
+                .parse::<jiff::Timestamp>()
                 .map(|dt| {
-                    let age = Utc::now().signed_duration_since(dt.with_timezone(&Utc));
-                    age.num_seconds() <= EXCHANGE_RATE_TTL_SECS
+                    let age = Timestamp::now().duration_since(dt);
+                    age.as_secs() <= EXCHANGE_RATE_TTL_SECS
                 })
                 .unwrap_or(false);
 

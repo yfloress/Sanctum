@@ -118,7 +118,7 @@ fn normalize_history_date_accepts_supported_formats() {
     let iso = normalize_history_date("2025-02-10").expect("ISO date must parse");
     let dmy = normalize_history_date("10-02-2025").expect("DMY date must parse");
     assert_eq!(iso, dmy);
-    assert_eq!(iso.format("%Y-%m-%d").to_string(), "2025-02-10");
+    assert_eq!(iso.to_string(), "2025-02-10");
 }
 
 #[test]
@@ -200,8 +200,8 @@ fn parse_kraken_ohlc_close_price_rejects_a_candle_from_another_day() {
     assert_eq!(err, "Kraken historical close price not available");
 }
 
-fn day(y: i32, m: u32, d: u32) -> NaiveDate {
-    NaiveDate::from_ymd_opt(y, m, d).expect("valid test date")
+fn day(y: i16, m: i8, d: i8) -> Date {
+    Date::new(y, m, d).expect("valid test date")
 }
 
 #[test]

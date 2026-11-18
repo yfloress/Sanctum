@@ -252,8 +252,8 @@ fn parse_row(
     }
 
     let date = match (row.date.year, period) {
-        (Some(year), _) => chrono::NaiveDate::from_ymd_opt(year, row.date.month, row.date.day)
-            .ok_or(RowIssue::InvalidDate)?,
+        (Some(year), _) => jiff::civil::Date::new(year, row.date.month, row.date.day)
+            .map_err(|_| RowIssue::InvalidDate)?,
         (None, Some(period)) => infer_year(row.date, period).ok_or(RowIssue::OutsidePeriod)?,
         (None, None) => return Err(RowIssue::MissingYear),
     };

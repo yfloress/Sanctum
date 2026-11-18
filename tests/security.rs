@@ -605,6 +605,21 @@ fn test_transfer_between_different_currencies_is_rejected() {
 // ==================== Authentication / Rate Limiting ====================
 
 #[test]
+fn sqlcipher_uses_sqlite_with_the_wal_page_size_fix() {
+    let conn = rusqlite::Connection::open_in_memory().expect("open SQLCipher");
+    let cipher: String = conn
+        .query_row("PRAGMA cipher_version", [], |row| row.get(0))
+        .expect("SQLCipher must be enabled");
+    assert!(!cipher.is_empty());
+    // RUSTSEC-2026-0459 also applies to SQLite bundled inside SQLCipher.
+    assert!(
+        rusqlite::version_number() >= 3_054_000,
+        "SQLite {}",
+        rusqlite::version()
+    );
+}
+
+#[test]
 fn test_wrong_password_is_rejected() {
     let wrong_passwords = vec![
         "",

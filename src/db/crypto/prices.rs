@@ -21,7 +21,7 @@
 
 use crate::db::{Database, DbError};
 use crate::models::CryptoAsset;
-use chrono::Utc;
+use jiff::Timestamp;
 use rusqlite::params;
 
 impl Database {
@@ -29,7 +29,7 @@ impl Database {
 
     /// Saves an exchange rate to cache (e.g., CLP_USD)
     pub fn save_exchange_rate(&self, pair: &str, rate: f64) -> Result<(), DbError> {
-        let now = Utc::now().to_rfc3339();
+        let now = Timestamp::now().to_string();
         self.write(|conn| {
             conn.execute(
                 "INSERT OR REPLACE INTO exchange_rate_cache (currency_pair, rate, updated_at)
@@ -61,7 +61,7 @@ impl Database {
 
     /// Saves several prices in one transaction (a sync brings ~250).
     pub fn save_crypto_prices(&self, prices: &[CryptoAsset]) -> Result<(), DbError> {
-        let now = Utc::now().to_rfc3339();
+        let now = Timestamp::now().to_string();
         self.with_transaction(|conn| {
             let mut stmt = conn.prepare(
                 "INSERT OR REPLACE INTO crypto_price_cache
@@ -135,7 +135,7 @@ impl Database {
         total_value_usd: f64,
         total_cost_usd: f64,
     ) -> Result<(), DbError> {
-        let now = Utc::now().to_rfc3339();
+        let now = Timestamp::now().to_string();
         self.write(|conn| {
             conn.execute(
                 "INSERT INTO crypto_portfolio_snapshots

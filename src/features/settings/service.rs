@@ -23,7 +23,7 @@
 
 use crate::core::settings::SETTING_LAST_BACKUP_AT;
 use crate::db::{Database, DbError};
-use chrono::Utc;
+use jiff::Timestamp;
 use std::sync::{Arc, RwLock};
 
 #[derive(thiserror::Error, Debug)]
@@ -82,6 +82,6 @@ impl SettingsService {
 
     /// Stamps now as the last successful vault backup.
     pub fn record_backup_now(&self) -> Result<(), SettingsError> {
-        self.set_app_setting(SETTING_LAST_BACKUP_AT, &Utc::now().to_rfc3339())
+        self.set_app_setting(SETTING_LAST_BACKUP_AT, &Timestamp::now().to_string())
     }
 }

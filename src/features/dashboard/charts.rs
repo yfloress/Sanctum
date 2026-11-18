@@ -23,7 +23,7 @@
 
 use crate::models::{Account, AccountBalance, Transaction};
 use crate::ui::currency::format_money;
-use chrono::{Datelike, Local, NaiveDate};
+use jiff::{Zoned, civil::Date};
 use std::collections::HashMap;
 
 /// Date format used for parsing transaction dates
@@ -137,30 +137,30 @@ impl DashboardCharts {
             }
         };
 
-        let today = Local::now().date_naive();
-        let today_str = today.format("%Y-%m-%d").to_string();
+        let today = Zoned::now().date();
+        let today_str = today.to_string();
         // ALL starts at the oldest data point, so a short history is not
         // squeezed against years of empty chart. Five years stays the cap.
         let earliest_data = transactions
             .iter()
             .map(|tx| tx.date.as_str())
             .chain(crypto_sorted.first().map(|(d, _)| d.as_str()))
-            .filter_map(|d| NaiveDate::parse_from_str(d, DATE_FORMAT).ok())
+            .filter_map(|d| Date::strptime(DATE_FORMAT, d).ok())
             .min()
             .unwrap_or(today)
-            .clamp(today - chrono::Duration::days(365 * 5), today);
+            .clamp(today - jiff::Span::new().days(365 * 5), today);
         let start_date = match range {
-            "1M" => today - chrono::Duration::days(30),
-            "3M" => today - chrono::Duration::days(90),
-            "6M" => today - chrono::Duration::days(180),
-            "1Y" => today - chrono::Duration::days(365),
+            "1M" => today - jiff::Span::new().days(30),
+            "3M" => today - jiff::Span::new().days(90),
+            "6M" => today - jiff::Span::new().days(180),
+            "1Y" => today - jiff::Span::new().days(365),
             _ => earliest_data, // ALL
         };
 
         // Build daily balance history from transactions
-        let mut delta_by_day: HashMap<NaiveDate, i64> = HashMap::new();
+        let mut delta_by_day: HashMap<Date, i64> = HashMap::new();
         for tx in transactions {
-            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT)
+            if let Ok(date) = Date::strptime(DATE_FORMAT, &tx.date)
                 && date >= start_date
             {
                 let raw_delta = match tx.transaction_type.as_str() {
@@ -175,11 +175,11 @@ impl DashboardCharts {
 
         // Build balance history going backwards from today
         let mut cursor = today;
-        let mut points_rev: Vec<(NaiveDate, i64)> = Vec::new();
+        let mut points_rev: Vec<(Date, i64)> = Vec::new();
         let mut balance = fiat_balance;
 
         loop {
-            let date_str = cursor.format("%Y-%m-%d").to_string();
+            let date_str = cursor.to_string();
 
             // Use historical crypto snapshot nearest on/before date, else 0
             let crypto_at_date = if date_str == today_str {
@@ -197,7 +197,7 @@ impl DashboardCharts {
             if cursor <= start_date {
                 break;
             }
-            if let Some(prev) = cursor.pred_opt() {
+            if let Ok(prev) = cursor.yesterday() {
                 cursor = prev;
             } else {
                 break;
@@ -209,10 +209,7 @@ impl DashboardCharts {
             points_rev.push((today, total_balance));
         }
 
-        let dates: Vec<String> = points_rev
-            .iter()
-            .map(|(d, _)| d.format("%Y-%m-%d").to_string())
-            .collect();
+        let dates: Vec<String> = points_rev.iter().map(|(d, _)| d.to_string()).collect();
         let values: Vec<i64> = points_rev.iter().map(|(_, v)| *v).collect();
         let min_val = *values.iter().min().unwrap_or(&0);
         let max_val = *values.iter().max().unwrap_or(&0);
@@ -229,7 +226,7 @@ impl DashboardCharts {
         let mut total_income_cents: i64 = 0;
         let mut total_expense_cents: i64 = 0;
         for tx in transactions {
-            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT)
+            if let Ok(date) = Date::strptime(DATE_FORMAT, &tx.date)
                 && date >= start_date
                 && date <= today
             {
@@ -331,8 +328,8 @@ impl DashboardCharts {
         transactions: &[Transaction],
         currency_map: &HashMap<String, String>,
         usd_rates: &HashMap<String, f64>,
-        start_date: NaiveDate,
-        end_date: NaiveDate,
+        start_date: Date,
+        end_date: Date,
     ) -> Vec<ExpenseSlice> {
         let normalize = |amount: i64, account_id: &str| -> i64 {
             let currency = currency_map
@@ -353,7 +350,7 @@ impl DashboardCharts {
             if tx.transaction_type != "expense" {
                 continue;
             }
-            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT)
+            if let Ok(date) = Date::strptime(DATE_FORMAT, &tx.date)
                 && date >= start_date
                 && date <= end_date
             {
@@ -591,9 +588,9 @@ mod tests {
 
     #[test]
     fn test_all_range_starts_at_the_oldest_transaction() {
-        let today = Local::now().date_naive();
-        let oldest = (today - chrono::Duration::days(40))
-            .format(DATE_FORMAT)
+        let today = Zoned::now().date();
+        let oldest = (today - jiff::Span::new().days(40))
+            .strftime(DATE_FORMAT)
             .to_string();
         let accounts = vec![make_account("acc1", "USD", 0)];
         let transactions = vec![make_transaction(

@@ -31,8 +31,8 @@
 
 use std::collections::HashMap;
 
-use chrono::NaiveDateTime;
 use csv::StringRecord;
+use jiff::civil::DateTime;
 
 use super::common::{
     append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote,
@@ -167,7 +167,7 @@ impl LedgerSubtype {
 /// A parsed row from the Kraken ledger CSV.
 #[derive(Debug, Clone)]
 struct LedgerRow {
-    time: NaiveDateTime,
+    time: DateTime,
     ledger_type: LedgerType,
     /// Normalised ticker (e.g. `BTC` instead of `XXBT`).
     symbol: String,

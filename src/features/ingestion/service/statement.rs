@@ -29,7 +29,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use chrono::{Datelike, NaiveDate, Weekday};
+use jiff::civil::{Date, Weekday};
 use secrecy::{ExposeSecret, SecretString};
 use uuid::Uuid;
 
@@ -56,7 +56,7 @@ pub enum StatementRead {
 
 pub struct StatementPreview {
     pub format: StatementFormat,
-    pub period: Option<(NaiveDate, NaiveDate)>,
+    pub period: Option<(Date, Date)>,
     pub rows: Vec<PreviewRow>,
     pub problems: Vec<RowProblem>,
     pub warnings: Vec<StatementWarning>,
@@ -223,7 +223,7 @@ impl IngestionService {
 
             let mut writes = Vec::with_capacity(entries.len());
             for entry in &entries {
-                let date = NaiveDate::parse_from_str(entry.date.trim(), "%Y-%m-%d")
+                let date = Date::strptime("%Y-%m-%d", entry.date.trim())
                     .map_err(|_| validation_error("import-statement-invalid-row"))?;
                 if entry.amount == 0 || entry.description.trim().is_empty() {
                     return Err(validation_error("import-statement-invalid-row"));
@@ -307,7 +307,7 @@ impl IngestionService {
                     cents,
                     category.name.clone(),
                     entry.description.trim().to_string(),
-                    date.format("%Y-%m-%d").to_string(),
+                    date.to_string(),
                     kind.to_string(),
                     None,
                 )));
@@ -333,7 +333,7 @@ impl IngestionService {
                             to,
                             *cents,
                             description,
-                            &date.format("%Y-%m-%d").to_string(),
+                            &date.to_string(),
                         )?);
                     }
                     Write::Merge {
@@ -360,7 +360,7 @@ enum Write {
         from: String,
         to: String,
         cents: i64,
-        date: NaiveDate,
+        date: Date,
         description: String,
     },
     Merge {
@@ -379,12 +379,12 @@ const MIRROR_WINDOW_BUSINESS_DAYS: u32 = 5;
 
 /// Weekdays after the earlier date up to and including the later one.
 /// Holidays are not known, so a long weekend counts a day short.
-fn business_days_between(a: NaiveDate, b: NaiveDate) -> u32 {
+fn business_days_between(a: Date, b: Date) -> u32 {
     let (mut day, end) = if a <= b { (a, b) } else { (b, a) };
     let mut count = 0;
     while day < end {
-        day = day.succ_opt().unwrap_or(end);
-        if !matches!(day.weekday(), Weekday::Sat | Weekday::Sun) {
+        day = day.tomorrow().unwrap_or(end);
+        if !matches!(day.weekday(), Weekday::Saturday | Weekday::Sunday) {
             count += 1;
         }
     }
@@ -421,11 +421,11 @@ fn match_mirrors(
                         && !used.contains(tx.id.as_str())
                 })
                 .filter_map(|tx| {
-                    let date = NaiveDate::parse_from_str(tx.date.get(..10)?, "%Y-%m-%d").ok()?;
+                    let date = Date::strptime("%Y-%m-%d", tx.date.get(..10)?).ok()?;
                     let gap = business_days_between(date, row.date);
                     (gap <= MIRROR_WINDOW_BUSINESS_DAYS).then_some((
                         gap,
-                        (date - row.date).num_days().abs(),
+                        (date - row.date).get_days().abs(),
                         tx,
                     ))
                 })
@@ -514,7 +514,7 @@ fn mark_duplicates(rows: &[StatementRow], existing: &[(String, i64)]) -> Vec<boo
     }
     rows.iter()
         .map(|row| {
-            let key = (row.date.format("%Y-%m-%d").to_string(), row.amount * 100);
+            let key = (row.date.to_string(), row.amount * 100);
             match available.get_mut(&key) {
                 Some(left) if *left > 0 => {
                     *left -= 1;
@@ -634,10 +634,10 @@ mod tests {
         )
     }
 
-    fn row(date: (i32, u32, u32), amount: i64) -> StatementRow {
+    fn row(date: (i16, i8, i8), amount: i64) -> StatementRow {
         StatementRow {
             line: 0,
-            date: NaiveDate::from_ymd_opt(date.0, date.1, date.2).unwrap(),
+            date: Date::new(date.0, date.1, date.2).unwrap(),
             description: "Transf.".into(),
             raw_description: "Transf.".into(),
             amount,
@@ -749,8 +749,8 @@ mod tests {
         );
     }
 
-    fn date(y: i32, m: u32, d: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(y, m, d).unwrap()
+    fn date(y: i16, m: i8, d: i8) -> Date {
+        Date::new(y, m, d).unwrap()
     }
 
     fn account(id: &str, kind: &str) -> Account {

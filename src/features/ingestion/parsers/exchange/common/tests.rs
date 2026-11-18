@@ -20,47 +20,45 @@ use super::*;
 #[test]
 fn parse_timestamp_standard() {
     let dt = parse_timestamp("2024-01-15 10:30:45").unwrap();
-    assert_eq!(dt.to_string(), "2024-01-15 10:30:45");
+    assert_eq!(format_datetime(dt), "2024-01-15 10:30:45");
 }
 
 #[test]
 fn parse_timestamp_fractional() {
     let dt = parse_timestamp("2024-01-15 10:30:45.1234").unwrap();
-    assert_eq!(
-        dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-        "2024-01-15 10:30:45"
-    );
+    assert_eq!(format_datetime(dt), "2024-01-15 10:30:45");
+    assert_eq!(dt.subsec_nanosecond(), 123_400_000);
 }
 
 #[test]
 fn parse_timestamp_iso8601() {
     let dt = parse_timestamp("2024-01-15T10:30:45").unwrap();
-    assert_eq!(dt.to_string(), "2024-01-15 10:30:45");
+    assert_eq!(format_datetime(dt), "2024-01-15 10:30:45");
 }
 
 #[test]
 fn parse_timestamp_iso8601_with_z() {
     // Feather Wallet uses this format: "2020-11-30T21:21:10Z"
     let dt = parse_timestamp("2020-11-30T21:21:10Z").unwrap();
-    assert_eq!(dt.to_string(), "2020-11-30 21:21:10");
+    assert_eq!(format_datetime(dt), "2020-11-30 21:21:10");
 }
 
 #[test]
 fn parse_timestamp_iso8601_with_z_quoted() {
     let dt = parse_timestamp("\"2020-11-30T21:21:10Z\"").unwrap();
-    assert_eq!(dt.to_string(), "2020-11-30 21:21:10");
+    assert_eq!(format_datetime(dt), "2020-11-30 21:21:10");
 }
 
 #[test]
 fn parse_timestamp_date_only() {
     let dt = parse_timestamp("2024-01-15").unwrap();
-    assert_eq!(dt.to_string(), "2024-01-15 00:00:00");
+    assert_eq!(format_datetime(dt), "2024-01-15 00:00:00");
 }
 
 #[test]
 fn parse_timestamp_quoted() {
     let dt = parse_timestamp("\"2024-01-15 10:30:45\"").unwrap();
-    assert_eq!(dt.to_string(), "2024-01-15 10:30:45");
+    assert_eq!(format_datetime(dt), "2024-01-15 10:30:45");
 }
 
 #[test]

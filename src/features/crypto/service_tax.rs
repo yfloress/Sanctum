@@ -31,7 +31,7 @@ use super::tax::{
 use crate::core::csv_escape;
 use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
 use crate::models::{CryptoTransaction, CryptoTransactionUpdate};
-use chrono::Local;
+use jiff::Zoned;
 
 impl CryptoService {
     // ==================== Tax: IPC Import (Offline) ====================
@@ -49,7 +49,11 @@ impl CryptoService {
         let entries = map_to_entries(parsed.entries);
         let json = serde_json::to_string(&entries)
             .map_err(|e| CryptoError::Validation(format!("IPC serialization failed: {}", e)))?;
-        let updated_at = Local::now().to_rfc3339();
+        let now = Zoned::now();
+        let updated_at = now
+            .timestamp()
+            .display_with_offset(now.offset())
+            .to_string();
 
         self.with_db(|db| {
             db.set_setting(SETTING_CRYPTO_TAX_IPC_DATA, &json)
@@ -448,7 +452,7 @@ fn compute_taxable_income(
 fn compute_end_balance(
     db: &crate::db::Database,
     transactions: &[CryptoTransaction],
-    period_end: chrono::NaiveDate,
+    period_end: jiff::civil::Date,
 ) -> Result<(Option<f64>, usize), CryptoError> {
     let filtered: Vec<CryptoTransaction> = transactions
         .iter()

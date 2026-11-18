@@ -23,7 +23,7 @@
 //! - System: settings, auth_attempts, session_info
 
 use crate::db::DbError;
-use chrono::Utc;
+use jiff::Timestamp;
 use rusqlite::{Connection, params};
 
 pub fn up(conn: &Connection) -> Result<(), DbError> {
@@ -330,7 +330,7 @@ fn initialize_default_categories(conn: &Connection) -> Result<(), DbError> {
         return Ok(());
     }
 
-    let now = Utc::now().to_rfc3339();
+    let now = Timestamp::now().to_string();
 
     let expense_categories = [
         "FOOD",
@@ -503,7 +503,7 @@ fn create_security_tables(conn: &Connection) -> Result<(), DbError> {
     )?;
 
     // Initialize session info
-    let now = Utc::now().to_rfc3339();
+    let now = Timestamp::now().to_string();
     conn.execute(
         "INSERT OR REPLACE INTO session_info (id, last_activity, created_at) VALUES (1, ?1, ?1)",
         params![&now],

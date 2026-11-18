@@ -211,11 +211,11 @@ impl RecurrenceFrequency {
     /// Month and year steps clamp to the end of a shorter month, so a rule on
     /// the 31st fires on the 28th in February and returns to the 31st after —
     /// the anchor day is never lost, unlike repeatedly adding 30 days.
-    pub fn next_after(&self, date: chrono::NaiveDate) -> Option<chrono::NaiveDate> {
+    pub fn next_after(&self, date: jiff::civil::Date) -> Option<jiff::civil::Date> {
         match self {
-            Self::Weekly => date.checked_add_days(chrono::Days::new(7)),
-            Self::Monthly => date.checked_add_months(chrono::Months::new(1)),
-            Self::Yearly => date.checked_add_months(chrono::Months::new(12)),
+            Self::Weekly => date.checked_add(jiff::Span::new().days(7)).ok(),
+            Self::Monthly => date.checked_add(jiff::Span::new().months(1)).ok(),
+            Self::Yearly => date.checked_add(jiff::Span::new().years(1)).ok(),
         }
     }
 }

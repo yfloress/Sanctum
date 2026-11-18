@@ -1256,10 +1256,10 @@ fn creating_a_credit_writes_its_whole_schedule() {
 
 #[test]
 fn a_schedule_anchored_on_the_31st_returns_to_the_31st_after_february() {
-    let first = chrono::NaiveDate::from_ymd_opt(2026, 1, 31).expect("date");
+    let first = jiff::civil::Date::new(2026, 1, 31).expect("date");
     let dates: Vec<String> = crate::features::finance::credits::schedule_dates(first, 4)
         .into_iter()
-        .map(|d| d.format("%Y-%m-%d").to_string())
+        .map(|d| d.to_string())
         .collect();
 
     // Offsets are taken from the first date, so February borrowing a shorter

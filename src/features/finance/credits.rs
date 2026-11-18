@@ -37,7 +37,7 @@
 //! integration: budgets, charts and the activity list count it like any other
 //! expense, and the row simply remembers which transaction it was.
 
-use chrono::{Months, NaiveDate};
+use jiff::{Span, civil::Date};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -139,9 +139,14 @@ pub struct AmortizationRow {
 /// Every date is offset from the first one rather than from the previous one,
 /// so a plan anchored on the 31st falls back to the 28th in February and
 /// returns to the 31st afterwards instead of drifting a few days each month.
-pub fn schedule_dates(first_due: NaiveDate, count: i32) -> Vec<NaiveDate> {
+pub fn schedule_dates(first_due: Date, count: i32) -> Vec<Date> {
     (0..count.max(0))
-        .filter_map(|step| first_due.checked_add_months(Months::new(step as u32)))
+        .filter_map(|step| {
+            Span::new()
+                .try_months(step)
+                .and_then(|span| first_due.checked_add(span))
+                .ok()
+        })
         .collect()
 }
 
@@ -419,7 +424,7 @@ impl CreditOps {
             cash_price,
             principal,
             monthly_rate_ppm,
-            created_at: chrono::Utc::now().to_rfc3339(),
+            created_at: jiff::Timestamp::now().to_string(),
         };
 
         let mut rows: Vec<CreditInstallment> = Vec::new();
@@ -447,7 +452,7 @@ impl CreditOps {
                     kind: InstallmentKind::Installment.as_str().to_string(),
                     number: index as i32 + 1,
                     amount: credit.installment_amount,
-                    due_date: date.format("%Y-%m-%d").to_string(),
+                    due_date: date.to_string(),
                     note: None,
                     transaction_id: None,
                     paid_date: None,
@@ -580,8 +585,8 @@ impl CreditOps {
     }
 }
 
-fn parse_date(value: &str) -> Result<NaiveDate, FinanceError> {
-    NaiveDate::parse_from_str(value, "%Y-%m-%d")
+fn parse_date(value: &str) -> Result<Date, FinanceError> {
+    Date::strptime("%Y-%m-%d", value)
         .map_err(|_| FinanceError::Validation("Invalid date".to_string()))
 }
 

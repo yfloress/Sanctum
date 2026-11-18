@@ -39,8 +39,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use chrono::NaiveDateTime;
 use csv::StringRecord;
+use jiff::civil::DateTime;
 
 use super::common::{
     append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_quote_currency,
@@ -159,7 +159,7 @@ impl BinanceOperation {
 
 #[derive(Debug, Clone)]
 struct BinanceRow {
-    timestamp: NaiveDateTime,
+    timestamp: DateTime,
     operation: BinanceOperation,
     /// Raw operation string for notes/debugging.
     operation_raw: String,
@@ -172,7 +172,7 @@ struct BinanceRow {
 }
 
 /// Normalise a Binance coin name, including the LUNA -> LUNC rename.
-fn normalise_coin(raw: &str, timestamp: NaiveDateTime) -> String {
+fn normalise_coin(raw: &str, timestamp: DateTime) -> String {
     let base = normalize_binance_currency(raw);
     if base == "LUNA" && should_rename_luna_to_lunc(timestamp) {
         "LUNC".to_string()

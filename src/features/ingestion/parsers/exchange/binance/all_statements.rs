@@ -156,7 +156,7 @@ impl ExchangeParser for BinanceAllStatementsParser {
             }
 
             if row.operation.needs_pairing() {
-                let time_key = row.timestamp.format("%Y-%m-%d %H:%M:%S").to_string();
+                let time_key = format_datetime(row.timestamp);
                 let remark_key = row.remark.trim().to_ascii_lowercase();
                 let key = if remark_key.is_empty() {
                     format!("{}_{:?}", time_key, row.operation)
@@ -170,7 +170,7 @@ impl ExchangeParser for BinanceAllStatementsParser {
                 BinanceOperation::TransactionSpend | BinanceOperation::TransactionRevenue
             ) {
                 // Pair TransactionSpend + TransactionRevenue by timestamp
-                let time_key = row.timestamp.format("%Y-%m-%d %H:%M:%S").to_string();
+                let time_key = format_datetime(row.timestamp);
                 let remark_key = row.remark.trim().to_ascii_lowercase();
                 let key = if remark_key.is_empty() {
                     time_key

@@ -904,7 +904,7 @@ impl Database {
             )?;
 
             let id = uuid::Uuid::new_v4().to_string();
-            let now = chrono::Utc::now().to_rfc3339();
+            let now = jiff::Timestamp::now().to_string();
 
             conn.execute(
                 "INSERT INTO transaction_categories (id, name, category_type, sort_order, is_default, created_at)
@@ -1127,7 +1127,7 @@ impl Database {
                 // Catch up period by period; a rule months behind lands every
                 // occurrence it owes rather than only the latest one.
                 while occurrence <= today_date {
-                    let occurrence_str = occurrence.format("%Y-%m-%d").to_string();
+                    let occurrence_str = occurrence.to_string();
                     conn.execute(
                         "INSERT INTO transactions
                             (id, account_id, amount, category, description, date, type, transfer_account_id)
@@ -1157,7 +1157,7 @@ impl Database {
                      SET next_date = ?1, last_created_date = ?2
                      WHERE id = ?3",
                     params![
-                        occurrence.format("%Y-%m-%d").to_string(),
+                        occurrence.to_string(),
                         last_created,
                         rule.id
                     ],
@@ -1245,6 +1245,6 @@ fn row_to_recurring(row: &Row<'_>) -> rusqlite::Result<RecurringTransaction> {
 }
 
 /// Parses an ISO date, mapping a malformed one to a database error.
-fn parse_iso_date(value: &str) -> Result<chrono::NaiveDate, DbError> {
-    chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").map_err(|_| DbError::InvalidDate)
+fn parse_iso_date(value: &str) -> Result<jiff::civil::Date, DbError> {
+    jiff::civil::Date::strptime("%Y-%m-%d", value).map_err(|_| DbError::InvalidDate)
 }

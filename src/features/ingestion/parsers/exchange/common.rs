@@ -20,7 +20,7 @@
 //! Contains timestamp normalisation, currency name mapping, and small
 //! utilities that are reused across multiple exchange modules.
 
-use chrono::NaiveDateTime;
+use jiff::civil::DateTime;
 
 // ─── Timestamp parsing ──────────────────────────────────────────────────────
 
@@ -42,42 +42,42 @@ const DATE_ONLY_FORMATS: &[&str] = &[
     "%m/%d/%Y", // 01/15/2024
 ];
 
-/// Parses a timestamp string into a `NaiveDateTime`, trying several common
+/// Parses a timestamp string into a `DateTime`, trying several common
 /// formats. Returns `None` if none of them match.
-pub fn parse_timestamp(raw: &str) -> Option<NaiveDateTime> {
+pub fn parse_timestamp(raw: &str) -> Option<DateTime> {
     let trimmed = raw.trim().trim_matches('"');
     if trimmed.is_empty() {
         return None;
     }
 
-    // Strip trailing 'Z' (UTC indicator) — NaiveDateTime has no timezone info,
+    // Strip trailing 'Z' (UTC indicator) — DateTime has no timezone info,
     // and Feather Wallet exports ISO-8601 dates like "2020-11-30T21:21:10Z".
     let trimmed = trimmed.trim_end_matches('Z');
 
     for fmt in DATETIME_FORMATS {
-        if let Ok(dt) = NaiveDateTime::parse_from_str(trimmed, fmt) {
+        if let Ok(dt) = DateTime::strptime(fmt, trimmed) {
             return Some(dt);
         }
     }
 
     // Fall back to date-only formats (midnight)
     for fmt in DATE_ONLY_FORMATS {
-        if let Ok(d) = chrono::NaiveDate::parse_from_str(trimmed, fmt) {
-            return d.and_hms_opt(0, 0, 0);
+        if let Ok(d) = jiff::civil::Date::strptime(fmt, trimmed) {
+            return Some(d.at(0, 0, 0, 0));
         }
     }
 
     None
 }
 
-/// Formats a `NaiveDateTime` as an ISO-8601 date-only string (`YYYY-MM-DD`).
-pub fn format_date(dt: NaiveDateTime) -> String {
-    dt.format("%Y-%m-%d").to_string()
+/// Formats a `DateTime` as an ISO-8601 date-only string (`YYYY-MM-DD`).
+pub fn format_date(dt: DateTime) -> String {
+    dt.date().to_string()
 }
 
-/// Formats a `NaiveDateTime` as a full ISO-8601 datetime (`YYYY-MM-DD HH:MM:SS`).
-pub fn format_datetime(dt: NaiveDateTime) -> String {
-    dt.format("%Y-%m-%d %H:%M:%S").to_string()
+/// Formats a `DateTime` as a full ISO-8601 datetime (`YYYY-MM-DD HH:MM:SS`).
+pub fn format_datetime(dt: DateTime) -> String {
+    dt.strftime("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 // ─── Kraken currency normalisation ──────────────────────────────────────────
@@ -223,12 +223,8 @@ pub fn normalize_binance_currency(raw: &str) -> &str {
 /// Checks whether a Binance `LUNA` entry should be mapped to `LUNC`.
 /// The rename happened between 2022-05-26 and 2022-05-30; we use 2022-05-27
 /// as the cutoff consistent with Binance's announcement.
-pub fn should_rename_luna_to_lunc(dt: NaiveDateTime) -> bool {
-    let cutoff = chrono::NaiveDate::from_ymd_opt(2022, 5, 27).and_then(|d| d.and_hms_opt(0, 0, 0));
-    match cutoff {
-        Some(c) => dt < c,
-        None => false,
-    }
+pub fn should_rename_luna_to_lunc(dt: DateTime) -> bool {
+    dt.date() < jiff::civil::date(2022, 5, 27)
 }
 
 // ─── Amount / field parsing helpers ─────────────────────────────────────────

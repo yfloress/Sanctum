@@ -296,13 +296,13 @@ fn map_statement_preview(preview: StatementPreview) -> StatementPreviewDto {
         format: preview.format.id().to_string(),
         format_label: format_label(preview.format),
         credit_card: preview.format.is_credit_card(),
-        period_start: preview.period.map(|p| p.0.format("%Y-%m-%d").to_string()),
-        period_end: preview.period.map(|p| p.1.format("%Y-%m-%d").to_string()),
+        period_start: preview.period.map(|p| p.0.to_string()),
+        period_end: preview.period.map(|p| p.1.to_string()),
         rows: preview
             .rows
             .into_iter()
             .map(|r| StatementRowDto {
-                date: r.row.date.format("%Y-%m-%d").to_string(),
+                date: r.row.date.to_string(),
                 description: r.row.description,
                 amount: r.row.amount,
                 category: r.category,

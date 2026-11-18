@@ -22,7 +22,6 @@ use super::types::{AllocationInfo, DisposalRequest, Lot, TaxConfig};
 use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
 use crate::models::CryptoTransaction;
-use chrono::Datelike;
 use std::collections::HashMap;
 
 fn is_stablecoin_symbol(raw: &str) -> bool {
@@ -90,7 +89,7 @@ pub(super) fn add_lot(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
     tx: &CryptoTransaction,
-    tx_date: chrono::NaiveDate,
+    tx_date: jiff::civil::Date,
     jurisdiction: TaxJurisdiction,
     subtype: Option<&str>,
 ) {
@@ -155,7 +154,7 @@ pub(super) fn apply_disposal(
     lots: &mut HashMap<String, Vec<Lot>>,
     cfg: &TaxConfig,
     tx: &CryptoTransaction,
-    tx_date: chrono::NaiveDate,
+    tx_date: jiff::civil::Date,
     taxable: bool,
 ) {
     let mut proceeds = match tx.price_per_coin {
@@ -547,7 +546,7 @@ fn consume_lots_cpp(
     lots: &mut Vec<Lot>,
     cfg: &TaxConfig,
     amount: f64,
-    sale_date: chrono::NaiveDate,
+    sale_date: jiff::civil::Date,
     tx_id: &str,
     warn: bool,
 ) -> (Vec<AllocationInfo>, f64) {
@@ -672,7 +671,7 @@ fn apply_ipc_cost_adjustment(
 pub(super) fn apply_gain_ipc_adjustment(
     report: &mut TaxReport,
     cfg: &TaxConfig,
-    sale_date: chrono::NaiveDate,
+    sale_date: jiff::civil::Date,
     raw_gain: f64,
     tx_id: &str,
 ) -> f64 {
@@ -721,7 +720,7 @@ pub(super) fn apply_gain_ipc_adjustment(
 fn split_term_gain(
     allocations: &[AllocationInfo],
     proceeds: f64,
-    sale_date: chrono::NaiveDate,
+    sale_date: jiff::civil::Date,
     jurisdiction: TaxJurisdiction,
 ) -> (f64, f64) {
     if !jurisdiction.rules().classifies_holding_term() {
@@ -760,10 +759,10 @@ fn split_term_gain(
 /// period begins the day after acquisition, so this uses the one-year
 /// anniversary date rather than a flat 365-day count — keeping leap years and
 /// the exact one-year boundary correct.
-fn is_long_term(acquired: chrono::NaiveDate, sale: chrono::NaiveDate) -> bool {
-    match acquired.checked_add_months(chrono::Months::new(12)) {
+fn is_long_term(acquired: jiff::civil::Date, sale: jiff::civil::Date) -> bool {
+    match acquired.checked_add(jiff::Span::new().years(1)).ok() {
         Some(anniversary) => sale > anniversary,
-        None => (sale - acquired).num_days() > 365,
+        None => (sale - acquired).get_days() > 365,
     }
 }
 

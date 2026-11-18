@@ -63,7 +63,7 @@ fn require_markers(
 
 fn billing_period(
     doc: &Document,
-) -> Result<(chrono::NaiveDate, chrono::NaiveDate), StatementError> {
+) -> Result<(jiff::civil::Date, jiff::civil::Date), StatementError> {
     find_period(
         &doc.folded_tokens(),
         &[PeriodRule::AfterHeader(&["PERIODO", "FACTURADO"])],

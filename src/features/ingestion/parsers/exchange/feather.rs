@@ -191,9 +191,9 @@ impl ExchangeParser for FeatherParser {
                     let ts_raw = get_field(&record, &cols, "timestamp");
                     match parse_decimal(ts_raw) {
                         Some(epoch) if epoch > 0.0 => {
-                            match chrono::DateTime::from_timestamp(epoch as i64, 0) {
-                                Some(dt) => dt.naive_utc(),
-                                None => {
+                            match jiff::Timestamp::from_second(epoch as i64) {
+                                Ok(dt) => dt.to_zoned(jiff::tz::TimeZone::UTC).datetime(),
+                                Err(_) => {
                                     result.errors.push(RowError::new(
                                         line_number,
                                         Some("date"),
