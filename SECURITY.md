@@ -144,7 +144,12 @@ that Sanctum is installed or in use.
   kept in a separate owner-only file next to the vault, so it survives a restart.
 - The vault locks itself after 15 minutes of inactivity by default; the user can change
   this.
-- A weak password produces a warning when the vault is created.
+- New master passwords are judged as NIST SP 800-63B advises for a single-factor
+  secret: 15 characters or more, checked against the 10,000 most common passwords
+  (also with digits or symbols around them), repetitions, sequences, keyboard rows and
+  the app's own name, with no composition rules. Length is counted in characters. This
+  is advice: the user can go ahead after a second, explicit confirmation, for example
+  for a throwaway test vault. The same check applies when the password is changed.
 
 ### Secrets in memory (ASVS V8 Data Protection)
 
@@ -209,9 +214,9 @@ that Sanctum is installed or in use.
 - No external security audit has been done.
 - The content security policy allows inline styles (`style-src 'unsafe-inline'`), which
   the interface framework needs. Inline scripts are not allowed.
-- The password strength check relies on character-variety rules and only warns. NIST
-  SP 800-63B now recommends judging length and checking against breached-password
-  lists instead.
+- The password check warns but never forces a strong password, so a user can still
+  protect a vault with a weak one on purpose. The common-password list is local and
+  fixed; it is not a live breached-password service.
 - There is no signed release process yet: no published binaries are signed. Build from
   source and verify the commit.
 - The PDF reader is isolated from panics, not sandboxed in a separate process.

@@ -12,6 +12,14 @@ package. Copyright 2022 The Instrument Sans Project Authors
 (<https://github.com/Instrument/instrument-sans>). SIL Open Font License 1.1:
 [LICENSES/InstrumentSans-OFL-1.1.txt](LICENSES/InstrumentSans-OFL-1.1.txt).
 
+## Common password list
+
+`src/vault_manager/common_passwords.txt` is the list of the 10,000 most common
+passwords from **SecLists** (<https://github.com/danielmiessler/SecLists>), lowercased
+and deduplicated. Copyright Daniel Miessler, MIT License:
+[LICENSES/SecLists-MIT.txt](LICENSES/SecLists-MIT.txt). It is used only to warn when a
+new master password is one of them.
+
 ## Interface icons
 
 **Lucide** (`ui-svelte/public/assets/icons/`), <https://lucide.dev>. Copyright

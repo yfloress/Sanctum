@@ -24,6 +24,7 @@
 //! the domain services (finance, crypto, ingestion, settings).
 
 mod backup;
+pub mod password_policy;
 
 use crate::core::settings::{
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
@@ -89,8 +90,6 @@ impl From<String> for ControllerError {
 
 // ==================== Security: Field Length Limits ====================
 const MAX_PASSWORD_LENGTH: usize = 128;
-const MIN_PASSWORD_LENGTH: usize = 8;
-const PASSWORD_PASSPHRASE_LENGTH: usize = 16;
 
 // ==================== Helper Functions ====================
 
@@ -131,7 +130,7 @@ fn validate_password_basic(password: String) -> Result<SecretString, ControllerE
         ));
     }
 
-    if trimmed.len() > MAX_PASSWORD_LENGTH {
+    if trimmed.chars().count() > MAX_PASSWORD_LENGTH {
         return Err(ControllerError::Validation(format!(
             "Password cannot exceed {} characters",
             MAX_PASSWORD_LENGTH
@@ -140,68 +139,6 @@ fn validate_password_basic(password: String) -> Result<SecretString, ControllerE
 
     // Create SecretString that clears memory automatically
     Ok(SecretString::from(trimmed.to_string()))
-}
-
-/// Returns a warning message if the password is weak (empty string means ok)
-fn password_strength_warning(password: &str) -> Option<String> {
-    let trimmed = password.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    if trimmed.len() >= PASSWORD_PASSPHRASE_LENGTH {
-        return None;
-    }
-
-    let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
-    let has_lowercase = trimmed.chars().any(|c| c.is_ascii_lowercase());
-    let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
-    let has_special = trimmed.chars().any(|c| {
-        matches!(
-            c,
-            '!' | '@'
-                | '#'
-                | '$'
-                | '%'
-                | '^'
-                | '&'
-                | '*'
-                | '('
-                | ')'
-                | '-'
-                | '_'
-                | '='
-                | '+'
-                | '['
-                | ']'
-                | '{'
-                | '}'
-                | '|'
-                | ';'
-                | ':'
-                | '\''
-                | '"'
-                | ','
-                | '.'
-                | '<'
-                | '>'
-                | '?'
-                | '/'
-                | '`'
-                | '~'
-        )
-    });
-
-    if trimmed.len() < MIN_PASSWORD_LENGTH
-        || !has_uppercase
-        || !has_lowercase
-        || !has_digit
-        || !has_special
-    {
-        return Some("Weak password: use 16+ chars or add variety".to_string());
-    }
-
-    None
 }
 
 // ==================== Configuration ====================
@@ -564,9 +501,12 @@ impl VaultManager {
         Ok(db_path.to_string_lossy().to_string())
     }
 
-    /// Checks the password strength and returns a warning message if weak
+    /// Advice on a new master password, translated; empty when there is
+    /// none. Only advice: see `password_policy`.
     pub fn check_password_strength(&self, password: String) -> String {
-        password_strength_warning(&password).unwrap_or_default()
+        password_policy::assess(&password)
+            .map(|weakness| crate::services::i18n::t(weakness.message_key()))
+            .unwrap_or_default()
     }
 
     /// Opens an existing vault

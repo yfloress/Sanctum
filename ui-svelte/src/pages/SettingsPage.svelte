@@ -142,6 +142,15 @@
   let changingPassword = $state(false)
   let passwordError = $state('')
   let rollbackPath = $state('')
+  /** Advice on the new password; a second press goes ahead anyway. */
+  let weakWarning = $state('')
+  let confirmWeak = $state(false)
+
+  /** The confirmation is for the password it warned about. */
+  function onNewPasswordInput() {
+    weakWarning = ''
+    confirmWeak = false
+  }
 
   let passwordsMatch = $derived(newPassword.length > 0 && newPassword === confirmPassword)
 
@@ -152,6 +161,8 @@
     confirmPassword = ''
     passwordError = ''
     rollbackPath = ''
+    weakWarning = ''
+    confirmWeak = false
   }
 
   async function changePassword() {
@@ -161,9 +172,24 @@
       return
     }
 
+    if (!confirmWeak) {
+      try {
+        const strength = await vaultApi.checkPasswordStrength(newPassword)
+        if (strength.warning) {
+          weakWarning = strength.warning
+          confirmWeak = true
+          return
+        }
+      } catch {
+        // Advice only: never block a password change over it.
+      }
+    }
+
     changingPassword = true
     try {
       rollbackPath = await vaultApi.changeVaultPassword(currentPassword, newPassword)
+      weakWarning = ''
+      confirmWeak = false
       currentPassword = ''
       newPassword = ''
       confirmPassword = ''
@@ -373,6 +399,7 @@
               autocomplete="new-password"
               placeholder={i18n.t('settings-password-new', 'New password')}
               bind:value={newPassword}
+              oninput={onNewPasswordInput}
             />
             <input
               type="password"
@@ -380,6 +407,12 @@
               placeholder={i18n.t('settings-password-confirm', 'Confirm new password')}
               bind:value={confirmPassword}
             />
+            {#if weakWarning}
+              <p class="password-warning">
+                {weakWarning}
+                <span class="password-weak-hint">{i18n.t('settings-password-weak-hint', 'Press again to use it anyway.')}</span>
+              </p>
+            {/if}
             {#if passwordError}
               <p class="password-error">{passwordError}</p>
             {/if}
@@ -562,6 +595,7 @@
     border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow);
   }
   .password-error { margin: 0; font-size: 0.8rem; color: var(--danger); }
+  .password-weak-hint { display: block; margin-top: 4px; opacity: 0.85; }
   .password-done { margin: 0; font-size: 0.85rem; color: var(--success); }
   .password-warning code {
     display: block; margin-top: 4px; word-break: break-all;
