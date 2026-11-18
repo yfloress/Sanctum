@@ -20,7 +20,7 @@ exclude = [
 ]
 
 [dependencies]
-base64 = "0.22"
+base64 = "0.23"
 ring = "0.17"
 zeroize = "1"
 csv = "1.4"
