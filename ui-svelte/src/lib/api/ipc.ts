@@ -76,6 +76,8 @@ export async function profilePerformance() {
     intervals.sort((a, b) => a - b)
     const report = {
       averageFps: Math.round(1000 * intervals.length / total),
+      medianFrameMs: Math.round(intervals[Math.floor(intervals.length / 2)] * 10) / 10,
+      longestFrameMs: Math.round(intervals[intervals.length - 1]),
       p95FrameMs: Math.round(intervals[Math.ceil(intervals.length * 0.95) - 1]),
       framesOver50Ms: intervals.filter(ms => ms > 50).length,
       commands: Object.fromEntries(commands),
