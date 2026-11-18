@@ -42,12 +42,63 @@ export function setSessionLostHandler(handler: (() => void) | null) {
   onSessionLost = handler
 }
 
+type TimingSink = (command: string, milliseconds: number) => void
+let timingSink: TimingSink | undefined
+
+/** Samples a foreground dev window. Only frame intervals and aggregate command timings are retained. */
+export async function profilePerformance() {
+  if (!import.meta.env.DEV || document.hidden || timingSink) {
+    throw new Error('Profiling requires a visible development window and a single active capture.')
+  }
+  const commands = new Map<string, { calls: number; slowestMs: number }>()
+  const intervals: number[] = []
+  let lastFrame: number | undefined
+  let frameId = 0
+  let interrupted = false
+  const onVisibility = () => { if (document.hidden) interrupted = true }
+  function frame(now: number) {
+    if (lastFrame !== undefined) intervals.push(now - lastFrame)
+    lastFrame = now
+    frameId = requestAnimationFrame(frame)
+  }
+  timingSink = (command, elapsed) => {
+    const entry = commands.get(command) ?? { calls: 0, slowestMs: 0 }
+    entry.calls++
+    entry.slowestMs = Math.max(entry.slowestMs, Math.round(elapsed))
+    commands.set(command, entry)
+  }
+  try {
+    document.addEventListener('visibilitychange', onVisibility)
+    frameId = requestAnimationFrame(frame)
+    await new Promise(resolve => setTimeout(resolve, 10000))
+    if (interrupted || !intervals.length) throw new Error('Keep the app visible throughout the capture.')
+    const total = intervals.reduce((a, b) => a + b, 0)
+    intervals.sort((a, b) => a - b)
+    const report = {
+      averageFps: Math.round(1000 * intervals.length / total),
+      p95FrameMs: Math.round(intervals[Math.ceil(intervals.length * 0.95) - 1]),
+      framesOver50Ms: intervals.filter(ms => ms > 50).length,
+      commands: Object.fromEntries(commands),
+    }
+    console.info('[Sanctum] Performance report', JSON.stringify(report))
+    return report
+  } finally {
+    timingSink = undefined
+    cancelAnimationFrame(frameId)
+    document.removeEventListener('visibilitychange', onVisibility)
+  }
+}
+
 export async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  const sink = import.meta.env.DEV ? timingSink : undefined
+  const start = sink ? performance.now() : 0
   try {
     return await tauriInvoke<T>(command, args)
   } catch (e) {
     if (SESSION_LOST.has(errorKind(e) ?? '')) onSessionLost?.()
     // Rethrown untouched: the caller still gets to report what it was doing.
     throw e
+  } finally {
+    if (sink && sink === timingSink) sink(command, performance.now() - start)
   }
 }
