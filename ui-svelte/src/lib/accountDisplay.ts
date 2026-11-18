@@ -24,7 +24,7 @@ export interface AccountIcon {
 }
 
 export const ACCOUNT_ICONS: AccountIcon[] = [
-  ...['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'mercado_pago', 'santander', 'wf']
+  ...['banco-chile', 'banco-estado', 'banco-falabella', 'bci', 'copec-pay', 'itau', 'mach', 'mercado_pago', 'santander', 'scotiabank', 'bank-of-america', 'citibank', 'jpmorgan', 'wf']
     .map(n => ({ value: `${n}.svg`, src: `/assets/bank-icons/${n}.svg`, generic: false })),
   ...['landmark', 'wallet', 'credit-card', 'piggy-bank', 'briefcase', 'coins', 'banknote', 'building-2']
     .map(n => ({ value: `/assets/icons/${n}.svg`, src: `/assets/icons/${n}.svg`, generic: true })),

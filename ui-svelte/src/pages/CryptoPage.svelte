@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { WALLET_ICONS, getDefaultWalletIconPath, getWalletDisplayIcon, isGenericWalletIcon } from '../lib/walletDisplay'
   import { untrack } from 'svelte'
   import { formatDate, formatSyncTime, localIsoDate } from '../lib/dates'
   import { errorMessage } from '../lib/errors'
@@ -52,36 +53,9 @@
   let activeTab = $state<Tab>('portfolio')
   let loading = $state(true)
 
-  // Wallet icons catalog (mirrors FinancesPage ACCOUNT_ICONS)
-  const WALLET_ICONS: { value: string; src: string; generic: boolean }[] = [
-    ...['binance', 'bisq', 'bitmart', 'buda', 'bybit', 'kraken', 'mexc', 'retoswap', 'uniswap']
-      .map(n => ({ value: `${n}.svg`, src: `/assets/exchange-icons/${n}.svg`, generic: false })),
-    ...['landmark', 'wallet', 'shield', 'shield-check', 'link', 'lock']
-      .map(n => ({ value: `/assets/icons/${n}.svg`, src: `/assets/icons/${n}.svg`, generic: true })),
-  ]
 
-  function getDefaultWalletIconPath(category: string): string {
-    const iconMap: { [key: string]: string } = {
-      'exchange': 'landmark',
-      'hardware': 'shield',
-      'software': 'wallet',
-    }
-    const icon = iconMap[category.toLowerCase()] || 'wallet'
-    return `/assets/icons/${icon}.svg`
-  }
 
-  function getWalletDisplayIcon(w: { category: string; icon_path: string | null }): string {
-    if (w.icon_path) {
-      if (w.icon_path.startsWith('/') || w.icon_path.startsWith('http')) return w.icon_path
-      return `/assets/exchange-icons/${w.icon_path}`
-    }
-    return getDefaultWalletIconPath(w.category)
-  }
 
-  function isGenericWalletIcon(iconPath: string | null): boolean {
-    if (!iconPath) return true
-    return iconPath.startsWith('/assets/icons/')
-  }
 
   // Portfolio state
   let portfolio = $state<PortfolioResponse | null>(null)
