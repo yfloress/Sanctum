@@ -190,6 +190,8 @@ cargo tauri dev      # desarrollo, con recarga en caliente
 cargo tauri build    # binario de producción → target/release/sanctum-tauri
 ```
 
+En Linux, WebKit elige el renderizador por defecto. Si la ventana de desarrollo aparece en blanco, puedes probar el modo de compatibilidad para ese arranque con `WEBKIT_DISABLE_DMABUF_RENDERER=1 cargo tauri dev`.
+
 ### Windows
 
 **Opción A — WSL (recomendado).** Instala Ubuntu o Fedora desde la Microsoft

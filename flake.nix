@@ -126,7 +126,6 @@
                 export LIBRARY_PATH=${lib.makeLibraryPath libraries}:$LIBRARY_PATH
                 export LD_LIBRARY_PATH=${lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
                 export PKG_CONFIG_PATH=${lib.makeSearchPathOutput "dev" "lib/pkgconfig" libraries}:$PKG_CONFIG_PATH
-                export WEBKIT_DISABLE_DMABUF_RENDERER=1
 
                 echo "> SANCTUM ${if withAndroid then "ANDROID" else "DEV"} SHELL ACTIVE"
                 echo "   Compiler:  Rust $(rustc --version)"

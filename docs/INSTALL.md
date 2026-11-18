@@ -189,6 +189,8 @@ cargo tauri dev      # development, with hot-reload
 cargo tauri build    # production binary → target/release/sanctum-tauri
 ```
 
+On Linux, WebKit selects the renderer by default. If the development window opens blank, try the compatibility setting for that launch with `WEBKIT_DISABLE_DMABUF_RENDERER=1 cargo tauri dev`.
+
 ### Windows
 
 **Option A — WSL (recommended).** Install Ubuntu or Fedora from the Microsoft
