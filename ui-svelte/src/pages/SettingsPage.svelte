@@ -264,6 +264,7 @@
   <h2>{i18n.t('settings-title', 'Settings')}</h2>
 
   {#if app.settings}
+  <div class="settings-grid">
     <!-- Appearance -->
     <section class="section">
       <h3>{i18n.t('settings-appearance', 'Appearance')}</h3>
@@ -432,7 +433,7 @@
     </section>
 
     <!-- Data Import -->
-    <section class="section" id="setting-import" class:setting-highlight={revealed === 'import'}>
+    <section class="section wide" id="setting-import" class:setting-highlight={revealed === 'import'}>
       <h3>{i18n.t('settings-data-import', 'Data Import')}</h3>
 
       <DataImport />
@@ -505,6 +506,7 @@
         <button class="danger-btn" onclick={() => showResetConfirm = true}>{i18n.t('settings-reset-btn', 'Reset')}</button>
       </div>
     </section>
+  </div>
   {/if}
 </div>
 
@@ -520,12 +522,21 @@
 />
 
 <style>
-  .page { padding: 24px 32px; max-width: 640px; width: 100%; margin: 0 auto; }
+  .page { padding: 24px 32px; max-width: 1080px; width: 100%; margin: 0 auto; box-sizing: border-box; }
   h2 { font-size: 1.3rem; letter-spacing: 0.15em; color: var(--text-primary); margin-bottom: 28px; }
 
-  .section {
-    margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--glass-border);
+  /* Two columns of cards on a wide window, one on a narrow one. A section
+     with a lot inside (the import) takes the whole row. */
+  .settings-grid {
+    display: grid; gap: 16px; align-items: start;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
   }
+  .section {
+    min-width: 0; padding: 20px 22px;
+    background: var(--card-bg); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg); box-shadow: var(--card-shadow);
+  }
+  .section.wide { grid-column: 1 / -1; }
   .section h3 {
     font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase;
     letter-spacing: 0.08em; margin-bottom: 14px;
@@ -623,7 +634,7 @@
   }
   .danger-btn:hover { background: var(--danger-border); }
 
-  .danger-section { border-bottom: none; }
+  .danger-section { border-color: var(--danger-border); }
 
   .about-grid {
     display: grid; grid-template-columns: 100px 1fr; gap: 8px;
@@ -633,6 +644,7 @@
   /* ── Mobile ───────────────────────────────────────────────── */
   @media (max-width: 640px) {
     .page { padding: 20px 16px; }
+    .section { padding: 16px; }
   }
   .about-label { color: var(--text-tertiary); }
 
