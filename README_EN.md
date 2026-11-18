@@ -192,4 +192,5 @@ Bugs and ideas are welcome in the [issue tracker](https://github.com/yfloress/Sa
 ## License
 
 Sanctum is free software under the **GNU Affero General Public License v3.0**. See
-[LICENSE](LICENSE).
+[LICENSE](LICENSE). Third-party fonts, icons and logos, with their licenses, are
+listed in [NOTICE.md](NOTICE.md).

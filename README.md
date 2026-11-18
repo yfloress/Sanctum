@@ -196,4 +196,5 @@ Los errores y las ideas son bienvenidos en el [gestor de issues](https://github.
 ## Licencia
 
 Sanctum es software libre bajo la **GNU Affero General Public License v3.0**. Ver
-[LICENSE](LICENSE).
+[LICENSE](LICENSE). Las fuentes, íconos y logos de terceros, con sus licencias,
+están en [NOTICE.md](NOTICE.md).
