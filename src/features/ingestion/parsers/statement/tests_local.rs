@@ -18,28 +18,15 @@
 //! Checks the parser against your own statements without printing them.
 //!
 //! ```text
-//! SANCTUM_STATEMENTS_DIR=/path/to/pdfs SANCTUM_STATEMENT_PASSWORD=12345678 \
+//! SANCTUM_STATEMENTS_DIR=/path/to/pdfs \
 //!     cargo test statement_samples -- --ignored --nocapture
 //! ```
 //!
-//! For each PDF it prints the detected format, how many rows parsed, the
-//! kind of each problem and warning, and the shape of unreadable rows with
-//! digits and letters masked ("dd/dd Aaaa 9.999"). No amount, name or
-//! description is printed, so the output is safe to share.
+//! For encrypted PDFs, set SANCTUM_STATEMENT_PASSWORD in the environment.
+//! Each file is identified by its position in the sorted directory listing.
+//! Diagnostics use fixed status messages.
 
 use super::*;
-
-/// "02/03 93 Compra UBER 4.516" → "99/99 99 Aaaaaa AAAA 9.999".
-fn shape(text: &str) -> String {
-    text.chars()
-        .map(|c| match c {
-            '0'..='9' => '9',
-            c if c.is_uppercase() => 'A',
-            c if c.is_alphabetic() => 'a',
-            other => other,
-        })
-        .collect()
-}
 
 #[test]
 #[ignore = "reads local files; run by hand"]
@@ -65,51 +52,36 @@ fn statement_samples() {
         };
         let doc = match doc {
             Ok(doc) => doc,
-            Err(error) => {
-                println!("pdf: {error}");
+            Err(_) => {
+                println!("PDF could not be read");
                 continue;
             }
         };
-        let positioned = doc.lines.iter().filter(|l| l.is_positioned()).count();
-        println!("lines: {} ({} positioned)", doc.lines.len(), positioned);
         let Some(format) = detect_format(&doc) else {
-            println!("format: not detected; first lines:");
-            for line in doc.lines.iter().take(8) {
-                println!("  {}", shape(&line.text()));
-            }
+            println!("statement format not recognized");
             continue;
         };
-        println!("format: {format:?}");
         match parse_statement(&doc, format) {
             Ok(statement) => {
-                let guessed = statement
-                    .rows
-                    .iter()
-                    .filter(|r| r.sign_from_keyword)
-                    .count();
-                println!(
-                    "rows: {} ({} signed by keyword), period found: {}",
-                    statement.rows.len(),
-                    guessed,
-                    statement.period.is_some()
-                );
-                for warning in &statement.warnings {
-                    let kind = match warning {
-                        StatementWarning::TotalsMismatch { .. } => {
-                            "totals do not match".to_string()
-                        }
-                        StatementWarning::SectionMismatch { section, .. } => {
-                            format!("section {section} does not match")
-                        }
-                        StatementWarning::TotalsUnreadable => "summary unreadable".to_string(),
-                    };
-                    println!("warning: {kind}");
+                if statement.rows.is_empty() {
+                    println!("no rows parsed");
+                } else {
+                    println!("rows parsed");
                 }
-                for problem in &statement.problems {
-                    println!("problem {:?}: {}", problem.issue, shape(&problem.text));
+                if !statement.problems.is_empty() {
+                    println!("some rows require review");
+                }
+                for warning in &statement.warnings {
+                    match warning {
+                        StatementWarning::TotalsMismatch { .. } => println!("totals do not match"),
+                        StatementWarning::SectionMismatch { .. } => {
+                            println!("section totals do not match")
+                        }
+                        StatementWarning::TotalsUnreadable => println!("summary unreadable"),
+                    }
                 }
             }
-            Err(error) => println!("parse: {error}"),
+            Err(_) => println!("statement could not be parsed"),
         }
     }
 }

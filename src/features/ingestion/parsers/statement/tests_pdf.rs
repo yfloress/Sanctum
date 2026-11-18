@@ -110,10 +110,7 @@ fn pdf_words_keep_their_position() {
     let texts: Vec<String> = doc.lines.iter().map(Line::text).collect();
     assert_eq!(texts[0], "BANCO SANTANDER CHILE");
     assert_eq!(texts[1], "PERIODO DESDE: 01/05/2026 HASTA: 31/05/2026");
-    assert!(
-        texts.contains(&"02/05 93 Compra UBER 4.516".to_string()),
-        "{texts:?}"
-    );
+    assert!(texts.contains(&"02/05 93 Compra UBER 4.516".to_string()));
     assert!(doc.lines.iter().all(Line::is_positioned));
 
     let row = doc
@@ -132,7 +129,7 @@ fn pdf_statement_takes_the_sign_from_the_column() {
     let doc = read_pdf(&santander_pdf(), None).unwrap();
     assert_eq!(detect_format(&doc), Some(StatementFormat::SantanderAccount));
     let statement = parse_statement(&doc, StatementFormat::SantanderAccount).unwrap();
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
+    assert!(statement.problems.is_empty());
     let rows: Vec<(&str, i64, bool)> = statement
         .rows
         .iter()

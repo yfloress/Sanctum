@@ -436,26 +436,12 @@ mod tests {
         let result = parser.parse_full(json).expect("JSON parse should succeed");
 
         // All 25 crypto transactions should parse without errors
-        assert!(
-            result.crypto_transactions.errors.is_empty(),
-            "Parse errors: {:?}",
-            result
-                .crypto_transactions
-                .errors
-                .iter()
-                .map(|e| &e.message)
-                .collect::<Vec<_>>()
-        );
+        assert!(result.crypto_transactions.errors.is_empty());
         assert_eq!(result.crypto_transactions.items.len(), 25);
 
         // Validate every parsed transaction passes ingestion validation
         for (line, tx) in &result.crypto_transactions.items {
-            validate_import_crypto_transaction(tx, *line).unwrap_or_else(|e| {
-                panic!(
-                    "Validation failed for line {} (type={}, subtype={:?}): {}",
-                    e.line_number, tx.transaction_type, tx.subtype, e.message
-                )
-            });
+            assert!(validate_import_crypto_transaction(tx, *line).is_ok());
         }
 
         // Spot-check: trade:buy

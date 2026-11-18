@@ -521,7 +521,7 @@ mod tests {
         let parsed = CustomCsvParser::new(mapping_min())
             .parse(csv, "MyWallet")
             .expect("parse");
-        assert!(parsed.errors.is_empty(), "errors: {:?}", parsed.errors);
+        assert!(parsed.errors.is_empty());
         assert_eq!(parsed.items.len(), 2);
 
         let (_, deposit) = &parsed.items[0];
@@ -552,7 +552,7 @@ mod tests {
         let parsed = CustomCsvParser::new(mapping)
             .parse(csv, "Exchange")
             .expect("parse");
-        assert!(parsed.errors.is_empty(), "errors: {:?}", parsed.errors);
+        assert!(parsed.errors.is_empty());
         assert_eq!(parsed.items.len(), 1);
 
         let (_, tx) = &parsed.items[0];

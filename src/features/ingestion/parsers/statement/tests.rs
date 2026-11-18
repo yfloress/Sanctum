@@ -50,7 +50,7 @@ fn with_layout(mut doc: Document, lines: Vec<Line>) -> Document {
             .lines
             .iter_mut()
             .find(|l| l.page == line.page && !l.is_positioned() && l.text() == line.text())
-            .unwrap_or_else(|| panic!("no plain line {:?}", line.text()));
+            .expect("expected a matching plain line");
         *slot = line;
     }
     doc
@@ -332,7 +332,7 @@ fn periods_in_every_known_layout() {
 #[test]
 fn banco_chile_rows_and_year_from_period() {
     let statement = parse(BANCO_CHILE, StatementFormat::BancoChileAccount);
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
+    assert!(statement.problems.is_empty());
     assert_eq!(
         statement.period,
         Some((date(2025, 12, 30), date(2026, 4, 1)))
@@ -347,7 +347,7 @@ fn banco_chile_rows_and_year_from_period() {
 #[test]
 fn santander_simple_rows_drop_amount_labels() {
     let statement = parse(SANTANDER_SIMPLE, StatementFormat::SantanderAccount);
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
+    assert!(statement.problems.is_empty());
     assert_eq!(amounts(&statement), [-12_345, 50_000]);
     assert_eq!(statement.rows[0].description, "COMPRA SUPERMERCADO");
 }
@@ -359,8 +359,8 @@ fn santander_multiline_statement_matches_its_summary() {
         StatementFormat::SantanderAccount,
     )
     .unwrap();
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
-    assert!(statement.warnings.is_empty(), "{:?}", statement.warnings);
+    assert!(statement.problems.is_empty());
+    assert!(statement.warnings.is_empty());
     assert_eq!(
         statement.period,
         Some((date(2026, 2, 27), date(2026, 3, 31)))
@@ -450,7 +450,7 @@ fn santander_summary_variants() {
     ));
     let statement =
         parse_statement(&with_layout(doc, lines), StatementFormat::SantanderAccount).unwrap();
-    assert!(statement.warnings.is_empty(), "{:?}", statement.warnings);
+    assert!(statement.warnings.is_empty());
 
     let unreadable = SANTANDER_PAGE_1.replace(
         "Saldo Inicial Cheques o Cargos Depositos o Abonos Saldo Final",
@@ -518,7 +518,7 @@ CARGOS ABONOS
     ));
     let doc = with_layout(Document::from_pages(&[text]), lines);
     let statement = parse_statement(&doc, StatementFormat::SantanderAccount).unwrap();
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
+    assert!(statement.problems.is_empty());
     // The second 20.000 is the balance; "Transf." alone would say income.
     assert_eq!(amounts(&statement), [-20_000, -21_945]);
     assert_eq!(statement.rows[0].description, "Transf. MISMO BANCO");
@@ -528,7 +528,7 @@ CARGOS ABONOS
 #[test]
 fn copec_pay_signed_rows_infer_the_period() {
     let statement = parse(COPEC_SIGNED, StatementFormat::CopecPay);
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
+    assert!(statement.problems.is_empty());
     assert_eq!(amounts(&statement), [-15_000, 25_000]);
     assert_eq!(statement.period, Some((date(2026, 5, 1), date(2026, 5, 2))));
     assert!(statement.rows.iter().all(|r| !r.sign_from_keyword));
@@ -537,8 +537,8 @@ fn copec_pay_signed_rows_infer_the_period() {
 #[test]
 fn copec_pay_zero_filled_columns() {
     let statement = parse(COPEC_COLUMNS, StatementFormat::CopecPay);
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
-    assert!(statement.warnings.is_empty(), "{:?}", statement.warnings);
+    assert!(statement.problems.is_empty());
+    assert!(statement.warnings.is_empty());
     assert_eq!(amounts(&statement), [40_000, -18_750, -16_940]);
     let descriptions: Vec<&str> = statement
         .rows
@@ -591,8 +591,8 @@ PERIODO DESDE: 01/05/2026 HASTA: 31/05/2026
 #[test]
 fn banco_chile_credit_imports_billed_sections_only() {
     let statement = parse(BANCO_CHILE_CREDIT, StatementFormat::BancoChileCredit);
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
-    assert!(statement.warnings.is_empty(), "{:?}", statement.warnings);
+    assert!(statement.problems.is_empty());
+    assert!(statement.warnings.is_empty());
     // The payment in section B is not here.
     assert_eq!(amounts(&statement), [-25_990, -8_500, -100_000, -1_200]);
     assert_eq!(statement.rows[1].description, "FARMACIA EJEMPLO");
@@ -619,8 +619,8 @@ fn banco_chile_credit_imports_billed_sections_only() {
 #[test]
 fn santander_credit_skips_payments_and_future_installments() {
     let statement = parse(SANTANDER_CREDIT, StatementFormat::SantanderCredit);
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
-    assert!(statement.warnings.is_empty(), "{:?}", statement.warnings);
+    assert!(statement.problems.is_empty());
+    assert!(statement.warnings.is_empty());
     assert_eq!(amounts(&statement), [-100_000, -30_000, -2_000]);
     assert_eq!(statement.rows[1].description, "COMPRA EN CUOTAS");
     assert_eq!(statement.rows[1].installment, Some((1, 3)));
@@ -679,7 +679,7 @@ fn detection_reads_the_heading() {
 #[test]
 fn banco_estado_zero_filled_columns() {
     let statement = parse(BANCO_ESTADO, StatementFormat::BancoEstadoAccount);
-    assert!(statement.problems.is_empty(), "{:?}", statement.problems);
+    assert!(statement.problems.is_empty());
     assert_eq!(amounts(&statement), [-10_000, 50_000, 2_500]);
     assert_eq!(
         statement.period,
@@ -716,17 +716,17 @@ FECHA DE ACREDITACION TIPO DE MOVIMIENTO TIPO DE TRANSACCION ID DE TRANSACCION M
 #[test]
 fn mercado_pago_layouts() {
     let signed = parse(MERCADO_PAGO_SIGNED, StatementFormat::MercadoPago);
-    assert!(signed.problems.is_empty(), "{:?}", signed.problems);
+    assert!(signed.problems.is_empty());
     assert_eq!(amounts(&signed), [20_000, -8_500]);
 
     // Income comes before expense here, the opposite of the banks.
     let columns = parse(MERCADO_PAGO_COLUMNS, StatementFormat::MercadoPago);
-    assert!(columns.problems.is_empty(), "{:?}", columns.problems);
+    assert!(columns.problems.is_empty());
     assert_eq!(amounts(&columns), [35_000, -22_500]);
     assert_eq!(columns.rows[1].description, "Retiro a cuenta bancaria");
 
     let account = parse(MERCADO_PAGO_ACCOUNT, StatementFormat::MercadoPago);
-    assert!(account.problems.is_empty(), "{:?}", account.problems);
+    assert!(account.problems.is_empty());
     assert_eq!(account.period, Some((date(2026, 5, 1), date(2026, 5, 31))));
     assert_eq!(amounts(&account), [7, -5_490]);
     let descriptions: Vec<&str> = account
