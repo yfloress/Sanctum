@@ -68,7 +68,7 @@ pub fn max_import_file_size() -> usize {
     MAX_FILE_SIZE
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn detect_exchange_source(content: String) -> Option<ExchangeDetectionResult> {
     detect_exchange_source_inner(&content)
 }
@@ -83,7 +83,7 @@ fn detect_exchange_source_inner(content: &str) -> Option<ExchangeDetectionResult
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn preview_exchange_csv(
     ingestion: State<'_, IngestionService>,
     content: String,
@@ -95,7 +95,7 @@ pub fn preview_exchange_csv(
     Ok(map_import_summary(summary))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn import_exchange_csv(
     ingestion: State<'_, IngestionService>,
     crypto: State<'_, CryptoService>,
@@ -109,7 +109,7 @@ pub fn import_exchange_csv(
     Ok(map_import_summary(summary))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn analyze_custom_csv(
     ingestion: State<'_, IngestionService>,
     content: String,
@@ -123,7 +123,7 @@ pub fn analyze_custom_csv(
     })
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command(async, rename_all = "snake_case")]
 pub fn preview_custom_csv(
     ingestion: State<'_, IngestionService>,
     content: String,
@@ -165,7 +165,7 @@ pub fn save_custom_csv_mapping(
     Ok(ingestion.save_custom_csv_mapping(&headers, &into_domain_mapping(mapping))?)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn import_custom_csv(
     ingestion: State<'_, IngestionService>,
     crypto: State<'_, CryptoService>,
