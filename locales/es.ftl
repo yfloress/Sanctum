@@ -19,16 +19,22 @@ action-undo = Deshacer
 time-today = Hoy
 
 # ==================== Login Page ====================
-login-subtitle = Tu boveda personal privada
-login-placeholder-unlock = Ingresa tu contrasena maestra
-login-placeholder-create = Crea tu contrasena maestra
+login-subtitle = Tu bóveda personal privada
+login-placeholder-unlock = Ingresa tu contraseña maestra
+login-placeholder-create = Crea tu contraseña maestra
 login-unlock = Desbloquear
-login-create = Crear Boveda
-login-confirm-create = Confirmar Creación
+login-create = Crear bóveda
+login-confirm-create = Confirmar creación
 login-authenticating = Autenticando...
 login-initializing = Inicializando...
-login-weak-hint = Presiona de nuevo para confirmar con contrasena debil
+login-weak-hint = Presiona de nuevo para crearla igual con esta contraseña débil
 login-restore = Restaurar desde respaldo
+login-label-unlock = Contraseña maestra
+login-label-create = Elige una contraseña maestra
+login-show-password = Mostrar contraseña
+login-hide-password = Ocultar contraseña
+login-caps-lock = Bloq Mayús está activado
+login-create-hint = Cifra todo y no se puede recuperar: si la olvidas, los datos se pierden. Anótala en un lugar seguro.
 login-version = Sanctum v0.1.0
 
 # ==================== Sidebar ====================

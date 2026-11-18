@@ -30,6 +30,24 @@
   let error = $state('')
   let weakWarning = $state('')
   let confirmWeak = $state(false)
+  let capsLock = $state(false)
+
+  /** Focuses the password field as soon as it appears. */
+  function focusOnMount(node: HTMLInputElement) {
+    node.focus()
+  }
+
+  /** The weak-password confirmation is for the password it warned about. */
+  function onPasswordInput() {
+    if (confirmWeak || weakWarning) {
+      confirmWeak = false
+      weakWarning = ''
+    }
+  }
+
+  function trackCapsLock(e: KeyboardEvent) {
+    capsLock = e.getModifierState?.('CapsLock') ?? false
+  }
 
   $effect(() => {
     vaultApi.checkVaultExists().then((exists) => {
@@ -89,6 +107,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    trackCapsLock(e)
     if (e.key === 'Enter') handleSubmit()
   }
 
@@ -113,24 +132,12 @@
 </script>
 
 <div class="login-page">
-  <!-- Floating particles -->
-  <div class="particles" aria-hidden="true">
-    <div class="particle p1"></div>
-    <div class="particle p2"></div>
-    <div class="particle p3"></div>
-    <div class="particle p4"></div>
-    <div class="particle p5"></div>
-    <div class="particle p6"></div>
-  </div>
-
   <div class="login-card">
-    <div class="card-shimmer"></div>
-
     <div class="logo-section">
-      <div class="logo-ring">
-        <img src="/assets/logo/sanctum_logo.svg" alt="Sanctum" class="login-logo" />
+      <div class="logo-tile">
+        <img src="/assets/logo/sanctum_logo.svg" alt="" class="login-logo" />
       </div>
-      <h1 class="title">SANCTUM</h1>
+      <h1 class="title">Sanctum</h1>
       <p class="subtitle">{i18n.t('login-subtitle', 'Privacy-first personal vault')}</p>
     </div>
 
@@ -141,6 +148,9 @@
       </div>
     {:else}
       <div class="form-section">
+        <label class="field-label" for="master-password">
+          {vaultExists ? i18n.t('login-label-unlock', 'Master password') : i18n.t('login-label-create', 'Choose a master password')}
+        </label>
         <div class="input-group">
           <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -148,7 +158,11 @@
           <input
             type={showPassword ? 'text' : 'password'}
             bind:value={password}
+            oninput={onPasswordInput}
             onkeydown={handleKeydown}
+            onkeyup={trackCapsLock}
+            onblur={() => capsLock = false}
+            use:focusOnMount
             placeholder={vaultExists ? i18n.t('login-placeholder-unlock', 'Enter master password') : i18n.t('login-placeholder-create', 'Create master password')}
             disabled={loading}
             autocomplete="off"
@@ -157,7 +171,7 @@
           <button
             class="toggle-vis"
             onclick={() => showPassword = !showPassword}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-label={showPassword ? i18n.t('login-hide-password', 'Hide password') : i18n.t('login-show-password', 'Show password')}
             tabindex={-1}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -170,6 +184,13 @@
             </svg>
           </button>
         </div>
+
+        {#if capsLock}
+          <p class="field-hint warn">{i18n.t('login-caps-lock', 'Caps Lock is on')}</p>
+        {/if}
+        {#if vaultExists === false}
+          <p class="field-hint">{i18n.t('login-create-hint', 'It encrypts everything and cannot be recovered: if you forget it, the data is lost. Write it down somewhere safe.')}</p>
+        {/if}
 
         {#if weakWarning}
           <div class="warning-banner">
@@ -229,7 +250,9 @@
 </div>
 
 <style>
-  /* ===== Page Layout ===== */
+  /* One flat look for both themes, the same as the rest of the app: a solid
+     card on the dotted page, a solid button, no glow and no motion beyond the
+     card's entrance. */
   .login-page {
     display: flex;
     align-items: center;
@@ -237,228 +260,85 @@
     min-height: 100vh;
     padding: 24px;
     box-sizing: border-box;
-    /* Hardcoded dot-grid backdrop: the login screen can't read the user's
-       chosen background yet, so it always uses dots (themed via --bg-dots). */
+    /* The login screen cannot read the user's chosen background yet, so it
+       always shows the dots (themed via --bg-dots). */
     background-color: var(--bg-base);
     background-image: var(--bg-dots), var(--bg-gradient);
     background-size: 24px 24px, cover;
     background-position: center, center;
     background-repeat: repeat, no-repeat;
-    position: relative;
-    overflow: hidden;
   }
 
-  .login-page::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background:
-      radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(74, 222, 128, 0.04) 0%, transparent 50%),
-      radial-gradient(ellipse at 60% 10%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
-    animation: auroraShift 20s ease-in-out infinite alternate;
-    pointer-events: none;
-  }
-
-  @keyframes auroraShift {
-    0% { transform: translate(0, 0) rotate(0deg); }
-    50% { transform: translate(1%, -1%) rotate(1.5deg); }
-    100% { transform: translate(2%, -2%) rotate(3deg); }
-  }
-
-  /* ===== Floating Particles ===== */
-  .particles {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .particle {
-    position: absolute;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, transparent 70%);
-    filter: blur(1px);
-    animation: float linear infinite;
-  }
-
-  .p1 { width: 4px; height: 4px; left: 15%; top: 25%; animation-duration: 18s; animation-delay: 0s; }
-  .p2 { width: 3px; height: 3px; left: 75%; top: 35%; animation-duration: 22s; animation-delay: -4s; }
-  .p3 { width: 5px; height: 5px; left: 45%; top: 65%; animation-duration: 15s; animation-delay: -8s; }
-  .p4 { width: 3px; height: 3px; left: 85%; top: 15%; animation-duration: 20s; animation-delay: -2s; }
-  .p5 { width: 4px; height: 4px; left: 25%; top: 75%; animation-duration: 25s; animation-delay: -6s; }
-  .p6 { width: 3px; height: 3px; left: 60%; top: 85%; animation-duration: 17s; animation-delay: -10s; }
-
-  @keyframes float {
-    0% { transform: translateY(0px) translateX(0px); opacity: 0; }
-    10% { opacity: 0.8; }
-    50% { transform: translateY(-120px) translateX(30px); opacity: 0.4; }
-    90% { opacity: 0.6; }
-    100% { transform: translateY(-240px) translateX(-20px); opacity: 0; }
-  }
-
-  /* ===== Card ===== */
   .login-card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 36px;
-    padding: 52px 44px;
+    gap: 28px;
     width: 100%;
-    max-width: 420px;
-    background: var(--glass);
-    backdrop-filter: var(--glass-blur-heavy);
-    border: 1px solid var(--glass-border);
+    max-width: 400px;
+    padding: 40px 36px 28px;
+    box-sizing: border-box;
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border);
     border-radius: var(--radius-xl);
-    box-shadow:
-      var(--glass-shadow-lg),
-      var(--glass-glow),
-      0 0 80px -20px rgba(168, 85, 247, 0.08);
-    position: relative;
-    z-index: 1;
-    animation: cardEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-    overflow: hidden;
-  }
-
-  .card-shimmer {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 2;
-  }
-
-  .card-shimmer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 60%;
-    height: 100%;
-    background: linear-gradient(
-      105deg,
-      transparent 0%,
-      transparent 35%,
-      rgba(168, 85, 247, 0.06) 45%,
-      rgba(192, 132, 252, 0.1) 50%,
-      rgba(168, 85, 247, 0.06) 55%,
-      transparent 65%,
-      transparent 100%
-    );
-    animation: shimmer 8s ease-in-out infinite;
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-50%); }
-    100% { transform: translateX(500%); }
+    box-shadow: var(--modal-shadow);
+    animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   @keyframes cardEntrance {
-    from {
-      opacity: 0;
-      transform: translateY(24px) scale(0.97);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
   }
 
-  /* ===== Logo Section ===== */
+  /* ===== Logo ===== */
   .logo-section {
-    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    animation: fadeIn 0.8s ease 0.2s both;
+    gap: 6px;
+    text-align: center;
   }
 
-  .logo-ring {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .logo-tile {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-border);
   }
 
-  .logo-ring::before {
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    background: conic-gradient(
-      from 0deg,
-      transparent,
-      rgba(168, 85, 247, 0.3),
-      transparent,
-      rgba(139, 92, 246, 0.2),
-      transparent
-    );
-    animation: logoSpin 8s linear infinite;
-    filter: blur(3px);
-  }
-
-  .logo-ring::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: var(--bg-base);
-    z-index: 0;
-  }
-
-  @keyframes logoSpin {
-    to { transform: rotate(360deg); }
-  }
-
-  .login-logo {
-    width: 56px;
-    height: 56px;
-    z-index: 1;
-    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.3));
-  }
+  .login-logo { width: 40px; height: 40px; }
 
   .title {
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: 0.4em;
-    color: var(--text-primary);
     margin: 0;
+    font-size: 1.6rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
   }
 
   .subtitle {
-    color: var(--text-tertiary);
-    font-size: 0.82rem;
     margin: 0;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* ===== Loading State ===== */
+  /* ===== Loading ===== */
   .loading-state {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
     color: var(--text-tertiary);
     font-size: 0.85rem;
-    animation: fadeIn 0.5s ease both;
   }
 
   .loading-spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(168, 85, 247, 0.2);
+    border: 2px solid var(--accent-border);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -468,13 +348,17 @@
     to { transform: rotate(360deg); }
   }
 
-  /* ===== Form Section ===== */
+  /* ===== Form ===== */
   .form-section {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    width: 100%;
-    animation: fadeIn 0.8s ease 0.35s both;
+    gap: 12px;
+  }
+
+  .field-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
   }
 
   .input-group {
@@ -490,66 +374,57 @@
     height: 18px;
     color: var(--text-tertiary);
     pointer-events: none;
-    transition: color 0.2s;
-    z-index: 1;
+    transition: color 0.15s;
   }
 
-  .input-group:focus-within .input-icon {
-    color: var(--accent);
-  }
+  .input-group:focus-within .input-icon { color: var(--accent); }
 
   input {
     width: 100%;
-    padding: 14px 44px 14px 42px;
-    border: 1px solid var(--glass-border);
+    padding: 13px 44px 13px 42px;
+    box-sizing: border-box;
+    border: 1px solid var(--glass-border-hover);
     border-radius: var(--radius-md);
     background: var(--select-bg);
-    backdrop-filter: blur(8px);
     color: var(--text-primary);
-    font-size: 0.9rem;
-    letter-spacing: 0.02em;
+    font-size: 0.95rem;
     outline: none;
-    transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
-    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
 
-  input:hover {
-    border-color: var(--glass-border-hover);
-    background: var(--select-bg-hover);
-  }
+  input:hover { border-color: var(--accent-border); }
 
   input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow), 0 0 20px -5px rgba(168, 85, 247, 0.15);
+    box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
-  input::placeholder {
-    color: var(--text-tertiary);
-    letter-spacing: 0.03em;
-  }
+  input::placeholder { color: var(--text-tertiary); }
 
   .toggle-vis {
     position: absolute;
-    right: 10px;
-    background: none;
+    right: 8px;
+    display: flex;
+    padding: 6px;
     border: none;
+    border-radius: 6px;
+    background: none;
     color: var(--text-tertiary);
     cursor: pointer;
-    padding: 6px;
-    display: flex;
-    transition: color 0.2s, transform 0.15s;
-    border-radius: 6px;
+    transition: color 0.15s;
   }
 
-  .toggle-vis:hover {
-    color: var(--text-secondary);
-    transform: scale(1.1);
+  .toggle-vis:hover { color: var(--text-primary); }
+  .toggle-vis svg { width: 18px; height: 18px; }
+
+  .field-hint {
+    margin: -4px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text-tertiary);
   }
 
-  .toggle-vis svg {
-    width: 18px;
-    height: 18px;
-  }
+  .field-hint.warn { color: var(--warning); }
 
   /* ===== Banners ===== */
   .warning-banner,
@@ -557,17 +432,29 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    padding: 12px 14px;
+    padding: 11px 13px;
+    border: 1px solid;
     border-radius: var(--radius-sm);
-    backdrop-filter: blur(8px);
-    font-size: 0.8rem;
-    line-height: 1.4;
-    animation: bannerSlide 0.3s ease both;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    animation: bannerIn 0.2s ease both;
   }
 
-  @keyframes bannerSlide {
-    from { opacity: 0; transform: translateY(-6px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes bannerIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .warning-banner {
+    color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 10%, transparent);
+    border-color: color-mix(in srgb, var(--warning) 28%, transparent);
+  }
+
+  .error-banner {
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 9%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 26%, transparent);
   }
 
   .banner-icon {
@@ -583,84 +470,33 @@
     gap: 3px;
   }
 
-  .warning-banner {
-    background: rgba(58, 42, 10, 0.5);
-    color: var(--warning);
-    border: 1px solid rgba(251, 191, 36, 0.18);
-  }
+  .weak-hint { font-size: 0.75rem; opacity: 0.85; }
 
-  .weak-hint {
-    color: #a88520;
-    font-size: 0.72rem;
-    opacity: 0.85;
-  }
-
-  .error-banner {
-    background: rgba(58, 26, 26, 0.5);
-    color: var(--danger);
-    border: 1px solid rgba(248, 113, 113, 0.18);
-  }
-
-  /* Light mode: the dark translucent banners read as out-of-place patches,
-     so swap them for soft tinted surfaces (text stays the themed accent). */
-  :global(.light-mode) .warning-banner {
-    background: rgba(251, 191, 36, 0.14);
-    border-color: rgba(217, 119, 6, 0.25);
-  }
-
-  :global(.light-mode) .error-banner {
-    background: rgba(180, 35, 24, 0.07);
-    border-color: rgba(180, 35, 24, 0.22);
-  }
-
-  /* ===== Submit Button ===== */
+  /* ===== Buttons ===== */
   .submit-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     width: 100%;
-    padding: 14px 24px;
     margin-top: 4px;
+    padding: 13px 24px;
     border: none;
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 50%, #7c3aed 100%);
-    color: #fff;
-    font-size: 0.9rem;
+    background: var(--accent-solid);
+    color: var(--text-on-accent);
+    font-size: 0.92rem;
     font-weight: 600;
-    letter-spacing: 0.04em;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 20px -4px rgba(168, 85, 247, 0.35);
+    transition: background 0.15s, transform 0.1s;
   }
 
-  .submit-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
-    opacity: 0;
-    transition: opacity 0.25s;
-  }
-
-  .submit-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 28px -4px rgba(168, 85, 247, 0.45);
-  }
-
-  .submit-btn:hover:not(:disabled)::before {
-    opacity: 1;
-  }
-
-  .submit-btn:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
-    box-shadow: 0 2px 12px -2px rgba(168, 85, 247, 0.3);
-  }
+  .submit-btn:hover:not(:disabled) { background: var(--accent-solid-hover); }
+  .submit-btn:active:not(:disabled) { transform: scale(0.99); }
+  .submit-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .submit-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
@@ -673,150 +509,47 @@
   .btn-spinner {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-top-color: #fff;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
-    flex-shrink: 0;
   }
 
-  /* ===== Restore Link ===== */
   .restore-link {
-    background: none;
+    align-self: center;
+    padding: 6px 8px;
     border: none;
-    color: var(--text-tertiary);
+    border-radius: 6px;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
     cursor: pointer;
-    font-size: 0.78rem;
-    text-align: center;
-    padding: 6px;
-    transition: color 0.2s;
-    text-decoration: none;
-    letter-spacing: 0.02em;
-    opacity: 0.8;
+    transition: color 0.15s;
   }
 
-  .restore-link:hover {
-    color: var(--accent);
-    opacity: 1;
-  }
+  .restore-link:hover { color: var(--accent); }
+  .restore-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .restore-link:disabled {
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
-  /* ===== Version Tag ===== */
   .version-tag {
     position: fixed;
     bottom: 16px;
     right: 20px;
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     color: var(--text-tertiary);
-    opacity: 0.35;
-    letter-spacing: 0.05em;
-    z-index: 0;
   }
 
-  /* ===== Dark theme =====
-     The effects above were tuned on the light theme, where purple on white
-     reads as a tint. On the dark background the same purple turns into
-     glow, so here the glass and the slow background stay and the glows go:
-     a flat solid button like the rest of the app, a still logo, neutral
-     particles and tinted banners instead of dark patches. */
-  :global(html:not(.light-mode)) .login-page::before {
-    background:
-      radial-gradient(ellipse at 20% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(74, 222, 128, 0.025) 0%, transparent 50%);
-  }
-
-  :global(html:not(.light-mode)) .particle {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, transparent 70%);
-  }
-
-  :global(html:not(.light-mode)) .login-card {
-    box-shadow: var(--glass-shadow-lg), var(--glass-glow);
-  }
-
-  :global(html:not(.light-mode)) .card-shimmer {
-    display: none;
-  }
-
-  :global(html:not(.light-mode)) .logo-ring::before {
-    background: none;
-    border: 1px solid var(--glass-border);
-    filter: none;
-    animation: none;
-  }
-
-  :global(html:not(.light-mode)) .login-logo {
-    filter: none;
-    animation: none;
-  }
-
-  :global(html:not(.light-mode)) input:focus {
-    box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-
-  :global(html:not(.light-mode)) .submit-btn {
-    background: var(--accent-solid);
-    color: var(--text-on-accent);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    letter-spacing: 0.01em;
-  }
-
-  :global(html:not(.light-mode)) .submit-btn::before {
-    display: none;
-  }
-
-  :global(html:not(.light-mode)) .submit-btn:hover:not(:disabled) {
-    background: var(--accent-solid-hover);
-    transform: none;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  }
-
-  :global(html:not(.light-mode)) .submit-btn:active:not(:disabled) {
-    transform: scale(0.99);
-    box-shadow: none;
-  }
-
-  :global(html:not(.light-mode)) .warning-banner {
-    background: color-mix(in srgb, var(--warning) 10%, transparent);
-    border-color: color-mix(in srgb, var(--warning) 28%, transparent);
-  }
-
-  :global(html:not(.light-mode)) .error-banner {
-    background: color-mix(in srgb, var(--danger) 10%, transparent);
-    border-color: color-mix(in srgb, var(--danger) 28%, transparent);
-  }
-
-  /* Motion is decoration here; the form works the same without it. */
   @media (prefers-reduced-motion: reduce) {
-    .login-page::before,
-    .particle,
-    .card-shimmer::before,
-    .logo-ring::before,
-    .login-logo {
-      animation: none;
-    }
+    .login-card, .warning-banner, .error-banner { animation: none; }
   }
 
-  /* ===== Mobile ===== */
   @media (max-width: 480px) {
-    .login-card {
-      padding: 36px 24px;
-      gap: 28px;
-    }
-    .title {
-      font-size: 1.6rem;
-      letter-spacing: 0.3em;
-    }
-    .logo-ring {
-      width: 68px;
-      height: 68px;
-    }
-    .login-logo {
-      width: 48px;
-      height: 48px;
-    }
+    .login-card { padding: 32px 22px 22px; gap: 24px; }
+    .title { font-size: 1.45rem; }
   }
 </style>

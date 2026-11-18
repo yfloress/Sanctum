@@ -22,13 +22,19 @@ time-today = Today
 login-subtitle = Privacy-first personal vault
 login-placeholder-unlock = Enter master password
 login-placeholder-create = Create master password
-login-unlock = Unlock Vault
-login-create = Create Vault
-login-confirm-create = Confirm Create
+login-unlock = Unlock vault
+login-create = Create vault
+login-confirm-create = Confirm creation
 login-authenticating = Authenticating...
 login-initializing = Initializing...
-login-weak-hint = Press again to confirm with weak password
+login-weak-hint = Press again to create it anyway with this weak password
 login-restore = Restore from backup
+login-label-unlock = Master password
+login-label-create = Choose a master password
+login-show-password = Show password
+login-hide-password = Hide password
+login-caps-lock = Caps Lock is on
+login-create-hint = It encrypts everything and cannot be recovered: if you forget it, the data is lost. Write it down somewhere safe.
 login-version = Sanctum v0.1.0
 
 # ==================== Sidebar ====================

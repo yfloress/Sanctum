@@ -333,7 +333,7 @@
   }
 
   :global(.light-mode .login-logo) {
-    filter: brightness(0) saturate(100%) invert(25%) sepia(60%) saturate(4000%) hue-rotate(255deg) brightness(85%) contrast(95%) drop-shadow(0 0 20px rgba(139, 92, 246, 0.25)) !important;
+    filter: brightness(0) saturate(100%) invert(25%) sepia(60%) saturate(4000%) hue-rotate(255deg) brightness(85%) contrast(95%) !important;
   }
 
   :global(body) {
