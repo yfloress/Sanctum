@@ -109,16 +109,10 @@
       justify-content: space-between;
       padding: 0 8px;
       padding-top: env(safe-area-inset-top, 0px);
-      background: rgba(14, 12, 20, 0.9);
-      backdrop-filter: blur(18px) saturate(1.3);
-      border-bottom: 1px solid rgba(168, 85, 247, 0.12);
+      background: var(--sidebar-bg);
+      border-bottom: 1px solid var(--sidebar-border);
       z-index: 100;
     }
-  }
-
-  :global(.light-mode) .mtopbar {
-    background: rgba(242, 239, 243, 0.94);
-    border-bottom: 1px solid var(--sidebar-border);
   }
 
   .mtb-btn {
@@ -139,7 +133,7 @@
     color: var(--text-primary);
   }
   .mtb-btn.active {
-    color: #c084fc;
+    color: var(--accent-hover);
   }
   .mtb-btn svg {
     width: 22px;
@@ -149,7 +143,6 @@
   .mtb-logo {
     width: 24px;
     height: 24px;
-    filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.3));
   }
 
   .mtb-scrim {

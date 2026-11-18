@@ -41,6 +41,10 @@
     overflow: hidden;
   }
   .aurora.paused .blob { animation-play-state: paused; }
+  /* Decoration only: the blobs stay put when the system asks for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .blob { animation: none; }
+  }
 
   .blob {
     position: absolute;

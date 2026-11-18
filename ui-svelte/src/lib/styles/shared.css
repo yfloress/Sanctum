@@ -413,14 +413,6 @@ select option { background: var(--option-bg); color: var(--text-primary); }
   box-shadow: var(--card-shadow);
   overflow: hidden;
 }
-.settings-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: var(--card-accent-line);
-  opacity: 0.6;
-}
 .settings-card-label,
 .settings-card-title {
   display: flex;
@@ -429,7 +421,7 @@ select option { background: var(--option-bg); color: var(--text-primary); }
   font-size: 0.68rem;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.06em;
   font-weight: 600;
   margin: 0 0 14px;
 }
@@ -439,8 +431,7 @@ select option { background: var(--option-bg); color: var(--text-primary); }
   width: 3px;
   height: 12px;
   border-radius: 2px;
-  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
-  box-shadow: 0 0 6px var(--accent-glow);
+  background: var(--accent);
 }
 
 /* Row marker shared by the ledger and the recurring list. */

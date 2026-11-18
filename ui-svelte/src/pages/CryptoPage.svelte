@@ -2120,11 +2120,6 @@
     box-shadow: var(--card-shadow);
     overflow: hidden;
   }
-  .chart-section::before {
-    content: ''; position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: var(--card-accent-line); opacity: 0.5;
-  }
   .chart-section h3 { font-size: 0.78rem; color: var(--text-tertiary); letter-spacing: 0; margin: 0; font-weight: 500; }
   .chart-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
   .range-picker {

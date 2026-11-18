@@ -81,7 +81,7 @@
       <div class="logo-icon-wrap">
         <img src="/assets/logo/sanctum_logo.svg" alt="Sanctum" class="logo-icon" />
       </div>
-      <span class="logo-text">SANCTUM</span>
+      <span class="logo-text">Sanctum</span>
     </div>
   </div>
 
@@ -301,9 +301,9 @@
   }
 
   .logo-text {
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: 0.3em;
+    font-size: 1.05rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
     color: var(--text-primary);
     white-space: nowrap;
     opacity: 1;
@@ -356,9 +356,9 @@
   .nav-group-label {
     font-size: 0.625rem;
     font-weight: 600;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: rgba(168, 150, 200, 0.45);
+    color: var(--text-tertiary);
     padding: 0 4px;
     white-space: nowrap;
     overflow: hidden;
@@ -439,7 +439,7 @@
 
   .nav-item:hover .nav-icon-wrap {
     transform: scale(1.08);
-    color: rgba(196, 181, 253, 0.8);
+    color: var(--accent-hover);
   }
 
   /* ── Active ──────────────────────────────────────────── */
@@ -449,11 +449,11 @@
   }
 
   .nav-item.active .nav-icon-wrap {
-    color: #c084fc;
+    color: var(--accent-hover);
   }
 
   .nav-item.active .nav-label {
-    color: #e2d9f3;
+    color: var(--text-primary);
     font-weight: 500;
   }
 
@@ -488,11 +488,11 @@
 
   /* ── Eye / hide-balances button ──────────────────────── */
   .eye-btn.active {
-    color: #c084fc;
+    color: var(--accent-hover);
   }
 
   .eye-btn.active .nav-icon-wrap {
-    color: #c084fc;
+    color: var(--accent-hover);
   }
 
   /* ── Lock button ─────────────────────────────────────── */
@@ -574,19 +574,13 @@
       height: calc(60px + env(safe-area-inset-bottom, 0px));
       flex-direction: row;
       align-items: stretch;
-      background: rgba(14, 12, 20, 0.9);
-      backdrop-filter: blur(18px) saturate(1.3);
+      background: var(--sidebar-bg);
       border-right: none;
-      border-top: 1px solid rgba(168, 85, 247, 0.12);
+      border-top: 1px solid var(--sidebar-border);
       box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
       transition: none;
       z-index: 100;
       padding-bottom: env(safe-area-inset-bottom, 0px);
-    }
-
-    :global(.light-mode) .sidebar {
-      background: rgba(242, 239, 243, 0.94);
-      border-top-color: var(--sidebar-border);
     }
 
     /* Desktop-only chrome and text labels disappear on the bar */
@@ -634,7 +628,7 @@
     }
 
     .nav-item.active .nav-icon-wrap {
-      color: #c084fc;
+      color: var(--accent-hover);
       transform: scale(1.06);
     }
 

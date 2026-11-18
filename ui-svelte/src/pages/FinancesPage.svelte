@@ -1888,11 +1888,6 @@
     margin-bottom: 14px;
     overflow: hidden;
   }
-  .chart-card::before {
-    content: ''; position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: var(--card-accent-line); opacity: 0.5;
-  }
   .chart-card--wide { grid-column: unset; }
   .chart-card h4 {
     font-size: 0.78rem;

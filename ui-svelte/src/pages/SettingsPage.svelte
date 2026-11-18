@@ -273,7 +273,7 @@
           <span class="setting-label">{i18n.t('settings-dark-mode', 'Dark Mode')}</span>
           <span class="setting-desc">{i18n.t('settings-dark-mode-desc', 'Toggle dark/light theme')}</span>
         </div>
-        <button class="toggle-switch" class:on={app.settings.dark_mode} onclick={() => app.toggleDarkMode()} aria-label="Toggle dark mode">
+        <button class="toggle-switch" role="switch" aria-checked={app.settings.dark_mode} class:on={app.settings.dark_mode} onclick={() => app.toggleDarkMode()} aria-label="Toggle dark mode">
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -447,7 +447,7 @@
           <span class="setting-label">{i18n.t('settings-auto-fetch', 'Auto-fetch Prices')}</span>
           <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Off: Sanctum never goes online on its own. On: refreshes prices every 10 minutes while the window is visible.')}</span>
         </div>
-        <button class="toggle-switch" class:on={app.settings.auto_fetch} onclick={toggleAutoFetch} aria-label="Toggle auto-fetch">
+        <button class="toggle-switch" role="switch" aria-checked={app.settings.auto_fetch} class:on={app.settings.auto_fetch} onclick={toggleAutoFetch} aria-label="Toggle auto-fetch">
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -456,7 +456,7 @@
           <span class="setting-label">{i18n.t('settings-use-proxy', 'Use Proxy')}</span>
           <span class="setting-desc">{i18n.t('settings-use-proxy-desc', 'Route API calls through a proxy')}</span>
         </div>
-        <button class="toggle-switch" class:on={app.settings.proxy_enabled} onclick={toggleProxy} aria-label="Toggle proxy">
+        <button class="toggle-switch" role="switch" aria-checked={app.settings.proxy_enabled} class:on={app.settings.proxy_enabled} onclick={toggleProxy} aria-label="Toggle proxy">
           <span class="toggle-knob"></span>
         </button>
       </div>
@@ -523,7 +523,7 @@
 
 <style>
   .page { padding: 24px 32px; max-width: 1080px; width: 100%; margin: 0 auto; box-sizing: border-box; }
-  h2 { font-size: 1.3rem; letter-spacing: 0.15em; color: var(--text-primary); margin-bottom: 28px; }
+  h2 { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.02em; color: var(--text-primary); margin: 0 0 24px; }
 
   /* Two columns of cards on a wide window, one on a narrow one. A section
      with a lot inside (the import) takes the whole row. */
@@ -605,19 +605,22 @@
     box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
+  /* Off: a quiet track with a pale knob. On: the solid accent with a white
+     knob, the same purple as the primary button. No halo. */
   .toggle-switch {
-    position: relative; width: 44px; height: 24px; border-radius: 12px;
-    border: 1px solid var(--glass-border); background: var(--glass); cursor: pointer; padding: 0;
-    transition: all 0.25s;
+    position: relative; flex-shrink: 0; width: 44px; height: 24px; border-radius: 12px;
+    border: 1px solid var(--glass-border-hover); background: var(--select-bg); cursor: pointer; padding: 0;
+    transition: background 0.2s, border-color 0.2s;
   }
-  .toggle-switch.on {
-    background: var(--accent-bg); border-color: var(--accent-border);
-    box-shadow: 0 0 12px var(--accent-glow);
-  }
+  .toggle-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toggle-switch.on { background: var(--accent-solid); border-color: var(--accent-solid); }
   .toggle-knob {
     position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
-    border-radius: 50%; background: var(--text-primary); transition: transform 0.25s;
+    border-radius: 50%; background: var(--text-tertiary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background 0.2s;
   }
+  .toggle-switch.on .toggle-knob { background: #ffffff; }
   .toggle-switch.on .toggle-knob { transform: translateX(20px); }
 
   .secondary-btn {

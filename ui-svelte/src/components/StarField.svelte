@@ -70,6 +70,10 @@
   .starfield.paused .star {
     animation-play-state: paused;
   }
+  /* Decoration only: still stars when the system asks for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .starfield, .star { animation: none; }
+  }
 
   .star {
     position: absolute;

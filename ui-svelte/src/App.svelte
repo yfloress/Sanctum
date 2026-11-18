@@ -255,7 +255,6 @@
     --card-bg: #0e0c15;
     --card-bg-solid: #0e0c15;
     --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-    --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.35) 30%, rgba(168, 85, 247, 0.35) 70%, transparent 100%);
   }
 
   /* Light is a daylight theme, not dark inverted: solid white cards over a
@@ -324,7 +323,6 @@
     --row-border: rgba(33, 31, 38, 0.05);
     --card-bg-solid: #ffffff;
     --card-shadow: 0 1px 1px rgba(33, 31, 38, 0.03), 0 12px 32px -16px rgba(70, 50, 130, 0.22);
-    --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(110, 86, 207, 0.30) 30%, rgba(110, 86, 207, 0.30) 70%, transparent 100%);
   }
 
   /* Make white logo visible in light mode */

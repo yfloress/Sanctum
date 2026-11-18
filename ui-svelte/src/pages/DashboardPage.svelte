@@ -518,14 +518,6 @@
     box-shadow: var(--card-shadow);
     overflow: hidden;
   }
-  .chart-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--card-accent-line);
-    opacity: 0.5;
-  }
   .chart-card-header {
     display: flex;
     justify-content: space-between;
@@ -609,14 +601,6 @@
     padding: 20px;
     box-shadow: var(--card-shadow);
     overflow: hidden;
-  }
-  .panel::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--card-accent-line);
-    opacity: 0.5;
   }
   .panel-title {
     font-size: 0.78rem;
