@@ -35,6 +35,7 @@ use super::validation::validate_file_size;
 mod crypto;
 mod folders;
 mod kraken_sync;
+mod monero_local;
 mod statement;
 mod transactions;
 

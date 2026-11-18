@@ -76,3 +76,23 @@ pub async fn update_export_folders(app: tauri::AppHandle) -> Result<FolderUpdate
     })?
     .map_err(Into::into)
 }
+
+#[tauri::command]
+pub async fn read_monero_history(
+    app: tauri::AppHandle,
+    address: String,
+    user: String,
+    password: String,
+) -> Result<String, AppError> {
+    use tauri::Manager;
+    let secret = secrecy::SecretString::from(password);
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<IngestionService>()
+            .read_monero_history(&address, &user, &secret)
+    })
+    .await
+    .map_err(|_| {
+        sanctum::features::ingestion::IngestionError::Parse("Local wallet read interrupted".into())
+    })?
+    .map_err(Into::into)
+}

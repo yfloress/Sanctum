@@ -35,6 +35,7 @@
   import CryptoAssetPanel from '../components/crypto/CryptoAssetPanel.svelte'
   import CryptoTaxPanel from '../components/crypto/CryptoTaxPanel.svelte'
   import CryptoSync from '../components/crypto/CryptoSync.svelte'
+  import MoneroLocal from '../components/crypto/MoneroLocal.svelte'
   import ExportFolders from '../components/crypto/ExportFolders.svelte'
   import CryptoBatchImport from '../components/CryptoBatchImport.svelte'
   import type {
@@ -1725,6 +1726,7 @@
     <div class="modal wide history-sources" role="dialog" aria-modal="true" aria-labelledby="sources-title" use:dialog={{ onclose: () => showSources = false, autofocus: false }}>
       <h3 id="sources-title">{i18n.t('crypto-sources-title', 'History sources')}</h3>
       <CryptoSync wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
+      <details><summary>Monero RPC</summary><MoneroLocal wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} /></details>
       <ExportFolders wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
       <div class="modal-actions"><button class="secondary-btn" onclick={() => showSources = false}>{i18n.t('crypto-close','Close')}</button></div>
     </div>
