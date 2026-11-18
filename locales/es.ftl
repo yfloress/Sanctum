@@ -881,6 +881,22 @@ statement-mirror = Coincide con {$account}
 statement-mirror-hint = Este movimiento ya está en la otra cuenta; se convierte en la transferencia en vez de agregarse dos veces.
 import-exchange-drop = Arrastra aquí el CSV del exchange o la billetera, o haz clic para elegirlo
 
+crypto-batch-select = Elige o arrastra tus archivos de historial
+crypto-batch-overlap = La vista previa es por archivo. Al importar se vuelven a comprobar las coincidencias con los archivos anteriores.
+crypto-batch-file-large = El archivo supera el límite de tamaño.
+crypto-batch-new-wallet = Crear una billetera de destino
+crypto-batch-create = Crear
+crypto-batch-remove = Quitar
+crypto-batch-map = Revisar columnas
+crypto-batch-partial = Importar las filas válidas y omitir las que tienen estos errores
+crypto-batch-retry = Reintentar vista previa
+crypto-batch-apply = Importar los archivos revisados
+crypto-batch-balances = Comparar saldos
+crypto-batch-expected = Saldo de tu billetera
+crypto-batch-matches = Coincide
+crypto-batch-difference = Diferencia
+crypto-batch-no-balances = No hay saldos registrados para esta billetera.
+
 mapping-assistant = Sugerir columnas con un asistente de IA
 mapping-prompt = Copia este prompt. Contiene etiquetas genéricas y ejemplos inventados.
 mapping-response = Pega aquí la sugerencia en JSON

@@ -173,6 +173,7 @@ pub struct WalletDetailResponse {
 /// A single holding within a wallet.
 #[derive(Debug, Clone, Serialize)]
 pub struct WalletHoldingDto {
+    pub recorded_amount: f64,
     pub coin_id: String,
     pub symbol: String,
     pub amount: String,

@@ -123,6 +123,11 @@ impl IngestionService {
         dry_run: bool,
         skip_balance_validation: bool,
     ) -> Result<ImportSummary, IngestionError> {
+        // Keep the duplicate lookup and its inserts together across import sources.
+        static IMPORT: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = IMPORT
+            .lock()
+            .map_err(|_| IngestionError::Parse("Import unavailable".into()))?;
         // Sort transactions by date to ensure chronological processing.
         // This prevents balance validation failures when the CSV has rows
         // out of order (e.g. a withdrawal before the deposit that funds it).

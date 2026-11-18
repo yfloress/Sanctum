@@ -107,6 +107,7 @@ export interface WalletDetailResponse {
 }
 
 export interface WalletHoldingDto {
+  recorded_amount: number
   coin_id: string
   symbol: string
   amount: string

@@ -329,6 +329,7 @@ pub fn fetch_wallet_detail(
         .map(|h| {
             let price = pm.get(&h.coin_id).copied().unwrap_or(0.0);
             WalletHoldingDto {
+                recorded_amount: h.total_amount,
                 coin_id: h.coin_id.clone(),
                 symbol: h.symbol.clone(),
                 amount: format_crypto_amount(h.total_amount),

@@ -881,6 +881,22 @@ statement-mirror = Matches {$account}
 statement-mirror-hint = This movement is already in the other account; it becomes the transfer instead of being added twice.
 import-exchange-drop = Drop the exchange or wallet CSV here, or click to choose it
 
+crypto-batch-select = Choose or drop history files
+crypto-batch-overlap = Previews are per file. Overlaps are checked again as each file is imported.
+crypto-batch-file-large = File exceeds the import size limit.
+crypto-batch-new-wallet = Create a destination wallet
+crypto-batch-create = Create
+crypto-batch-remove = Remove
+crypto-batch-map = Review columns
+crypto-batch-partial = Import valid rows and skip these errors
+crypto-batch-retry = Retry preview
+crypto-batch-apply = Import reviewed files
+crypto-batch-balances = Compare balances
+crypto-batch-expected = Wallet balance
+crypto-batch-matches = Matches
+crypto-batch-difference = Difference
+crypto-batch-no-balances = No holdings recorded for this wallet.
+
 mapping-assistant = Suggest columns with an AI assistant
 mapping-prompt = Copy this prompt. It contains generic column labels and invented examples.
 mapping-response = Paste the JSON suggestion here
