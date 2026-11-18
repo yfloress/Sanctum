@@ -207,7 +207,12 @@ fn into_domain_mapping(mapping: CustomCsvMapping) -> CustomColumnMapping {
 fn map_import_summary(
     summary: sanctum::features::ingestion::ImportSummary,
 ) -> ImportResultsResponse {
+    let mut skipped_reasons = std::collections::BTreeMap::new();
+    for reason in summary.skipped_reasons {
+        *skipped_reasons.entry(reason).or_insert(0) += 1;
+    }
     ImportResultsResponse {
+        skipped_reasons,
         total_processed: summary.total_processed,
         inserted: summary.inserted,
         skipped: summary.skipped,

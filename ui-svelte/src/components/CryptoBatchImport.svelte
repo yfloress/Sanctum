@@ -15,6 +15,8 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import PrivateAmount from './PrivateAmount.svelte'
+  import { app } from '../lib/stores/app.svelte'
   import * as ingestion from '../lib/api/ingestion'
   import * as crypto from '../lib/api/crypto'
   import { errorMessage } from '../lib/errors'
@@ -260,8 +262,12 @@
         {/if}
       {/if}
       {#if summary}
-        <p>{row.result ? i18n.t('settings-import-inserted', 'Inserted:') : i18n.t('settings-import-preview-btn', 'Preview')} {summary.inserted}
+        <p>{row.result ? i18n.t('history-added', 'Added') : i18n.t('history-to-add', 'To add')} {summary.inserted}
           · {i18n.t('settings-import-skipped', 'Skipped:')} {summary.skipped}</p>
+        {#if row.result}<p>{i18n.t('settings-import-target-wallet', 'Target wallet')} · {row.wallet}</p>{/if}
+        {#if summary.skipped > 0}
+          <ul>{#each Object.entries(summary.skipped_reasons ?? {}) as [reason, count]}<li>{reason} · {count}</li>{/each}</ul>
+        {/if}
         {#if summary.errors.length}
           <details><summary>{i18n.t('settings-import-errors', 'Errors')} ({summary.errors.length})</summary>
             <ul>{#each summary.errors as issue}<li>{issue.line ?? '—'} · {issue.message}</li>{/each}</ul>
@@ -292,11 +298,13 @@
         <summary>{detail.name} · {i18n.t('crypto-batch-balances', 'Compare balances')}</summary>
         {#each detail.holdings as holding (holding.coin_id)}
           {@const key = JSON.stringify([detail.id, holding.coin_id])}
-          <label class="controls">{holding.symbol} · {holding.recorded_amount}
-            <input type="number" step="any" placeholder={i18n.t('crypto-batch-expected', 'Wallet balance')}
+          <div class="controls"><PrivateAmount value={holding.recorded_amount} unit={holding.symbol} />
+            {#if !app.hideBalances}
+            <input type="number" step="any" aria-label={holding.symbol + ' · ' + i18n.t('crypto-batch-expected', 'Wallet balance')} placeholder={i18n.t('crypto-batch-expected', 'Wallet balance')}
               value={expected[key] ?? ''} oninput={e => expected[key] = e.currentTarget.value} />
             {difference(expected[key], holding.recorded_amount)}
-          </label>
+            {/if}
+          </div>
         {:else}
           <p>{i18n.t('crypto-batch-no-balances', 'No holdings recorded for this wallet.')}</p>
         {/each}

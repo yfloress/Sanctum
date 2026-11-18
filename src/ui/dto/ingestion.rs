@@ -46,6 +46,7 @@ pub struct ImportResultsResponse {
     pub total_processed: usize,
     pub inserted: usize,
     pub skipped: usize,
+    pub skipped_reasons: std::collections::BTreeMap<String, usize>,
     pub errors: Vec<ImportErrorDto>,
     /// Accounts the file refers to that do not exist yet.
     pub missing_accounts: Vec<MissingAccountDto>,

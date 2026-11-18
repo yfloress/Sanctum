@@ -19,6 +19,7 @@ export interface ImportResultsResponse {
   total_processed: number
   inserted: number
   skipped: number
+  skipped_reasons: Record<string, number>
   errors: ImportErrorDto[]
   /** Accounts the file refers to that do not exist yet. */
   missing_accounts: MissingAccountDto[]
