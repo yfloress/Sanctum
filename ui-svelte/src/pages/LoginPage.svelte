@@ -301,15 +301,10 @@
   .logo-tile {
     display: grid;
     place-items: center;
-    width: 64px;
-    height: 64px;
-    margin-bottom: 10px;
-    border-radius: 18px;
-    background: var(--accent-bg);
-    border: 1px solid var(--accent-border);
+    margin-bottom: 8px;
   }
 
-  .login-logo { width: 40px; height: 40px; }
+  .login-logo { width: 56px; height: 56px; }
 
   .title {
     margin: 0;
