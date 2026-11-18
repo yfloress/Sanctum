@@ -48,7 +48,7 @@
     display: inline-flex; align-items: center; gap: 4px;
     padding: 3px 4px 3px 10px; border-radius: 20px;
     font-size: 0.78rem; color: var(--text-primary);
-    background: var(--accent-bg); border: 1px solid var(--accent-border);
+    background: color-mix(in srgb, var(--accent) 16%, var(--row-solid)); border: 1px solid var(--accent-border);
   }
   .filter-chip button {
     display: grid; place-items: center; width: 18px; height: 18px; padding: 0;

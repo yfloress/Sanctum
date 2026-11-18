@@ -579,5 +579,5 @@
   .error-line { color: var(--text-secondary); font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
   .wallet-create { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
   .wallet-create-note { margin: 0 0 8px; font-size: 0.82rem; color: var(--text-secondary); }
-  .wallet-create select { padding: 6px 8px; border-radius: 6px; background: var(--input-bg, rgba(255, 255, 255, 0.04)); border: 1px solid var(--glass-border); color: var(--text-primary); }
+  .wallet-create select { padding: 6px 8px; border-radius: 6px; background: var(--select-bg); border: 1px solid var(--glass-border); color: var(--text-primary); }
 </style>

@@ -2354,7 +2354,7 @@
   .quick-field .label { font-size: 0.78rem; color: var(--text-secondary); }
   .quick-field select {
     padding: 8px 10px; border-radius: 8px;
-    background: var(--input-bg, rgba(255, 255, 255, 0.04));
+    background: var(--select-bg);
     border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
     color: var(--text-primary); font-size: 0.85rem; cursor: pointer;
   }
@@ -2370,7 +2370,7 @@
   }
   .report-empty {
     padding: 16px; border-radius: 10px; text-align: center;
-    background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    background: var(--row-solid); border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
     font-size: 0.85rem; color: var(--text-secondary);
   }
 
@@ -2478,7 +2478,7 @@
   .summary-item .label { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 500; }
   .summary-item .value { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
   .summary-item .value.negative { color: var(--danger); }
-  .summary-item.highlight { background: rgba(255, 255, 255, 0.04); border-radius: var(--radius-sm); padding: 8px; }
+  .summary-item.highlight { background: var(--row-solid); border-radius: var(--radius-sm); padding: 8px; }
 
   /* Warnings */
   .warnings {
@@ -2531,11 +2531,11 @@
   .last-updated { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px; }
   .export-btn {
     padding: 8px 14px; border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm); background: var(--row-solid);
     color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
     transition: all 0.15s; display: flex; align-items: center; gap: 6px;
   }
-  .export-btn:hover { border-color: var(--glass-border-hover); background: rgba(0, 0, 0, 0.3); }
+  .export-btn:hover { border-color: var(--accent-border); background: var(--row-solid-hover); color: var(--text-primary); }
 
   /* Events table */
   .events-table {

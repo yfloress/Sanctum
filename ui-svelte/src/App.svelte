@@ -235,8 +235,10 @@
     --radius-xl: 20px;
     --scrollbar-thumb: rgba(255, 255, 255, 0.12);
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
-    --select-bg: rgba(0, 0, 0, 0.25);
-    --select-bg-hover: rgba(0, 0, 0, 0.35);
+    /* Fields: opaque, a step below the card, so a select on the page does
+       not show the background through. */
+    --select-bg: #0a0910;
+    --select-bg-hover: #0d0b14;
     --option-bg: #16141d;
     --sidebar-bg: #0c0b12;
     --sidebar-border: rgba(238, 235, 255, 0.06);
@@ -254,8 +256,8 @@
        clears 4.5:1 on it, which #a855f7 does not. */
     --accent-solid: #7c3aed;
     --accent-solid-hover: #6d28d9;
-    --btn-bg: rgba(238, 235, 255, 0.05);
-    --btn-bg-hover: rgba(238, 235, 255, 0.09);
+    --btn-bg: var(--row-solid);
+    --btn-bg-hover: var(--row-solid-hover);
     /* Solid and flat: no translucent sheen, no inner highlight. */
     --card-bg: #0e0c15;
     --card-bg-solid: #0e0c15;
@@ -304,8 +306,8 @@
     --text-tertiary: #65636d;
     --scrollbar-thumb: rgba(33, 31, 38, 0.18);
     --scrollbar-thumb-hover: rgba(33, 31, 38, 0.30);
-    --select-bg: rgba(255, 255, 255, 0.75);
-    --select-bg-hover: rgba(255, 255, 255, 0.92);
+    --select-bg: #ffffff;
+    --select-bg-hover: #fdfcfe;
     --option-bg: #ffffff;
     --sidebar-bg: #faf9fc;
     --sidebar-border: rgba(33, 31, 38, 0.07);
@@ -320,8 +322,8 @@
     --text-on-accent: #ffffff;
     --accent-solid: #6e56cf;
     --accent-solid-hover: #6550b9;
-    --btn-bg: rgba(255, 255, 255, 0.78);
-    --btn-bg-hover: #ffffff;
+    --btn-bg: var(--row-solid);
+    --btn-bg-hover: var(--row-solid-hover);
     --card-bg: #ffffff;
     --row-bg: rgba(33, 31, 38, 0.035);
     --row-solid: #ffffff;
@@ -527,7 +529,7 @@
   }
 
   :global(.light-mode .tab-bar) {
-    background: var(--glass);
+    background: var(--card-bg);
     box-shadow: 0 8px 24px -14px rgba(70,50,130,0.22);
   }
 

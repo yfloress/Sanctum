@@ -165,12 +165,12 @@
 
 /* Secondary actions: a neutral surface that shows in both themes. */
 .glass-btn {
-  padding: 6px 14px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+  padding: 6px 14px; border: 1px solid var(--glass-border-hover); border-radius: var(--radius-sm);
   background: var(--btn-bg); color: var(--text-primary); cursor: pointer;
   font-size: 0.8rem; font-weight: 500;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-.glass-btn:hover:not(:disabled) { border-color: var(--glass-border-hover); background: var(--btn-bg-hover); }
+.glass-btn:hover:not(:disabled) { border-color: var(--accent-border); background: var(--btn-bg-hover); }
 .glass-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Icon button (small, for card headers) ─────────────────────── */
