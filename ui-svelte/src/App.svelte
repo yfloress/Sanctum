@@ -220,6 +220,11 @@
     --row-bg: rgba(238, 235, 255, 0.025);
     --row-bg-hover: rgba(238, 235, 255, 0.055);
     --row-border: rgba(238, 235, 255, 0.05);
+    /* Rows that sit on the page itself, not inside a card: opaque, so the
+       background does not show through as a washed-out grey. A step above
+       the card surface so a list inside a card still reads as rows. */
+    --row-solid: #13111b;
+    --row-solid-hover: #1a1724;
     /* Radix mauve (dark), the same family as the light theme's neutrals. */
     --text-primary: #eeeef0;
     --text-secondary: #b5b2bc;
@@ -319,6 +324,8 @@
     --btn-bg-hover: #ffffff;
     --card-bg: #ffffff;
     --row-bg: rgba(33, 31, 38, 0.035);
+    --row-solid: #ffffff;
+    --row-solid-hover: #f7f6fa;
     --row-bg-hover: rgba(33, 31, 38, 0.06);
     --row-border: rgba(33, 31, 38, 0.05);
     --card-bg-solid: #ffffff;

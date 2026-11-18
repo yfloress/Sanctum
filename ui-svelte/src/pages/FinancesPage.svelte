@@ -1545,7 +1545,7 @@
     padding: 8px 12px;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    background: var(--glass);
+    background: var(--row-solid);
     color: var(--text-primary);
     font-size: 0.82rem;
     transition: border-color 0.2s;
@@ -1559,7 +1559,7 @@
     padding: 7px 10px;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    background: var(--glass);
+    background: var(--row-solid);
     color: var(--text-primary);
     font-size: 0.82rem;
     transition: border-color 0.2s;
@@ -1603,7 +1603,7 @@
     margin-bottom: 10px;
     border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
-    background: var(--accent-glow);
+    background: color-mix(in srgb, var(--accent) 14%, var(--row-solid));
   }
   .bulk-all {
     display: flex;
@@ -1619,7 +1619,7 @@
     padding: 6px 10px;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    background: var(--glass);
+    background: var(--row-solid);
     color: var(--text-primary);
     font-size: 0.8rem;
   }
@@ -1665,18 +1665,18 @@
     align-items: center;
     gap: 12px;
     padding: 9px 12px;
-    background: var(--row-bg);
+    background: var(--row-solid);
     border: 1px solid var(--row-border);
     cursor: pointer;
     border-radius: var(--radius-sm);
     transition: background 0.15s;
   }
-  .tx-row:hover { background: var(--row-bg-hover); }
+  .tx-row:hover { background: var(--row-solid-hover); }
   /* The accent edge does the work: on a long list a tinted background alone is
      easy to lose, and it has to survive the hover tint sitting on top of it. */
   .tx-row.selected,
   .tx-row.selected:hover {
-    background: var(--accent-glow);
+    background: color-mix(in srgb, var(--accent) 16%, var(--row-solid));
     box-shadow: inset 3px 0 0 var(--accent);
   }
   /* Outlined rather than tinted so it reads as "here it is" without being
@@ -1688,8 +1688,8 @@
     animation: tx-flash 2.4s ease-out;
   }
   @keyframes tx-flash {
-    0%, 40% { background: var(--accent-glow); }
-    100% { background: transparent; }
+    0%, 40% { background: color-mix(in srgb, var(--accent) 16%, var(--row-solid)); }
+    100% { background: var(--row-solid); }
   }
   @media (prefers-reduced-motion: reduce) {
     .tx-row.highlight { animation: none; }

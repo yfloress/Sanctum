@@ -326,7 +326,7 @@
     padding: 8px 20px;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    background: var(--glass);
+    background: var(--row-solid);
     color: var(--text-primary);
     cursor: pointer;
     font-size: 0.85rem;
@@ -648,11 +648,11 @@
     gap: 12px;
     padding: 9px 12px;
     border-radius: var(--radius-sm);
-    background: var(--row-bg);
+    background: var(--row-solid);
     border: 1px solid var(--row-border);
     transition: background 0.15s ease;
   }
-  .tx-row:hover { background: var(--row-bg-hover); }
+  .tx-row:hover { background: var(--row-solid-hover); }
   .tx-main {
     flex: 1;
     min-width: 0;

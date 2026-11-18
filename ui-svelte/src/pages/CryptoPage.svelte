@@ -2077,14 +2077,14 @@
     gap: 14px;
     padding: 10px 12px;
     border-radius: var(--radius-sm);
-    background: var(--row-bg);
+    background: var(--row-solid);
     border: 1px solid var(--row-border);
     color: inherit;
     text-align: left;
     cursor: pointer;
     transition: background 0.15s ease;
   }
-  .holding-row:hover { background: var(--row-bg-hover); }
+  .holding-row:hover { background: var(--row-solid-hover); }
   .holding-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .holding-symbol { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
   .holding-name { font-size: 0.75rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2643,12 +2643,12 @@
     gap: 12px;
     padding: 9px 12px;
     border-radius: var(--radius-sm);
-    background: var(--row-bg);
+    background: var(--row-solid);
     border: 1px solid var(--row-border);
     cursor: pointer;
     transition: background 0.15s ease;
   }
-  .tx-row:hover { background: var(--row-bg-hover); }
+  .tx-row:hover { background: var(--row-solid-hover); }
   .tx-crypto-icon { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
 
   .tx-main {
@@ -2697,7 +2697,7 @@
   .activity-filters .date-input {
     padding: 8px 12px;
     border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--glass); color: var(--text-primary); font-size: 0.82rem;
+    background: var(--row-solid); color: var(--text-primary); font-size: 0.82rem;
     transition: border-color 0.2s;
   }
   .activity-filters select:focus,

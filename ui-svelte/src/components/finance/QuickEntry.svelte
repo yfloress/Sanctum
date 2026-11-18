@@ -134,7 +134,7 @@
   .quick-entry {
     display: flex; gap: 8px; align-items: center; margin-bottom: 14px;
     padding: 6px; border: 1px solid var(--row-border); border-radius: var(--radius-sm);
-    background: var(--row-bg);
+    background: var(--row-solid);
   }
   .quick-entry input {
     flex: 1; min-width: 0; padding: 8px 10px; border: none; background: transparent;
