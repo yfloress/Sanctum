@@ -948,3 +948,5 @@ crypto-transfer-unlink = Desvincular movimientos
 crypto-transfer-no-matches = No se encontraron movimientos coincidentes.
 crypto-transfer-refresh = Actualizar
 crypto-transfer-more = Se muestran las primeras 200 sugerencias. Confirma coincidencias para ver más.
+crypto-history-deposit = Depósito
+crypto-history-withdrawal = Retiro

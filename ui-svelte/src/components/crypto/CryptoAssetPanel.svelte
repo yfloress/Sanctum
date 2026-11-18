@@ -72,7 +72,11 @@
       {#each transactions as tx}
         <div class="panel-tx">
           <span class="tx-date">{tx.date}</span>
-          <span class="tx-type">{tx.transaction_type}</span>
+          <span class="tx-type">{tx.transaction_type === 'transfer' && tx.subtype === 'deposit'
+            ? i18n.t('crypto-history-deposit', 'Deposit')
+            : tx.transaction_type === 'transfer' && tx.subtype === 'withdrawal'
+              ? i18n.t('crypto-history-withdrawal', 'Withdrawal')
+              : i18n.t('crypto-type-' + tx.transaction_type, tx.transaction_type)}</span>
           <span class="tx-amount">{mask(tx.amount)} {tx.symbol}</span>
           <div class="panel-tx-actions">
             <button class="icon-btn-mini" onclick={() => onedit(tx.id)} aria-label={i18n.t('crypto-edit', 'Edit')} title={i18n.t('crypto-edit', 'Edit')}>

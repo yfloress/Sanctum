@@ -948,3 +948,5 @@ crypto-transfer-unlink = Unlink movements
 crypto-transfer-no-matches = No matching movements found.
 crypto-transfer-refresh = Refresh
 crypto-transfer-more = Showing the first 200 suggestions. Confirm matches to see more.
+crypto-history-deposit = Deposit
+crypto-history-withdrawal = Withdrawal
