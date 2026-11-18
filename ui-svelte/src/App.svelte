@@ -21,6 +21,7 @@
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import { startShortcuts } from './lib/shortcuts'
   import { autoSyncKraken } from './lib/api/krakenSync'
+  import { updateExportFolders } from './lib/api/exportFolders'
   import { startAutoSync } from './lib/autoSync'
   import Sidebar from './components/Sidebar.svelte'
   import MobileTopBar from './components/MobileTopBar.svelte'
@@ -47,6 +48,13 @@
       void autoSyncKraken().then(result => {
         if (active && result?.inserted) app.showToast('Kraken · ' + result.inserted)
       }).catch(() => { if (active && app.isLoggedIn) app.showToast(i18n.t('crypto-kraken-retry','Review Kraken in History sources'), true) })
+      void updateExportFolders().then(result => {
+        if (!active) return
+        if (result.issues.length) app.showToast(i18n.t('crypto-folders-issues','Some exports need review in Crypto → History sources'), true)
+        else if (result.inserted) app.showToast(i18n.t('crypto-folders-count','Imported movements') + ' · ' + result.inserted)
+      }).catch(() => {
+        if (active && app.isLoggedIn) app.showToast(i18n.t('crypto-folders-failed','Could not check export folders'), true)
+      })
       const stopSession = startSessionMonitor()
       const stopShortcuts = startShortcuts({
         openHelp: () => showShortcuts = true,

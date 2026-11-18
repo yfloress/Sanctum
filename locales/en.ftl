@@ -921,4 +921,15 @@ kraken-connect = Save connection
 kraken-working = Working…
 
 crypto-sources-title = History sources
+crypto-folders-title = CSV export folders
+crypto-folders-help = Choose a dedicated folder for one wallet and format. New CSV exports are imported locally after unlock.
+crypto-folders-remove = Disconnect
+crypto-folders-wallet = Wallet
+crypto-folders-format = CSV format
+crypto-folders-add = Choose folder
+crypto-folders-scan = Import new files
+crypto-folders-count = Imported movements
+crypto-folders-review = Review these files in Import history
+crypto-folders-issues = Some exports need review in Crypto → History sources
+crypto-folders-failed = Could not check export folders
 crypto-kraken-retry = Review Kraken in History sources

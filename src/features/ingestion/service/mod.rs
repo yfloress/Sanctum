@@ -33,6 +33,7 @@ use super::types::{ImportFormat, ImportSummary};
 use super::validation::validate_file_size;
 
 mod crypto;
+mod folders;
 mod kraken_sync;
 mod statement;
 mod transactions;
@@ -1507,6 +1508,34 @@ mod integration_tests {
         let wallet = CryptoWallet::new(id.clone(), name.to_string(), "exchange".to_string(), None);
         db.create_wallet(&wallet).expect("create wallet");
         id
+    }
+
+    #[test]
+    fn export_folder_imports_overlapping_histories_once_and_disconnects() {
+        let h = new_ingestion_harness();
+        let wallet_id = seed_wallet(h.db.read().unwrap().as_ref().unwrap(), "Feather");
+        let folder = h.test_dir.join("exports");
+        std::fs::create_dir(&folder).unwrap();
+        let header =
+            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n";
+        let first = "1,0,2025-01-01 12:00:00,in,1,0,first,,,\n";
+        let second = "2,0,2025-01-02 12:00:00,in,2,0,second,,,\n";
+        std::fs::write(folder.join("01.csv"), format!("{header}{first}")).unwrap();
+        h.service
+            .set_export_folder(wallet_id.clone(), "feather".into(), Some(folder.clone()))
+            .unwrap();
+        let first_scan = h.service.update_export_folders().unwrap();
+        assert!(first_scan.issues.is_empty());
+        assert_eq!(first_scan.inserted, 1);
+        std::fs::write(folder.join("02.csv"), format!("{header}{first}{second}")).unwrap();
+        let next_scan = h.service.update_export_folders().unwrap();
+        assert!(next_scan.issues.is_empty());
+        assert_eq!(next_scan.inserted, 1);
+        assert_eq!(h.service.update_export_folders().unwrap().inserted, 0);
+        h.service
+            .set_export_folder(wallet_id, "feather".into(), None)
+            .unwrap();
+        assert!(h.service.export_folders().unwrap().is_empty());
     }
 
     // Test fixture builder: cohesive args mirror the struct fields it constructs.

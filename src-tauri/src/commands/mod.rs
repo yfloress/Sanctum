@@ -22,6 +22,7 @@
 
 pub mod crypto;
 pub mod dashboard;
+pub mod export_folders;
 pub mod finance;
 pub mod ingestion;
 pub mod kraken_sync;

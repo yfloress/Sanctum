@@ -921,4 +921,15 @@ kraken-connect = Guardar conexión
 kraken-working = Procesando…
 
 crypto-sources-title = Fuentes de historial
+crypto-folders-title = Carpetas de exportaciones CSV
+crypto-folders-help = Elige una carpeta exclusiva para una billetera y un formato. Los CSV nuevos se importan localmente al desbloquear.
+crypto-folders-remove = Desconectar
+crypto-folders-wallet = Billetera
+crypto-folders-format = Formato CSV
+crypto-folders-add = Elegir carpeta
+crypto-folders-scan = Importar archivos nuevos
+crypto-folders-count = Movimientos importados
+crypto-folders-review = Revisa estos archivos en Importar historial
+crypto-folders-issues = Hay exportaciones que revisar en Cripto → Fuentes de historial
+crypto-folders-failed = No se pudieron revisar las carpetas de exportaciones
 crypto-kraken-retry = Revisa Kraken en Fuentes de historial
