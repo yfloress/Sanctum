@@ -153,7 +153,7 @@
   }
   .cat-col:hover {
     border-color: var(--glass-border-hover);
-    box-shadow: var(--glass-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: var(--glass-shadow-lg);
   }
   .cat-col-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
   .cat-col-header h4 { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin: 0; flex: 1; }

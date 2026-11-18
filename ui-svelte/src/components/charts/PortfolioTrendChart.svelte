@@ -72,9 +72,9 @@
     grid: { left: 60, right: 20, top: 20, bottom: 30 },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: pick('#1a1a1a', L.tooltipBg),
-      borderColor: pick('#333', L.tooltipBorder),
-      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
+      backgroundColor: pick('#18161f', L.tooltipBg),
+      borderColor: pick('#2f2c35', L.tooltipBorder),
+      textStyle: { color: pick('#eeeef0', L.tooltipText), fontSize: 12 },
       formatter: (params: { value: [number, number] }[]) => {
         const pt = params[0]
         if (!pt) return ''
@@ -85,8 +85,8 @@
     },
     xAxis: {
       type: 'time',
-      axisLine: { lineStyle: { color: pick('#333', L.axisLine) } },
-      axisLabel: { color: pick('#666', L.labelDim), fontSize: 10 },
+      axisLine: { lineStyle: { color: pick('#2f2c35', L.axisLine) } },
+      axisLabel: { color: pick('#7c7a85', L.labelDim), fontSize: 10 },
     },
     yAxis: {
       type: 'value',
@@ -95,8 +95,8 @@
       scale: true,
       splitNumber: 3,
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: pick('#1a1a1a', L.splitLine) } },
-      axisLabel: { color: pick('#666', L.labelDim), fontSize: 10, formatter: (val: number) => formatYAxis(val) },
+      splitLine: { lineStyle: { color: pick('#18161f', L.splitLine) } },
+      axisLabel: { color: pick('#7c7a85', L.labelDim), fontSize: 10, formatter: (val: number) => formatYAxis(val) },
     },
     series: [{
       type: 'line',

@@ -33,9 +33,9 @@
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      backgroundColor: pick('#1a1a1a', L.tooltipBg),
-      borderColor: pick('#333', L.tooltipBorder),
-      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
+      backgroundColor: pick('#18161f', L.tooltipBg),
+      borderColor: pick('#2f2c35', L.tooltipBorder),
+      textStyle: { color: pick('#eeeef0', L.tooltipText), fontSize: 12 },
       formatter: (p: { name: string; percent: number }) =>
         `${p.name}: ${p.percent.toFixed(1)}%`,
     },
@@ -43,7 +43,7 @@
       orient: 'vertical',
       right: 8,
       top: 'center',
-      textStyle: { color: pick('#555', L.labelDim), fontSize: 11 },
+      textStyle: { color: pick('#7c7a85', L.labelDim), fontSize: 11 },
       icon: 'circle',
       itemWidth: 8,
       itemHeight: 8,
@@ -53,10 +53,10 @@
       radius: ['40%', '68%'],
       center: ['38%', '50%'],
       avoidLabelOverlap: true,
-      itemStyle: { borderColor: pick('#0d0d12', L.sliceBorder), borderWidth: 2, borderRadius: 4 },
+      itemStyle: { borderColor: pick('#0e0c15', L.sliceBorder), borderWidth: 2, borderRadius: 4 },
       label: { show: false },
       emphasis: {
-        label: { show: true, fontSize: 12, fontWeight: 'bold', color: pick('#e8eaed', L.centerLabel) },
+        label: { show: true, fontSize: 12, fontWeight: 'bold', color: pick('#eeeef0', L.centerLabel) },
       },
       data: data.map((d, i) => ({
         name: d.name,

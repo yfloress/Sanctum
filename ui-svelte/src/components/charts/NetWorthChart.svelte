@@ -66,23 +66,23 @@
     grid: { left: 60, right: 16, top: 20, bottom: 32 },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: pick('#1a1a1a', L.tooltipBg),
-      borderColor: pick('#2a2a2a', L.tooltipBorder),
-      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
+      backgroundColor: pick('#18161f', L.tooltipBg),
+      borderColor: pick('#2b2930', L.tooltipBorder),
+      textStyle: { color: pick('#eeeef0', L.tooltipText), fontSize: 12 },
       formatter: (params: { axisValue: string; value: number }[]) => {
         const pt = params[0]
         if (!pt) return ''
-        return `<span style="color:${pick('#888', L.muted)};font-size:11px">${formatDate(pt.axisValue)}</span><br/><b>${formatCurrency(pt.value)}</b>`
+        return `<span style="color:${pick('#8e8c99', L.muted)};font-size:11px">${formatDate(pt.axisValue)}</span><br/><b>${formatCurrency(pt.value)}</b>`
       },
     },
     xAxis: {
       type: 'category',
       data: data.dates,
       boundaryGap: false,
-      axisLine: { lineStyle: { color: pick('#2a2a2a', L.axisLine) } },
+      axisLine: { lineStyle: { color: pick('#2b2930', L.axisLine) } },
       axisTick: { show: false },
       axisLabel: {
-        color: pick('#555', L.labelDim),
+        color: pick('#7c7a85', L.labelDim),
         fontSize: 10,
         formatter: (val: string) => formatDate(val),
         interval: labelInterval(),
@@ -92,9 +92,9 @@
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: pick('#1a1a1a', L.splitLine) } },
+      splitLine: { lineStyle: { color: pick('#18161f', L.splitLine) } },
       axisLabel: {
-        color: pick('#555', L.labelDim),
+        color: pick('#7c7a85', L.labelDim),
         fontSize: 10,
         formatter: (val: number) => formatYAxis(val),
       },

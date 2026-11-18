@@ -2519,7 +2519,7 @@
   .readiness-item.info { background: rgba(96, 165, 250, 0.05); }
   .status-badge {
     font-size: 0.65rem; text-transform: uppercase; font-weight: 600;
-    padding: 2px 6px; border-radius: 3px; color: #999;
+    padding: 2px 6px; border-radius: 3px; color: var(--text-tertiary);
   }
   .status-badge.ok { background: rgba(74, 222, 128, 0.2); color: var(--success); }
   .status-badge.warn { background: rgba(251, 191, 36, 0.2); color: var(--warning); }

@@ -196,17 +196,19 @@
     --aurora-2: rgba(99, 102, 241, 0.40);
     --aurora-3: rgba(217, 70, 239, 0.35);
     --aurora-opacity: 0.55;
-    --glass: rgba(255, 255, 255, 0.035);
-    --glass-hover: rgba(255, 255, 255, 0.06);
-    --glass-active: rgba(255, 255, 255, 0.08);
-    --glass-elevated: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-border-hover: rgba(255, 255, 255, 0.14);
+    /* Overlays tinted with the violet of the page rather than plain white:
+       white at a few percent over near-black reads as a flat, cold grey. */
+    --glass: rgba(238, 235, 255, 0.035);
+    --glass-hover: rgba(238, 235, 255, 0.06);
+    --glass-active: rgba(238, 235, 255, 0.08);
+    --glass-elevated: rgba(238, 235, 255, 0.05);
+    --glass-border: rgba(238, 235, 255, 0.08);
+    --glass-border-hover: rgba(238, 235, 255, 0.14);
     --glass-blur: blur(16px);
     --glass-blur-heavy: blur(24px);
     --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
     --glass-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.45);
-    --glass-glow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    --glass-glow: none;
     --accent: #a855f7;
     --accent-glow: rgba(168, 85, 247, 0.15);
     --accent-hover: #c084fc;
@@ -215,12 +217,13 @@
     --warning: #fbbf24;
     --success-vivid: var(--success);
     --danger-vivid: var(--danger);
-    --row-bg: rgba(255, 255, 255, 0.025);
-    --row-bg-hover: rgba(255, 255, 255, 0.055);
-    --row-border: rgba(255, 255, 255, 0.04);
-    --text-primary: #e8eaed;
-    --text-secondary: #9aa0a6;
-    --text-tertiary: #5f6368;
+    --row-bg: rgba(238, 235, 255, 0.025);
+    --row-bg-hover: rgba(238, 235, 255, 0.055);
+    --row-border: rgba(238, 235, 255, 0.05);
+    /* Radix mauve (dark), the same family as the light theme's neutrals. */
+    --text-primary: #eeeef0;
+    --text-secondary: #b5b2bc;
+    --text-tertiary: #7c7a85;
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
@@ -229,15 +232,15 @@
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
     --select-bg: rgba(0, 0, 0, 0.25);
     --select-bg-hover: rgba(0, 0, 0, 0.35);
-    --option-bg: #1a1a1a;
-    --sidebar-bg: linear-gradient(180deg, #111116 0%, #0d0d11 100%);
-    --sidebar-border: rgba(255, 255, 255, 0.06);
-    --nav-active-bg: rgba(255, 255, 255, 0.08);
-    --nav-active-border: rgba(255, 255, 255, 0.1);
+    --option-bg: #16141d;
+    --sidebar-bg: #0c0b12;
+    --sidebar-border: rgba(238, 235, 255, 0.06);
+    --nav-active-bg: rgba(238, 235, 255, 0.08);
+    --nav-active-border: rgba(238, 235, 255, 0.1);
     --danger-bg: rgba(248, 113, 113, 0.08);
     --danger-border: rgba(248, 113, 113, 0.15);
     --modal-bg: var(--card-bg-solid);
-    --modal-border: rgba(255, 255, 255, 0.1);
+    --modal-border: rgba(238, 235, 255, 0.1);
     --modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     --accent-bg: rgba(168, 85, 247, 0.2);
     --accent-border: rgba(168, 85, 247, 0.3);
@@ -246,17 +249,16 @@
        clears 4.5:1 on it, which #a855f7 does not. */
     --accent-solid: #7c3aed;
     --accent-solid-hover: #6d28d9;
-    --btn-bg: rgba(255, 255, 255, 0.05);
-    --btn-bg-hover: rgba(255, 255, 255, 0.09);
-    --card-bg:
-      radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.10) 0%, transparent 55%),
-      linear-gradient(145deg, rgba(18, 16, 24, 0.70) 0%, rgba(14, 12, 21, 0.70) 100%);
+    --btn-bg: rgba(238, 235, 255, 0.05);
+    --btn-bg-hover: rgba(238, 235, 255, 0.09);
+    /* Solid and flat: no translucent sheen, no inner highlight. */
+    --card-bg: #0e0c15;
     --card-bg-solid: #0e0c15;
-    --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
     --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.35) 30%, rgba(168, 85, 247, 0.35) 70%, transparent 100%);
   }
 
-  /* Light is a daylight theme, not dark inverted: frosted white glass over a
+  /* Light is a daylight theme, not dark inverted: solid white cards over a
      soft mauve page with the dot pattern showing through. --bg-gradient stays a
      single layer, because the dots background repeats its tile size across
      every layer. Neutrals and accent follow Radix Colors (mauve, violet, jade,
@@ -284,7 +286,7 @@
     --glass-blur-heavy: blur(28px) saturate(160%);
     --glass-shadow: 0 1px 1px rgba(33, 31, 38, 0.03), 0 10px 30px -14px rgba(70, 50, 130, 0.20);
     --glass-shadow-lg: 0 24px 60px -20px rgba(70, 50, 130, 0.28);
-    --glass-glow: 0 0 0 1px rgba(255, 255, 255, 0.75) inset;
+    --glass-glow: none;
     --accent: #6e56cf;
     --accent-glow: rgba(110, 86, 207, 0.18);
     --accent-hover: #6550b9;
@@ -316,12 +318,12 @@
     --accent-solid-hover: #6550b9;
     --btn-bg: rgba(255, 255, 255, 0.78);
     --btn-bg-hover: #ffffff;
-    --card-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.60) 100%);
+    --card-bg: #ffffff;
     --row-bg: rgba(33, 31, 38, 0.035);
     --row-bg-hover: rgba(33, 31, 38, 0.06);
     --row-border: rgba(33, 31, 38, 0.05);
     --card-bg-solid: #ffffff;
-    --card-shadow: 0 1px 1px rgba(33, 31, 38, 0.03), 0 12px 32px -16px rgba(70, 50, 130, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    --card-shadow: 0 1px 1px rgba(33, 31, 38, 0.03), 0 12px 32px -16px rgba(70, 50, 130, 0.22);
     --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(110, 86, 207, 0.30) 30%, rgba(110, 86, 207, 0.30) 70%, transparent 100%);
   }
 
@@ -507,17 +509,16 @@
     gap: 2px;
     padding: 5px;
     border-radius: 14px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%);
+    background: var(--card-bg-solid);
     border: 1px solid var(--glass-border);
     width: fit-content;
-    backdrop-filter: var(--glass-blur);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
     position: relative;
   }
 
   :global(.light-mode .tab-bar) {
     background: var(--glass);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px -14px rgba(70,50,130,0.22);
+    box-shadow: 0 8px 24px -14px rgba(70,50,130,0.22);
   }
 
   :global(.tab-bar button) {
