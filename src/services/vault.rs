@@ -312,7 +312,7 @@ mod tests {
         let old_vault = root.join("old").join("vault.db");
         let backup = root.join("backup.db");
         let new_vault = root.join("new").join("data").join("vault.db");
-        let password = SecretString::from("correct horse battery".to_string());
+        let password = SecretString::from(uuid::Uuid::new_v4().to_string());
 
         {
             let db = Database::init(old_vault.clone(), &password).unwrap();
@@ -334,7 +334,7 @@ mod tests {
         assert!(!new_vault.parent().unwrap().exists());
         import_vault(&backup, &new_vault).unwrap();
 
-        let wrong = SecretString::from("not the password".to_string());
+        let wrong = SecretString::from(uuid::Uuid::new_v4().to_string());
         assert!(Database::init(new_vault.clone(), &wrong).is_err());
         let db = Database::init(new_vault, &password).unwrap();
         assert_eq!(db.get_accounts().unwrap().len(), 1);
