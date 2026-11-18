@@ -128,7 +128,7 @@ pub const SUBTYPES_EXPENSE: [&str; 8] = [
 
 pub const SUBTYPES_TRANSFER: [&str; 2] = ["deposit", "withdrawal"];
 
-pub const SUBTYPES_TRADE: [&str; 4] = ["buy", "sell", "swap", "other"];
+pub const SUBTYPES_TRADE: [&str; 5] = ["buy", "sell", "swap", "other", "opening_balance"];
 
 pub fn normalize_subtype(tx_type: &str, value: &str) -> Option<String> {
     let trimmed = value.trim().to_lowercase();

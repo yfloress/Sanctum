@@ -84,6 +84,14 @@ impl CryptoService {
             let override_cost_basis =
                 validate_non_negative(override_cost_basis, "Override cost basis")?;
 
+            if subtype.as_deref() == Some("opening_balance")
+                && db.opening_balance_overlaps(&wallet_id, &coin_id, &date, None)?
+            {
+                return Err(CryptoError::Validation(crate::services::i18n::t(
+                    "crypto-opening-overlap",
+                )));
+            }
+
             let valid_types = ["trade", "income", "expense", "transfer"];
             if !valid_types.contains(&transaction_type.as_str()) {
                 return Err(CryptoError::Validation(format!(
@@ -104,7 +112,9 @@ impl CryptoService {
                 ));
             }
 
-            let price = if mech == "buy" || mech == "sell" {
+            let price = if subtype.as_deref() != Some("opening_balance")
+                && (mech == "buy" || mech == "sell")
+            {
                 match price_per_coin {
                     Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
                     None => {
@@ -635,7 +645,16 @@ impl CryptoService {
 
             validate_positive_amount(amount, "Amount")?;
             let existing_mech = existing.mechanical_type();
-            let price = if existing_mech == "buy" || existing_mech == "sell" {
+            if (existing.subtype.as_deref() == Some("opening_balance"))
+                != (subtype.as_deref() == Some("opening_balance"))
+            {
+                return Err(CryptoError::Validation(
+                    "An opening balance must be edited as an opening balance".into(),
+                ));
+            }
+            let price = if existing.subtype.as_deref() != Some("opening_balance")
+                && (existing_mech == "buy" || existing_mech == "sell")
+            {
                 match price_per_coin {
                     Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
                     None => {
@@ -657,6 +676,19 @@ impl CryptoService {
             let override_proceeds = validate_non_negative(override_proceeds, "Override proceeds")?;
             let override_cost_basis =
                 validate_non_negative(override_cost_basis, "Override cost basis")?;
+            if subtype.as_deref() == Some("opening_balance")
+                && db.opening_balance_overlaps(
+                    &existing.wallet_id,
+                    &existing.coin_id,
+                    &date,
+                    Some(&id),
+                )?
+            {
+                return Err(CryptoError::Validation(crate::services::i18n::t(
+                    "crypto-opening-overlap",
+                )));
+            }
+
             let next_mech = crate::features::crypto::tax::types::derive_mechanical_type(
                 &existing.transaction_type,
                 subtype.as_deref(),

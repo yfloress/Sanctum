@@ -63,6 +63,31 @@ fn row_to_crypto_transaction(row: &Row<'_>) -> rusqlite::Result<CryptoTransactio
 }
 
 impl Database {
+    pub fn opening_balance_overlaps(
+        &self,
+        wallet: &str,
+        coin: &str,
+        date: &str,
+        exclude: Option<&str>,
+    ) -> Result<bool, DbError> {
+        self.read(|conn| {
+            Ok(conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM crypto_transactions WHERE wallet_id = ?1
+                 AND id IS NOT ?4 AND (coin_id = ?2 OR (fee_coin_id = ?2 AND fee_amount > 0))
+                 AND (subtype = 'opening_balance' OR substr(date, 1, 10) <= substr(?3, 1, 10)))",
+                params![wallet, coin, date, exclude],
+                |row| row.get(0),
+            )?)
+        })
+    }
+
+    pub fn has_unknown_opening_cost(&self) -> Result<bool, DbError> {
+        self.read(|conn| Ok(conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM crypto_transactions WHERE subtype = 'opening_balance' AND override_cost_basis IS NULL)",
+            [], |row| row.get(0),
+        )?))
+    }
+
     /// Creates a new crypto transaction
     pub fn create_crypto_transaction(&self, tx: &CryptoTransaction) -> Result<(), DbError> {
         if !tx.validate() {

@@ -464,6 +464,10 @@ impl CryptoService {
 
     // ==================== Portfolio ====================
 
+    pub fn has_unknown_opening_cost(&self) -> Result<bool, CryptoError> {
+        self.with_db(|db| db.has_unknown_opening_cost().map_err(CryptoError::Database))
+    }
+
     pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, CryptoError> {
         self.with_db(|db| db.get_aggregated_portfolio().map_err(CryptoError::Database))
     }

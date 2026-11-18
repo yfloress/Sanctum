@@ -214,6 +214,7 @@
     const s = tx.subtype
     const detail = `${mask(tx.amount)} ${tx.symbol}`
     const args = { detail }
+    if (s === 'opening_balance') return i18n.t('crypto-tx-opening', 'Opening balance') + ' · ' + detail
     if (t === 'income' || (t === 'transfer' && s === 'deposit'))
       return i18n.tArgs('crypto-tx-received', args, `Received ${detail}`)
     if (t === 'expense' || (t === 'transfer' && s === 'withdrawal'))
@@ -547,7 +548,7 @@
 
   /** A leg of a swap or a wallet transfer means nothing copied on its own. */
   function canDuplicate(tx: CryptoTransactionDto): boolean {
-    return !tx.has_related_tx && tx.transaction_type !== 'transfer'
+    return !tx.has_related_tx && tx.transaction_type !== 'transfer' && tx.subtype !== 'opening_balance'
   }
 
   async function duplicateTransaction(tx: CryptoTransactionDto) {
@@ -864,6 +865,9 @@
       taxReport = taxSummary.report
       taxReportStale = false
     } catch (e) {
+      taxSummary = null
+      taxReport = null
+      taxReportStale = true
       app.showToast(errorMessage(e), true)
     } finally {
       taxReportLoading = false

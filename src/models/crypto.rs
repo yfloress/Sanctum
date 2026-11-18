@@ -269,6 +269,9 @@ impl CryptoTransaction {
     }
 
     pub fn cost_basis(&self) -> f64 {
+        if self.subtype.as_deref() == Some("opening_balance") {
+            return self.override_cost_basis.unwrap_or(0.0);
+        }
         let base = self.amount * self.price_per_coin.unwrap_or(0.0);
         let fee = self.fee.unwrap_or(0.0);
         base + fee

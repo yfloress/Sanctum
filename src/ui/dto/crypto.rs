@@ -48,6 +48,15 @@ fn parse_optional_f64(raw: &Option<String>) -> Option<f64> {
     raw.as_ref().and_then(|s| s.parse::<f64>().ok())
 }
 
+fn opening_cost(value: &Option<String>) -> Result<Option<f64>, AppError> {
+    value
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| parse_required_f64(s, "opening cost"))
+        .transpose()
+}
+
 // ==================== Portfolio ====================
 
 /// Portfolio overview for the main crypto page.
@@ -341,15 +350,23 @@ impl CryptoTransactionInput {
             symbol: self.symbol,
             transaction_type: self.transaction_type,
             amount: parse_required_f64(&self.amount, "amount")?,
-            price_per_coin: Some(parse_required_f64(&self.price, "price")?),
+            price_per_coin: if self.subtype.as_deref() == Some("opening_balance") {
+                None
+            } else {
+                Some(parse_required_f64(&self.price, "price")?)
+            },
             fee: parse_optional_nonzero_f64(&self.fee),
             fee_coin_id: self.fee_coin_id,
             fee_amount: parse_optional_f64(&self.fee_coin_amount),
             date: self.date,
             notes: self.notes,
+            override_cost_basis: if self.subtype.as_deref() == Some("opening_balance") {
+                opening_cost(&self.override_cost_basis)?
+            } else {
+                parse_optional_f64(&self.override_cost_basis)
+            },
             subtype: self.subtype,
             override_proceeds: parse_optional_f64(&self.override_proceeds),
-            override_cost_basis: parse_optional_f64(&self.override_cost_basis),
         })
     }
 }
@@ -399,15 +416,23 @@ impl CryptoTransactionUpdateInput {
         Ok(UpdateCryptoTransaction {
             id: self.id,
             amount: parse_required_f64(&self.amount, "amount")?,
-            price_per_coin: Some(parse_required_f64(&self.price, "price")?),
+            price_per_coin: if self.subtype.as_deref() == Some("opening_balance") {
+                None
+            } else {
+                Some(parse_required_f64(&self.price, "price")?)
+            },
             fee: parse_optional_nonzero_f64(&self.fee),
             fee_coin_id: self.fee_coin_id,
             fee_amount: parse_optional_f64(&self.fee_coin_amount),
             date: self.date,
             notes: self.notes,
+            override_cost_basis: if self.subtype.as_deref() == Some("opening_balance") {
+                opening_cost(&self.override_cost_basis)?
+            } else {
+                parse_optional_f64(&self.override_cost_basis)
+            },
             subtype: self.subtype,
             override_proceeds: parse_optional_f64(&self.override_proceeds),
-            override_cost_basis: parse_optional_f64(&self.override_cost_basis),
         })
     }
 }

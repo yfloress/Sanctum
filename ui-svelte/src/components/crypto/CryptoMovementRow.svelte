@@ -28,7 +28,7 @@
 
 <div class="movement">
   <span class="tx-date">{tx.date}</span>
-  <span class="tx-type">{tx.transaction_type === 'transfer' && tx.subtype === 'deposit'
+  <span class="tx-type">{tx.subtype === 'opening_balance' ? i18n.t('crypto-tx-opening', 'Opening balance') : tx.transaction_type === 'transfer' && tx.subtype === 'deposit'
     ? i18n.t('crypto-history-deposit', 'Deposit')
     : tx.transaction_type === 'transfer' && tx.subtype === 'withdrawal'
       ? i18n.t('crypto-history-withdrawal', 'Withdrawal')

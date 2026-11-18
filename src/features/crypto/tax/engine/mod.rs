@@ -139,6 +139,11 @@ pub fn build_tax_report(
             break;
         }
 
+        // The observation date cannot establish the date of acquisition for tax lots.
+        if tx.subtype.as_deref() == Some("opening_balance") {
+            return Err(crate::services::i18n::t("crypto-opening-tax-pending"));
+        }
+
         if let Some(rel_id) = &tx.related_tx_id
             && let Some(counter) = tx_map.get(rel_id)
         {
@@ -376,6 +381,48 @@ mod tests {
         assert_eq!(report.disposals.len(), 1);
         assert_eq!(report.disposals[0].term.as_deref(), Some("short"));
         assert!(report.summary.short_term_gain.is_some());
+    }
+
+    fn usa_fifo(period: &str) -> TaxPeriodSettings {
+        TaxPeriodSettings {
+            period_id: period.to_string(),
+            jurisdiction: TaxJurisdiction::Usa,
+            method: TaxMethod::Fifo,
+            include_swaps: false,
+            include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
+        }
+    }
+
+    fn opening(amount: f64, cost: Option<f64>, date: &str) -> CryptoTransaction {
+        let mut tx = tx_typed("o1", "trade", Some("opening_balance"), amount, None, date);
+        tx.override_cost_basis = cost;
+        tx
+    }
+
+    #[test]
+    fn opening_balance_holds_coins_at_its_stated_cost() {
+        let known = opening(2.6, Some(390.0), "2025-12-31");
+        assert_eq!(known.mechanical_type(), "buy");
+        assert!(approx_eq(known.cost_basis(), 390.0));
+        // Unknown cost: no price is invented from the amount.
+        let unknown = opening(2.6, None, "2025-12-31");
+        assert!(approx_eq(unknown.cost_basis(), 0.0));
+    }
+
+    #[test]
+    fn opening_balance_blocks_only_the_periods_it_reaches() {
+        // Its date says when the balance was observed, not when the coins were
+        // bought, so a period that includes it cannot be reported.
+        let txs = vec![
+            opening(1.0, Some(100.0), "2025-06-01"),
+            tx("s1", "sell", 0.5, Some(150.0), "2025-07-01"),
+        ];
+        assert!(build_tax_report(txs.clone(), usa_fifo("2025"), vec![]).is_err());
+
+        // An earlier period, before the opening balance, still reports.
+        let earlier = build_tax_report(txs, usa_fifo("2024"), vec![]).expect("report");
+        assert_eq!(earlier.summary.disposals, 0);
     }
 
     #[test]

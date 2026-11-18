@@ -228,8 +228,7 @@ impl Database {
 
             if matches!(tx_type, CryptoTransactionType::Buy) {
                 entry.total_amount += tx.amount;
-                let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
-                entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
+                entry.total_cost_basis += tx.cost_basis();
             } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
                 entry.total_amount += tx.amount;
                 if let Some(price) = tx.price_per_coin {
@@ -644,9 +643,7 @@ impl Database {
             match tx_type {
                 CryptoTransactionType::Buy => {
                     entry.total_amount += tx.amount;
-                    let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
-                    let fee = tx.fee.unwrap_or(0.0);
-                    entry.total_cost_basis += cost + fee;
+                    entry.total_cost_basis += tx.cost_basis();
                 }
                 CryptoTransactionType::TransferIn => {
                     entry.total_amount += tx.amount;

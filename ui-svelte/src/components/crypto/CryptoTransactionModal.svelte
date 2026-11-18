@@ -33,12 +33,13 @@
 
   let { show = $bindable(false), wallets, coinCatalog, onsubmit, onclose }: Props = $props()
 
-  let txMode = $state<'buy' | 'sell' | 'income' | 'fee' | 'transfer' | 'swap'>('buy')
+  let txMode = $state<'buy' | 'sell' | 'income' | 'fee' | 'transfer' | 'swap' | 'opening'>('buy')
   let txWalletId = $state('')
   let txCoinId = $state('')
   let txSymbol = $state('')
   let txAmount = $state('')
   let txPrice = $state('')
+  let openingCost = $state('')
   let txFee = $state('0')
   let txDate = $state(localIsoDate())
   let txNotes = $state('')
@@ -88,6 +89,7 @@
     txSymbol = ''
     txAmount = ''
     txPrice = ''
+    openingCost = ''
     txFee = '0'
     txDate = localIsoDate()
     txNotes = ''
@@ -159,10 +161,10 @@
         })
       } else {
         const backendType =
-          txMode === 'buy' ? 'trade' :
+          (txMode === 'opening' || txMode === 'buy') ? 'trade' :
           txMode === 'sell' ? 'trade' :
           txMode === 'fee' ? 'expense' : txMode
-        const subtype = txMode === 'fee' ? 'fee' : (txMode === 'buy' || txMode === 'sell') ? txMode : undefined
+        const subtype = txMode === 'opening' ? 'opening_balance' : txMode === 'fee' ? 'fee' : (txMode === 'buy' || txMode === 'sell') ? txMode : undefined
         await cryptoApi.addCryptoTransaction({
           wallet_id: txWalletId,
           coin_id: txCoinId,
@@ -170,8 +172,9 @@
           transaction_type: backendType,
           subtype,
           amount: txAmount,
-          price: txPrice,
-          fee: txFee,
+          price: txMode === 'opening' ? '' : txPrice,
+          override_cost_basis: txMode === 'opening' ? openingCost.trim() || undefined : undefined,
+          fee: txMode === 'opening' ? '0' : txFee,
           date: txDate,
           notes: txNotes || undefined,
         })
@@ -196,7 +199,7 @@
     <div class="modal wide" use:dialog={{ onclose: close, onsubmit: submitCryptoTransaction }}>
       <h3>{i18n.t('crypto-tx-title', 'New Transaction')}</h3>
       <div class="tx-type-bar">
-        {#each (['buy', 'sell', 'income', 'fee', 'transfer', 'swap'] as const) as t}
+        {#each (['buy', 'sell', 'income', 'fee', 'transfer', 'swap', 'opening'] as const) as t}
           <button class="tx-type-btn" class:active={txMode === t} onclick={() => txMode = t}>
             {i18n.t(`crypto-tx-${t}`, t.charAt(0).toUpperCase() + t.slice(1))}
           </button>
@@ -323,16 +326,25 @@
             {i18n.t('crypto-tx-amount', 'Amount')}
             <input type="text" bind:value={txAmount} placeholder="0.00" />
           </label>
+          {#if txMode === 'opening'}
+            <label>{i18n.t('crypto-opening-cost', 'Total acquisition cost (USD, optional)')}
+              <input type="number" step="any" min="0" value={openingCost} oninput={e => openingCost = e.currentTarget.value} />
+            </label>
+            <small>{i18n.t('crypto-opening-help', 'Enter the balance before the first movement you will import. Leave the cost blank if unknown.')}</small>
+          {:else}
           <label>
             {i18n.t('crypto-tx-price', 'Price (per coin)')}
             <input type="text" bind:value={txPrice} placeholder="0.00" />
           </label>
+          {/if}
         {/if}
 
+        {#if txMode !== 'opening'}
         <label>
           {i18n.t('crypto-tx-fee-label', 'Fee')}
           <input type="text" bind:value={txFee} placeholder="0" />
         </label>
+        {/if}
         <label>
           {i18n.t('crypto-tx-date', 'Date')}
           <input type="date" bind:value={txDate} />

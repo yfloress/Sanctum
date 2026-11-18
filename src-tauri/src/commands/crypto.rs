@@ -132,6 +132,7 @@ pub fn fetch_portfolio(
 
     // Calculate unrealized PnL and ROI from aggregated assets
     let total_cost_basis: f64 = assets.iter().map(|a| a.total_cost_basis).sum();
+    let pending_cost = crypto.has_unknown_opening_cost().map_err(AppError::from)?;
     let unrealized_pnl = total_usd - total_cost_basis;
     let roi = if total_cost_basis > 0.0 {
         (unrealized_pnl / total_cost_basis) * 100.0
@@ -141,26 +142,31 @@ pub fn fetch_portfolio(
 
     // Calculate realized gains YTD via tax summary
     let current_year = jiff::Zoned::now().strftime("%Y").to_string();
-    let (realized_ytd_val, realized_ytd_neg) = crypto
+    let realized = crypto
         .generate_tax_summary(current_year)
-        .map(|s| {
-            (
-                s.report.summary.total_gain,
-                s.report.summary.total_gain < 0.0,
-            )
-        })
-        .unwrap_or((0.0, false));
-
+        .ok()
+        .map(|s| s.report.summary.total_gain);
+    let pending = sanctum::services::i18n::t("crypto-opening-pending");
     // Save snapshot for portfolio trend chart
     let _ = crypto.save_crypto_portfolio_snapshot(total_usd, total_cost_basis);
 
     Ok(PortfolioResponse {
         total_value: fmt_pref(total_usd, &settings, &finance),
-        unrealized_pnl: fmt_pref(unrealized_pnl.abs(), &settings, &finance),
+        unrealized_pnl: if pending_cost {
+            pending.clone()
+        } else {
+            fmt_pref(unrealized_pnl.abs(), &settings, &finance)
+        },
         unrealized_pnl_negative: unrealized_pnl < 0.0,
-        realized_ytd: fmt_pref(realized_ytd_val.abs(), &settings, &finance),
-        realized_ytd_negative: realized_ytd_neg,
-        roi: format!("{:.2}%", if roi == 0.0 { 0.0 } else { roi }),
+        realized_ytd: realized
+            .map(|v| fmt_pref(v.abs(), &settings, &finance))
+            .unwrap_or_else(|| pending.clone()),
+        realized_ytd_negative: realized.is_some_and(|v| v < 0.0),
+        roi: if pending_cost {
+            pending
+        } else {
+            format!("{:.2}%", if roi == 0.0 { 0.0 } else { roi })
+        },
         roi_negative: roi < 0.0,
         assets: portfolio_assets,
         distribution,

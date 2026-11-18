@@ -430,6 +430,48 @@ fn create_crypto_tables(conn: &Connection) -> Result<(), DbError> {
         [],
     )?;
 
+    create_opening_balance_guards(conn)
+}
+
+/// An opening balance stands for everything a wallet held of one coin up to its
+/// date, so it must be the earliest record for that wallet and coin: one per
+/// pair, with nothing at or before it, carrying only an amount and optionally
+/// a total cost. The service checks this too; these guards keep the ledger
+/// consistent whatever path writes to it, imports included.
+fn create_opening_balance_guards(conn: &Connection) -> Result<(), DbError> {
+    conn.execute_batch(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_crypto_opening_balance
+            ON crypto_transactions(wallet_id, coin_id) WHERE subtype = 'opening_balance';",
+    )?;
+    for (name, event) in [
+        ("insert", "INSERT"),
+        (
+            "update",
+            "UPDATE OF wallet_id, coin_id, date, subtype, amount, fee, fee_coin_id, fee_amount, \
+             related_tx_id, override_proceeds, price_per_coin, override_cost_basis",
+        ),
+    ] {
+        conn.execute_batch(&format!(
+            "CREATE TRIGGER IF NOT EXISTS crypto_opening_{name}
+            BEFORE {event} ON crypto_transactions BEGIN
+                SELECT RAISE(ABORT, 'Invalid opening balance') WHERE NEW.subtype = 'opening_balance'
+                    AND (NEW.type != 'trade' OR NEW.amount <= 0 OR NEW.override_cost_basis < 0
+                        OR NEW.price_per_coin IS NOT NULL OR COALESCE(NEW.fee, 0) != 0
+                        OR NEW.fee_coin_id IS NOT NULL OR COALESCE(NEW.fee_amount, 0) != 0
+                        OR NEW.related_tx_id IS NOT NULL OR NEW.override_proceeds IS NOT NULL);
+                SELECT RAISE(ABORT, 'Opening balance overlaps wallet history')
+                    WHERE NEW.subtype = 'opening_balance' AND EXISTS (
+                        SELECT 1 FROM crypto_transactions t WHERE t.wallet_id = NEW.wallet_id AND t.id != NEW.id
+                            AND (t.coin_id = NEW.coin_id OR (t.fee_coin_id = NEW.coin_id AND t.fee_amount > 0))
+                            AND substr(t.date, 1, 10) <= substr(NEW.date, 1, 10));
+                SELECT RAISE(ABORT, 'Movement predates opening balance') WHERE EXISTS (
+                    SELECT 1 FROM crypto_transactions t WHERE t.subtype = 'opening_balance'
+                        AND t.wallet_id = NEW.wallet_id AND t.id != NEW.id
+                        AND (t.coin_id = NEW.coin_id OR (t.coin_id = NEW.fee_coin_id AND NEW.fee_amount > 0))
+                        AND substr(NEW.date, 1, 10) <= substr(t.date, 1, 10));
+            END;"
+        ))?;
+    }
     Ok(())
 }
 

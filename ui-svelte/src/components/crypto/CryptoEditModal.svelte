@@ -119,10 +119,11 @@
       <div class="edit-tx-meta">
         <span class="etm-wallet">{editTxData.wallet_name}</span>
         <span class="etm-coin">{editTxData.symbol}</span>
-        <span class="etm-type" class:etm-negative={/^(sell|expense|fee)$/.test(editTxData.transaction_type)}>{editTxData.transaction_type}</span>
+        <span class="etm-type" class:etm-negative={/^(sell|expense|fee)$/.test(editTxData.transaction_type)}>{editTxData.subtype === 'opening_balance' ? i18n.t('crypto-tx-opening', 'Opening balance') : editTxData.transaction_type}</span>
       </div>
 
       <div class="form-grid">
+        {#if editTxData.subtype !== 'opening_balance'}
         <label>
           {i18n.t('crypto-tx-subtype', 'Subtype')}
           <select bind:value={editTxSubtype}>
@@ -132,10 +133,12 @@
             {/each}
           </select>
         </label>
+        {/if}
         <label>
           {i18n.t('crypto-tx-amount', 'Amount')}
           <input type="text" bind:value={editTxAmount} placeholder="0.00" />
         </label>
+        {#if editTxData.subtype !== 'opening_balance'}
         <label>
           {i18n.t('crypto-tx-price', 'Price (per coin)')}
           <input type="text" bind:value={editTxPrice} placeholder="0.00" />
@@ -152,6 +155,7 @@
           {i18n.t('crypto-tx-fee-coin-amount', 'Fee Coin Amount (optional)')}
           <input type="text" bind:value={editTxFeeCoinAmount} placeholder="0.00" />
         </label>
+        {/if}
         <label>
           {i18n.t('crypto-tx-date', 'Date')}
           <input type="date" bind:value={editTxDate} />
@@ -160,12 +164,14 @@
           {i18n.t('crypto-tx-notes', 'Notes (optional)')}
           <input type="text" bind:value={editTxNotes} placeholder={i18n.t('crypto-tx-notes-placeholder', 'Notes...')} />
         </label>
+        {#if editTxData.subtype !== 'opening_balance'}
         <label>
           {i18n.t('crypto-tx-override-proceeds', 'Override Proceeds (optional)')}
           <input type="text" bind:value={editTxOverrideProceeds} placeholder="0.00" />
         </label>
+        {/if}
         <label>
-          {i18n.t('crypto-tx-override-cost-basis', 'Override Cost Basis (optional)')}
+          {editTxData.subtype === 'opening_balance' ? i18n.t('crypto-opening-cost', 'Total acquisition cost (USD, optional)') : i18n.t('crypto-tx-override-cost-basis', 'Override Cost Basis (optional)')}
           <input type="text" bind:value={editTxOverrideCostBasis} placeholder="0.00" />
         </label>
       </div>
