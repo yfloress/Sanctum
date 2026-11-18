@@ -57,7 +57,8 @@ pub struct CsvStructure {
 /// Each field holds the *header name* the user selected for that logical
 /// column. `date_col`, `asset_col` and `amount_col` are mandatory; the rest
 /// are left unmapped (`None`) when the source CSV has no matching column.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct CustomColumnMapping {
     pub date_col: String,
     pub asset_col: String,
@@ -67,6 +68,43 @@ pub struct CustomColumnMapping {
     pub fee_currency_col: Option<String>,
     pub price_col: Option<String>,
     pub notes_col: Option<String>,
+}
+
+impl CustomColumnMapping {
+    /// A selected source column must identify exactly one input and one role.
+    pub fn validate(&self, headers: &[String]) -> Result<(), RowError> {
+        let normalized: Vec<_> = headers.iter().map(|h| normalize_header(h)).collect();
+        let mut used = std::collections::HashSet::new();
+        let assigned = [
+            Some(&self.date_col),
+            Some(&self.asset_col),
+            Some(&self.amount_col),
+            self.type_col.as_ref(),
+            self.fee_col.as_ref(),
+            self.fee_currency_col.as_ref(),
+            self.price_col.as_ref(),
+            self.notes_col.as_ref(),
+        ];
+        for header in assigned.into_iter().flatten() {
+            let name = normalize_header(header);
+            let matches = normalized.iter().filter(|h| **h == name).count();
+            if matches == 0 {
+                return Err(RowError::new(
+                    1,
+                    None,
+                    format!("Missing CSV column: {header}"),
+                ));
+            }
+            if name.is_empty() || matches > 1 || !used.insert(name) {
+                return Err(RowError::new(
+                    1,
+                    None,
+                    "Each mapped field needs a distinct, unambiguous CSV column".to_string(),
+                ));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Reads the header row and the first data row of `content`.
@@ -127,6 +165,9 @@ impl CustomCsvParser {
             .headers()
             .map_err(|e| RowError::new(1, None, format!("Invalid CSV header: {e}")))?
             .clone();
+
+        self.mapping
+            .validate(&headers.iter().map(clean_cell).collect::<Vec<_>>())?;
 
         // Normalised-header -> first matching column index of the actual file.
         let mut index_of: HashMap<String, usize> = HashMap::new();
@@ -208,7 +249,7 @@ impl CustomCsvParser {
             }
 
             let amount_signed = match parse_decimal(amount_raw) {
-                Some(v) if v != 0.0 => v,
+                Some(v) if v.is_finite() && v != 0.0 => v,
                 _ => {
                     result.errors.push(RowError::new(
                         line_number,
@@ -243,7 +284,7 @@ impl CustomCsvParser {
 
             let (fee_coin_symbol, fee_amount) = match fee_idx {
                 Some(i) => match parse_decimal(field(&record, i)) {
-                    Some(v) if v != 0.0 => {
+                    Some(v) if v.is_finite() && v != 0.0 => {
                         // Fee currency defaults to the row's asset when unmapped —
                         // network fees are most often paid in the same coin.
                         let coin = fee_currency_idx
@@ -253,12 +294,34 @@ impl CustomCsvParser {
                             .unwrap_or_else(|| symbol.clone());
                         (Some(coin), Some(v.abs()))
                     }
-                    _ => (None, None),
+                    Some(0.0) => (None, None),
+                    None if field(&record, i).is_empty() => (None, None),
+                    _ => {
+                        result.errors.push(RowError::new(
+                            line_number,
+                            Some("fee"),
+                            "Invalid fee".to_string(),
+                        ));
+                        continue;
+                    }
                 },
                 None => (None, None),
             };
 
-            let price_per_coin = price_idx.and_then(|i| parse_decimal(field(&record, i)));
+            let price_per_coin = match price_idx.map(|i| field(&record, i)) {
+                None | Some("") => None,
+                Some(raw) => match parse_decimal(raw) {
+                    Some(v) if v.is_finite() && v >= 0.0 => Some(v),
+                    _ => {
+                        result.errors.push(RowError::new(
+                            line_number,
+                            Some("price"),
+                            "Invalid unit price".to_string(),
+                        ));
+                        continue;
+                    }
+                },
+            };
 
             let mut notes = String::from("Custom CSV");
             if let Some(i) = notes_idx {

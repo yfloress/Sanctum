@@ -880,3 +880,14 @@ finances-quick-add = Add
 statement-mirror = Matches {$account}
 statement-mirror-hint = This movement is already in the other account; it becomes the transfer instead of being added twice.
 import-exchange-drop = Drop the exchange or wallet CSV here, or click to choose it
+
+mapping-assistant = Suggest columns with an AI assistant
+mapping-prompt = Copy this prompt. It contains generic column labels and invented examples.
+mapping-response = Paste the JSON suggestion here
+mapping-apply = Apply suggestion to fields
+mapping-invalid = Enter a JSON mapping with one distinct column number per field, or null for an unknown field.
+mapping-remember = Remember these columns in this vault for CSV files with the same headers
+mapping-direction = Without a type column, positive quantities are deposits and negative quantities are withdrawals.
+mapping-unit-price = Confirm that the price column is USD per unit.
+mapping-preview = Preview mapped transactions
+mapping-preview-count = To import: {$added}. Skipped: {$skipped}. Row errors: {$errors}.

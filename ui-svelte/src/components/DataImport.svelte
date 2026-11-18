@@ -358,6 +358,7 @@
       <!-- Custom CSV: user maps each column to a Sanctum field -->
       <div class="import-card">
         <CustomCsvMapper
+          content={importContent}
           headers={customAnalysis.headers}
           sampleRow={customAnalysis.sample_row}
           wallets={customWallets}

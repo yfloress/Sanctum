@@ -125,7 +125,8 @@ pub struct CsvAnalysisResult {
 /// Each field holds the header name the user picked for that logical column.
 /// Only `date_col`, `asset_col` and `amount_col` are mandatory; the rest are
 /// optional and omitted when the source CSV has no such column.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CustomCsvMapping {
     pub date_col: String,
     pub asset_col: String,

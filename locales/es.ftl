@@ -880,3 +880,14 @@ finances-quick-add = Agregar
 statement-mirror = Coincide con {$account}
 statement-mirror-hint = Este movimiento ya está en la otra cuenta; se convierte en la transferencia en vez de agregarse dos veces.
 import-exchange-drop = Arrastra aquí el CSV del exchange o la billetera, o haz clic para elegirlo
+
+mapping-assistant = Sugerir columnas con un asistente de IA
+mapping-prompt = Copia este prompt. Contiene etiquetas genéricas y ejemplos inventados.
+mapping-response = Pega aquí la sugerencia en JSON
+mapping-apply = Aplicar sugerencia a los campos
+mapping-invalid = Ingresa un mapa JSON con un número de columna distinto por campo, o null para un campo desconocido.
+mapping-remember = Recordar estas columnas en la bóveda para archivos CSV con los mismos encabezados
+mapping-direction = Sin columna de tipo, las cantidades positivas se importan como depósitos y las negativas como retiros.
+mapping-unit-price = Confirma que el precio está expresado en USD por unidad.
+mapping-preview = Previsualizar movimientos
+mapping-preview-count = Por importar: {$added}. Omitidos: {$skipped}. Errores de fila: {$errors}.

@@ -58,6 +58,18 @@ export async function analyzeCustomCsv(content: string): Promise<CsvAnalysisResu
   return invoke<CsvAnalysisResult>('analyze_custom_csv', { content })
 }
 
+export function previewCustomCsv(content: string, mapping: CustomCsvMapping, walletName: string) {
+  return invoke<ImportResultsResponse>('preview_custom_csv', { content, mapping, wallet_name: walletName })
+}
+
+export function loadCustomCsvMapping(headers: string[]) {
+  return invoke<CustomCsvMapping | null>('load_custom_csv_mapping', { headers })
+}
+
+export function saveCustomCsvMapping(headers: string[], mapping: CustomCsvMapping) {
+  return invoke<void>('save_custom_csv_mapping', { headers, mapping })
+}
+
 export async function importCustomCsv(
   content: string, mapping: CustomCsvMapping, wallet_name: string
 ): Promise<ImportResultsResponse> {

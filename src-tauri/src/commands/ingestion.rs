@@ -123,6 +123,48 @@ pub fn analyze_custom_csv(
     })
 }
 
+#[tauri::command(rename_all = "snake_case")]
+pub fn preview_custom_csv(
+    ingestion: State<'_, IngestionService>,
+    content: String,
+    mapping: CustomCsvMapping,
+    wallet_name: String,
+) -> Result<ImportResultsResponse, AppError> {
+    Ok(map_import_summary(ingestion.preview_custom_csv(
+        &content,
+        into_domain_mapping(mapping),
+        &wallet_name,
+    )?))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn load_custom_csv_mapping(
+    ingestion: State<'_, IngestionService>,
+    headers: Vec<String>,
+) -> Result<Option<CustomCsvMapping>, AppError> {
+    Ok(ingestion
+        .load_custom_csv_mapping(&headers)?
+        .map(|m| CustomCsvMapping {
+            date_col: m.date_col,
+            asset_col: m.asset_col,
+            amount_col: m.amount_col,
+            type_col: m.type_col,
+            fee_col: m.fee_col,
+            fee_currency_col: m.fee_currency_col,
+            price_col: m.price_col,
+            notes_col: m.notes_col,
+        }))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn save_custom_csv_mapping(
+    ingestion: State<'_, IngestionService>,
+    headers: Vec<String>,
+    mapping: CustomCsvMapping,
+) -> Result<(), AppError> {
+    Ok(ingestion.save_custom_csv_mapping(&headers, &into_domain_mapping(mapping))?)
+}
+
 #[tauri::command]
 pub fn import_custom_csv(
     ingestion: State<'_, IngestionService>,

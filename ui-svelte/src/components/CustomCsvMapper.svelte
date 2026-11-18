@@ -15,11 +15,19 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { untrack } from 'svelte'
+  import { onMount, untrack } from 'svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import type { CustomCsvMapping } from '../lib/types'
 
+  import CryptoMapping from './CryptoMapping.svelte'
+  import { previewCustomCsv, loadCustomCsvMapping, saveCustomCsvMapping } from '../lib/api/ingestion'
+  import { errorMessage } from '../lib/errors'
+  import type { ImportResultsResponse } from '../lib/types'
+
   interface Props {
+    content?: string
+    submitLabel?: string
+    initialWallet?: string
     headers: string[]
     sampleRow: string[]
     wallets: string[]
@@ -28,7 +36,7 @@
     oncancel: () => void
   }
 
-  let { headers, sampleRow, wallets, loading = false, onimport, oncancel }: Props = $props()
+  let { headers, sampleRow, wallets, content, submitLabel, initialWallet, loading = false, onimport, oncancel }: Props = $props()
 
   type FieldKey = 'date' | 'asset' | 'amount' | 'type' | 'fee' | 'feeCurrency' | 'price' | 'notes'
 
@@ -87,23 +95,54 @@
   // file, so the heuristic guesses and default wallet are intentionally seeded
   // from the initial values (and remain user-editable thereafter).
   let sel = $state<Record<FieldKey, string>>(untrack(() => autoMap(headers)))
-  let walletName = $state(untrack(() => wallets[0] ?? ''))
+  let walletName = $state(untrack(() => initialWallet || wallets[0] || ''))
 
   const canImport = $derived(!!sel.date && !!sel.asset && !!sel.amount && !!walletName)
 
-  function submit() {
-    if (!canImport || loading) return
-    const mapping: CustomCsvMapping = {
-      date_col: sel.date,
-      asset_col: sel.asset,
-      amount_col: sel.amount,
-      type_col: sel.type || null,
-      fee_col: sel.fee || null,
-      fee_currency_col: sel.feeCurrency || null,
-      price_col: sel.price || null,
-      notes_col: sel.notes || null,
+  let busy = $state(false)
+  let error = $state('')
+  let remember = $state(false)
+  let checked = $state<{ signature: string, summary: ImportResultsResponse } | null>(null)
+  const mapping: CustomCsvMapping = $derived({
+    date_col: sel.date, asset_col: sel.asset, amount_col: sel.amount,
+    type_col: sel.type || null, fee_col: sel.fee || null, fee_currency_col: sel.feeCurrency || null,
+    price_col: sel.price || null, notes_col: sel.notes || null,
+  })
+  const signature = $derived(JSON.stringify([mapping, walletName]))
+  const result = $derived(checked?.signature === signature ? checked.summary : null)
+
+  function setMap(m: CustomCsvMapping) {
+    sel = { date: m.date_col, asset: m.asset_col, amount: m.amount_col, type: m.type_col ?? '',
+      fee: m.fee_col ?? '', feeCurrency: m.fee_currency_col ?? '', price: m.price_col ?? '', notes: m.notes_col ?? '' }
+  }
+
+  onMount(() => {
+    if (!content) return
+    const original = signature
+    loadCustomCsvMapping(headers).then(m => {
+      if (m && signature === original) setMap(m)
+    }).catch(e => { error = errorMessage(e) })
+  })
+
+  async function submit() {
+    if (!canImport || busy || loading) return
+    error = ''
+    busy = true
+    try {
+      if (content && !result) {
+        const snapshot = signature
+        checked = { signature: snapshot, summary: await previewCustomCsv(content, mapping, walletName) }
+        return
+      }
+      const confirmedMapping = mapping
+      const confirmedWallet = walletName
+      if (remember && content) await saveCustomCsvMapping(headers, confirmedMapping)
+      onimport(confirmedMapping, confirmedWallet)
+    } catch (e) {
+      error = errorMessage(e)
+    } finally {
+      busy = false
     }
-    onimport(mapping, walletName)
   }
 </script>
 
@@ -124,6 +163,7 @@
     </div>
   </div>
 
+  {#if content}<CryptoMapping {headers} onmap={setMap} />{/if}
   <div class="fields">
     {#each fields as field (field.key)}
       <label class="field-row">
@@ -139,10 +179,13 @@
               ? i18n.t('settings-import-custom-select', '— Select column —')
               : i18n.t('settings-import-custom-none', '— None —')}
           </option>
-          {#each headers as header (header)}
+          {#each headers as header, index (index)}
             <option value={header}>{header}</option>
           {/each}
         </select>
+        {#if sel[field.key]}
+          <span class="preview-val">{sampleRow[headers.indexOf(sel[field.key])] || '—'}</span>
+        {/if}
       </label>
     {/each}
   </div>
@@ -164,14 +207,24 @@
     {/if}
   </label>
 
+  {#if content}
+    <label><input type="checkbox" bind:checked={remember} /> {i18n.t('mapping-remember')}</label>
+    {#if !sel.type}<p>{i18n.t('mapping-direction')}</p>{/if}
+    {#if sel.price}<p>{i18n.t('mapping-unit-price')}</p>{/if}
+    {#if result}
+      <p role="status">{i18n.tArgs('mapping-preview-count', { added: result.inserted, skipped: result.skipped, errors: result.errors.length })}</p>
+      {#each result.errors.slice(0, 5) as issue}<p>{issue.line ?? '—'} · {issue.message}</p>{/each}
+    {/if}
+  {/if}
+  {#if error}<p role="alert">{error}</p>{/if}
   <div class="actions">
     <button class="secondary-btn" onclick={oncancel} disabled={loading}>
       {i18n.t('settings-cancel', 'Cancel')}
     </button>
-    <button class="primary-btn" onclick={submit} disabled={loading || !canImport}>
+    <button class="primary-btn" onclick={submit} disabled={busy || loading || !canImport || (!!result && !result.inserted && !result.skipped)}>
       {loading
         ? i18n.t('settings-import-importing', 'Importing...')
-        : i18n.t('settings-import-confirm', 'Confirm Import')}
+        : content && !result ? i18n.t('mapping-preview') : submitLabel ?? i18n.t('settings-import-confirm', 'Confirm Import')}
     </button>
   </div>
 </div>

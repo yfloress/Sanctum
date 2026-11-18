@@ -641,6 +641,54 @@ impl IngestionService {
         analyze_csv_structure(content).map_err(|e| IngestionError::Parse(e.message))
     }
 
+    fn mapping_key(headers: &[String]) -> Result<String, IngestionError> {
+        if headers.is_empty() || headers.len() > 256 || headers.iter().any(|h| h.len() > 512) {
+            return Err(IngestionError::Validation("Invalid CSV layout".into()));
+        }
+        // Ordered, lossless encoding distinguishes column order and embedded separators.
+        let signature =
+            serde_json::to_string(headers).map_err(|e| IngestionError::Parse(e.to_string()))?;
+        Ok(format!("crypto_csv_mapping_v1/{signature}"))
+    }
+
+    pub fn load_custom_csv_mapping(
+        &self,
+        headers: &[String],
+    ) -> Result<Option<CustomColumnMapping>, IngestionError> {
+        let key = Self::mapping_key(headers)?;
+        self.with_db_readonly(|db| {
+            db.get_setting(&key)?
+                .map(|json| {
+                    serde_json::from_str(&json)
+                        .map_err(|_| IngestionError::Parse("Invalid saved CSV mapping".into()))
+                })
+                .transpose()
+        })
+    }
+
+    pub fn save_custom_csv_mapping(
+        &self,
+        headers: &[String],
+        mapping: &CustomColumnMapping,
+    ) -> Result<(), IngestionError> {
+        let key = Self::mapping_key(headers)?;
+        mapping
+            .validate(headers)
+            .map_err(|e| IngestionError::Validation(e.message))?;
+        let value =
+            serde_json::to_string(mapping).map_err(|e| IngestionError::Parse(e.to_string()))?;
+        self.with_db(|db| Ok(db.set_setting(&key, &value)?))
+    }
+
+    pub fn preview_custom_csv(
+        &self,
+        content: &str,
+        mapping: CustomColumnMapping,
+        wallet_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.run_custom_csv(content, mapping, wallet_name, true)
+    }
+
     /// Imports an arbitrary CSV using a user-provided column mapping.
     ///
     /// Builds a generic parser from `mapping`, converts each row into a crypto
@@ -653,11 +701,22 @@ impl IngestionService {
         mapping: CustomColumnMapping,
         wallet_name: &str,
     ) -> Result<ImportSummary, IngestionError> {
+        self.run_custom_csv(content, mapping, wallet_name, false)
+    }
+
+    fn run_custom_csv(
+        &self,
+        content: &str,
+        mapping: CustomColumnMapping,
+        wallet_name: &str,
+        preview: bool,
+    ) -> Result<ImportSummary, IngestionError> {
         validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
         let parsed = CustomCsvParser::new(mapping)
             .parse(content, wallet_name)
             .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.process_crypto_transactions_ext(parsed.items, "Custom CSV", true)?;
+        let mut summary =
+            self.process_crypto_transactions_internal(parsed.items, "Custom CSV", preview, true)?;
         for error in parsed.errors {
             summary.record_error(error);
         }
