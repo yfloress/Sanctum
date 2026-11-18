@@ -1,263 +1,199 @@
 <div align="center">
 
-<img src="./assets/sanct-app.png" alt="Sanctum" width="120" height="120" />
+<img src="./assets/sanct-app.png" alt="" width="112" height="112" />
 
-<h1>SANCTUM</h1>
+<h1>Sanctum</h1>
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=25&pause=1000&color=8B5CF6&center=true&vCenter=true&width=435&lines=Tu+fortaleza+personal.;Privado.;Encriptado.;Local." alt="Typing SVG">
-</p>
+<p><b>Una bóveda privada y cifrada para tu dinero y tus criptomonedas.</b><br />
+Local primero. Sin cuentas, sin telemetría, sin nube.</p>
 
-<div align="center">
+[![Licencia: AGPL-3.0](https://img.shields.io/badge/licencia-AGPL--3.0-8b5cf6?style=flat-square)](LICENSE)
+![Estado: alfa](https://img.shields.io/badge/estado-alfa-f59e0b?style=flat-square)
+![Plataformas](https://img.shields.io/badge/plataformas-Linux%20·%20macOS%20·%20Windows-6e56cf?style=flat-square)
+![Rust](https://img.shields.io/badge/Rust-núcleo-b7410e?style=flat-square&logo=rust&logoColor=white)
+![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db?style=flat-square&logo=tauri&logoColor=white)
+![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?style=flat-square&logo=svelte&logoColor=white)
+![SQLCipher](https://img.shields.io/badge/SQLCipher-AES--256-2f855a?style=flat-square&logo=sqlite&logoColor=white)
 
-[![English](https://img.shields.io/badge/In-English-8b5cf6?style=for-the-badge)](README.md) [![Website](https://img.shields.io/badge/🌐_Website-Sanctum-blueviolet?style=for-the-badge)](https://yfloress.github.io/Sanctum/)
-
-</div>
-
-<div align="center">
-    <a href="">
-      <img src="https://img.shields.io/badge/Core-Rust-orange?style=for-the-badge&logo=rust" alt="Rust" />
-    </a>
-    <a href="">
-      <img src="https://img.shields.io/badge/Shell-Tauri%202-blue?style=for-the-badge" alt="Tauri" />
-    </a>
-    <a href="">
-      <img src="https://img.shields.io/badge/UI-Svelte%205-orange?style=for-the-badge" alt="Svelte" />
-    </a>
-    <a href="">
-      <img src="https://img.shields.io/badge/Security-SQLCipher-green?style=for-the-badge&logo=sqlite" alt="SQLCipher" />
-    </a>
-    <a href="">
-      <img src="https://img.shields.io/badge/Env-Nix-blueviolet?style=for-the-badge&logo=nixos" alt="Nix" />
-    </a>
-  </div>
+**[English](README.md)** · **[Sitio web](https://yfloress.github.io/Sanctum/)** · **[Guía de instalación](docs/INSTALL_ES.md)** · **[Impuestos cripto](docs/CRYPTO_TAX.md)**
 
 <br />
-</div>
 
----
-
-![Sanctum](assets/sanctum-img.png)
-
-<div align="center">
-
-[![Licencia](https://img.shields.io/badge/Licencia-GPLv3-8b5cf6?style=flat-square)](LICENSE) &nbsp;
-![Plataforma](https://img.shields.io/badge/Plataforma-Linux%20%7C%20macOS%20%7C%20Windows-informational?style=flat-square) &nbsp;
-![Estado](https://img.shields.io/badge/Estado-Alpha-orange?style=flat-square) &nbsp;
-![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen?style=flat-square)
-
-**[Acerca de](#acerca-de)** · **[Características](#características)** · **[Importación](#importación-e-integraciones)** · **[Seguridad](#seguridad-y-privacidad)** · **[Plataformas](#plataformas-y-autohospedaje)** · **[Instalación](#instalación)** · **[Docs](docs/INSTALL_ES.md)**
+<img src="./assets/sanctum-img.png" alt="La pantalla de desbloqueo de Sanctum" width="860" />
 
 </div>
-
-## Acerca de
 
 > [!CAUTION]
-> **NO ESTÁ LISTO PARA USAR — EN DESARROLLO ACTIVO.**
+> **Software en fase alfa.** Sanctum está en desarrollo activo y puede cambiar sin
+> aviso. Mantén tus propios respaldos.
 
-**Sanctum** es una bóveda orientada a la privacidad para tus finanzas y crypto,
-totalmente offline sobre una base de datos local cifrada. Todo funciona sobre
-hardware que controlas tú: almacenamiento cifrado, cero telemetría, sin cuentas,
-sin nube corporativa. Tú controlas las llaves, la base de datos y los respaldos
-— nadie más.
+## Por qué Sanctum
 
-Hoy apunta a **escritorio**; el port a **Android** está en curso. Después, la hoja
-de ruta agrega **tu propio servidor Sanctum**, para compartir una sola bóveda
-privada entre todos tus dispositivos — escritorio, Android y cualquier navegador
-(incluido iOS) — por tu propia red.
+Tu vida financiera dice de ti más que casi cualquier otra cosa. Sanctum la guarda
+en un dispositivo tuyo, en una base de datos que sólo abre tu contraseña.
 
-Está pensado para quienes quieren un único lugar auditable donde llevar sus
-finanzas sin entregar su vida financiera a un tercero.
+- **Sólo tuya.** Toda la base de datos se cifra con una contraseña maestra que
+  nunca sale de tu dispositivo. No hay cuenta que crear ni empresa que pueda
+  leerla, perderla o entregarla.
+- **Sin conexión por defecto.** Sanctum no se conecta a internet salvo que tú lo
+  pidas. Las importaciones, los informes y los impuestos se calculan en tu equipo.
+- **Finanzas y cripto juntas.** Cuentas, tarjetas, créditos y billeteras en un
+  solo lugar, con un solo patrimonio.
 
-## Características
-
-### Dashboard Unificado
-Patrimonio neto y tendencias combinando tus finanzas **y** crypto en una sola vista.
+## Funciones
 
 ### Finanzas
-Cuentas, categorías, transferencias y un ledger completo de transacciones, con
-soporte multi-divisa (USD, CLP, EUR y más).
+- Cuentas en varias monedas (CLP, USD, EUR y más), transferencias, categorías y etiquetas.
+- Presupuestos mensuales, movimientos recurrentes y créditos con su calendario de cuotas.
+- Conciliación contra el saldo de tu banco.
+- Entrada rápida en una línea: `5000 almuerzo` y Enter.
 
-### Crypto
-- Billeteras, trades y swaps con balance dinámico de portafolio.
-- Sincronización privada de precios vía CoinGecko, con soporte de proxy / Tor.
-- **Motor de impuestos offline** para Chile (SII), USA (IRS) y jurisdicciones
-  internacionales, aplicando el método de costo correcto según las reglas locales
-  (FIFO, CPP y más). Ver **[CRYPTO_TAX.md](docs/CRYPTO_TAX.md)** para entender la
-  lógica y los fundamentos legales detrás.
+### Cartolas bancarias
+Arrastra la cartola en PDF y revisa cada fila antes de importarla.
+- Las filas que la cuenta ya tiene se reconocen y quedan fuera.
+- Las categorías se aprenden de cómo clasificaste antes ese mismo comercio.
+- Detecta las transferencias entre tus propias cuentas, para que el dinero que
+  mueves nunca se cuente dos veces como gasto.
+- Los PDF protegidos se abren con tu contraseña, que no se guarda.
+- Las filas leídas se comparan con los totales de la propia cartola.
 
-### Confiabilidad
-- Respaldos cifrados (SQLCipher) con seguridad de restauración y rollback.
-- Ingesta JSON/CSV/TXT con validación por fila y detección de duplicados.
-- Interfaz multi-idioma (EN/ES).
+### Cripto
+- Billeteras, compras, ventas, intercambios y transferencias, con historial del portafolio.
+- Importación de exportaciones de exchanges y billeteras (ver más abajo), conexión
+  de sólo lectura con Kraken y carpetas que toman solas las nuevas exportaciones CSV.
+- Un **motor tributario sin conexión** para Chile (SII), Estados Unidos (IRS) y
+  otras jurisdicciones, con el método de costo que exige cada una (FIFO, costo
+  promedio y más). Ver **[CRYPTO_TAX.md](docs/CRYPTO_TAX.md)**.
 
-## Importación e Integraciones
+### Dashboard
+Patrimonio y su evolución entre finanzas y cripto, gasto por categoría y movimientos recientes.
 
-Sanctum es **offline- y CSV-first** — diseñado para viajes y baja conectividad.
-Todos los imports son best-effort, se validan por fila, hacen deduplicación y **no
-realizan llamadas de red** durante la ingesta.
+## Importación
 
-> [!IMPORTANT]
-> Cada archivo de exchange/wallet se procesa **localmente en tu dispositivo**.
-> Nada se sube a un tercero — el único servidor que existe es uno que hospedas tú.
+Todo se procesa **en tu dispositivo**. Cada fila se valida, los duplicados se
+omiten y volver a importar el mismo historial no cambia nada.
 
-**Formatos soportados:**
+**Cartolas bancarias (PDF)**
 
-- **JSON** *(recomendado)* — formato completo usado por el Sanctum Generator.
-- **CSV** — exportes de hojas de cálculo (archivos separados por tipo).
-- **TXT** — notas por línea con prefijos para captura rápida.
+| Banco | Cartola de cuenta | Estado de cuenta de tarjeta |
+| :-- | :-: | :-: |
+| Banco de Chile | Sí | Sí |
+| Santander | Sí | Sí |
+| BancoEstado | Sí | — |
+| CopecPay | Sí | — |
+| Mercado Pago | Sí | — |
 
-**Integraciones de exchange y wallet:**
+**Exchanges y billeteras**
 
-| Integración | Estado | Entrada | Notas |
-| :-- | :-- | :-- | :-- |
-| Kraken | Disponible | CSV (`Ledgers`, `Trades`) | Sube uno o ambos archivos para cobertura spot completa. |
-| Binance | Disponible | CSV (`All Statements`, `Spot Trade History`) | Balances, actividad spot y movimientos de ledger asociados. |
-| MEXC | Disponible | CSV (17 tipos de reporte) | Spot, Statement, Funding, Fiat, Futures y exportes relacionados. |
-| NotBank (ex-CryptoMarket) | Disponible | CSV (`Transaction`, `Trade Activity`) | Movimientos de cuenta y trading desde reportes Exchange Pro. |
-| Feather Wallet | Disponible | CSV (export de historial) | Historial de wallet Monero en formato Feather. |
-| Monero GUI Wallet | Disponible | CSV (export de historial) | Historial de wallet Monero en formato Monero GUI. |
+| Origen | Qué exportar |
+| :-- | :-- |
+| Kraken | CSV de `Ledgers` y `Trades`, o una API key de sólo lectura con únicamente *Query ledger entries* |
+| Binance | CSV de `All Statements` y `Spot Trade History` |
+| MEXC | Exportación de datos de la cuenta (17 tipos de informe) |
+| NotBank (ex-CryptoMarket) | Informes de `Transaction` y `Trade Activity` |
+| Feather Wallet | CSV del historial (también desde una billetera de sólo lectura) |
+| Monero GUI | CSV del historial |
+| Cualquier otro | Cualquier CSV, asignando sus columnas |
 
-<details>
-<summary><b>Integraciones planificadas</b></summary>
+También acepta JSON y CSV genéricos, para mover datos hacia adentro y hacia afuera.
 
-| Integración | Estado | Entrada | Notas |
-| :-- | :-- | :-- | :-- |
-| Coinbase | Planificado | CSV | Flujos de estado de cuenta e historial de trades. |
-| Bybit | Planificado | CSV | Exportes de historial spot/funding. |
-| OKX | Planificado | CSV | Formatos de exportación de cuenta y trades. |
-| KuCoin | Planificado | CSV | Imports CSV de estado/trades. |
-| Bitget | Planificado | CSV | Reportes de wallet y spot. |
-| Buda | Planificado | CSV | Exportes de transacciones/trades. |
-| Orionx | Planificado | CSV | Exportes de transacciones/trades. |
-| APIs de Exchange (solo lectura) | Planificado | API | Sincronización directa futura — solo lectura, sin trading/retiros. |
+## Privacidad y seguridad
 
-</details>
-
-## Seguridad y Privacidad
-
-Sanctum se apoya en tres pilares:
-
-1. **Sin nube corporativa.** Sin telemetría, sin cuentas, sin servidores de terceros. Tus datos solo viven en hardware que controlas tú — tu dispositivo, o un servidor que hospedas tú.
-2. **Almacenamiento blindado.** SQLCipher (AES-256) cifra toda la base de datos con una contraseña maestra que controlas tú.
-3. **Conexiones externas mitigadas.** La sincronización de precios usa relleno de tráfico para ocultar tu portafolio y soporta proxies configurados por el usuario (SOCKS5/Tor, HTTP).
+- **Cifrado en reposo.** SQLCipher (AES-256, con claves derivadas con
+  PBKDF2-HMAC-SHA512) cifra toda la base de datos. Los respaldos son copias de ese
+  archivo cifrado.
+- **Nunca hay telemetría.** No hay nada que desactivar.
+- **Precios sin revelar tu portafolio.** La sincronización de precios viene apagada.
+  Si la activas, Sanctum pide el mismo conjunto de las 250 monedas más grandes que
+  cualquier otro usuario, así que la consulta no dice nada de lo que tienes. Una
+  moneda fuera de ese conjunto sólo se consulta después de que aceptes.
+- **Proxy y Tor.** Las conexiones pueden pasar por un proxy SOCKS5 o HTTP. Si el
+  proxy falla, la conexión falla también: nunca se hace directa por detrás.
+- **Las credenciales quedan en la bóveda.** La API key de un exchange se guarda
+  dentro de la base de datos cifrada y se usa sólo para leer.
 
 > [!NOTE]
-> Minimizar los metadatos no es lo mismo que eliminarlos: conectarse a cualquier
-> API externa revela inherentemente tu IP a ese proveedor a menos que enrutes el
-> tráfico por un proxy.
+> Cualquier conexión a un servicio externo le muestra tu dirección IP a ese
+> servicio, salvo que pase por un proxy. Sanctum hace esas conexiones pocas veces,
+> sólo si las pides y sin revelar nada.
 
-Los respaldos están cifrados en reposo e incluyen seguridad de restauración y rollback.
+**Para cambiarte de computador:** instala Sanctum, elige *Restaurar desde respaldo*
+en la primera pantalla, selecciona el respaldo que exportaste y desbloquéalo con tu
+contraseña de siempre.
 
-## Plataformas y Autohospedaje
+## Plataformas y hoja de ruta
 
-**Disponible hoy** — Sanctum funciona como app nativa en **escritorio (Linux,
-macOS, Windows)**, con una base de datos cifrada totalmente offline que vive solo
-en ese dispositivo. Sin servidor, sin red.
+**Hoy:** una aplicación de escritorio nativa para Linux, macOS y Windows.
 
-**Planeado** — en orden de la hoja de ruta:
-
-1. **Android** — el port nativo a móvil. En curso; el toolchain de Tauri mobile y
-   los comandos de build ya están listos (ver [Android](#android) más abajo).
-2. **Servidor autohospedado** — levanta tu propio **servidor Sanctum** como única
-   fuente de verdad y comparte una sola bóveda entre todos tus dispositivos,
-   accesible de forma privada por tu LAN o una VPN mesh como **Tailscale**, sin
-   quedar nunca expuesto a internet.
-3. **App web** — acceso por navegador a ese servidor autohospedado, que es lo que
-   trae a **iOS** y a cualquier otro dispositivo.
+**Lo que sigue, en orden:**
+1. **Android**, en desarrollo.
+2. **Un servidor de Sanctum autohospedado**, para compartir una bóveda entre todos
+   tus dispositivos por tu propia red o una VPN como Tailscale, sin exponerla nunca
+   a internet.
+3. **Una aplicación web** en ese servidor, que suma iOS y cualquier otro navegador.
 
 > [!IMPORTANT]
-> Nunca va a existir una nube de Sanctum. El único servidor que existirá es uno
-> que **tú** levantas, sobre hardware que **tú** controlas.
-
-## Tecnologías
-
-Sanctum prioriza el rendimiento, la seguridad de tipos y la auditabilidad.
-
-| Componente      | Tecnología           | Rol                                           |
-| :-------------- | :------------------- | :-------------------------------------------- |
-| **Núcleo**      | **Rust**             | Lógica de negocio, validación y cálculos.     |
-| **Shell**       | **Tauri 2**          | Shell nativo ligero con WebView.              |
-| **Frontend**    | **Svelte 5 + TS**    | UI reactiva con TypeScript y Vite.            |
-| **Base de Datos** | **SQLite + SQLCipher** | Almacenamiento relacional cifrado localmente. |
-| **Entorno**     | **Nix + Direnv**     | Entorno de desarrollo reproducible y hermético. |
-
-El mismo núcleo Rust está pensado para impulsar todos los destinos — escritorio
-hoy, Android y el servidor autohospedado opcional después — así que la lógica de
-negocio vive en un solo lugar.
+> Nunca habrá una nube de Sanctum. El único servidor será uno que **tú** administres,
+> en equipos que **tú** controlas.
 
 ## Instalación
 
-> [!NOTE]
-> La configuración completa para **Linux, macOS y Windows** — incluyendo el
-> toolchain de requisitos — está en la **[Guía de Instalación](docs/INSTALL_ES.md)**.
-
-El repositorio incluye un [`install.sh`](install.sh) que compila desde el código
-fuente e instala Sanctum. En Linux instala el binario, la entrada de escritorio y
-el icono; en macOS instala solo el binario.
+Las instrucciones completas para Linux, macOS y Windows están en la
+**[guía de instalación](docs/INSTALL_ES.md)**. Lo más rápido es el
+[`install.sh`](install.sh) incluido, que compila desde el código fuente:
 
 ```bash
 git clone https://github.com/yfloress/Sanctum.git
 cd Sanctum
-./install.sh --user      # compila + instala en ~/.local, sin sudo
+./install.sh --user   # compila e instala en ~/.local, sin sudo
 ```
 
-### Inicio Rápido (Nix, para desarrollo)
+### Desarrollo
 
-Este proyecto usa **Nix Flakes** para un entorno reproducible, además de
-**Node.js** y **pnpm** para el frontend Svelte. Todos los comandos se ejecutan
-desde la **raíz del repositorio**:
+El entorno es un flake de Nix y el frontend usa pnpm. Desde la raíz del repositorio:
 
 ```bash
-direnv allow                          # o: nix develop
-cd ui-svelte && pnpm install && cd ..  # solo la primera vez
-cargo tauri dev                       # ejecutar en modo desarrollo
-cargo tauri build                     # compilar binario de producción
+direnv allow                            # o: nix develop
+cd ui-svelte && pnpm install && cd ..   # sólo la primera vez
+cargo tauri dev                         # modo desarrollo
+cargo tauri build                       # compila la versión final
 ```
 
-### Android
-
-> [!NOTE]
-> El port a Android sigue en curso. El toolchain y los comandos de abajo
-> funcionan, pero el build móvil todavía no se considera usable.
-
-Con el toolchain móvil de Tauri configurado, compila y ejecuta en un dispositivo conectado:
+Android, todavía en desarrollo:
 
 ```bash
-cargo tauri android dev     # ejecutar en un dispositivo conectado (USB o ADB inalámbrico)
-cargo tauri android build   # compilar un APK / AAB de release
+cargo tauri android dev     # ejecuta en un dispositivo conectado
+cargo tauri android build   # compila un APK / AAB
 ```
 
-Consulta **[docs/INSTALL_ES.md](docs/INSTALL_ES.md)** para el toolchain manual y
-notas específicas por plataforma.
+## Tecnologías
 
-## Transparencia en el Desarrollo
+| Capa | Tecnología | Función |
+| :-- | :-- | :-- |
+| Núcleo | Rust | Lógica, validación, impuestos e importaciones |
+| Contenedor | Tauri 2 | Ventana nativa e integración con el sistema |
+| Interfaz | Svelte 5 + TypeScript | La interfaz, compilada con Vite |
+| Almacenamiento | SQLite + SQLCipher | Base de datos local cifrada |
+| Entorno | Nix | Entorno de desarrollo reproducible |
 
-Este proyecto abraza la colaboración abierta sin comprometer la auditabilidad.
+Un solo núcleo en Rust sirve a todas las plataformas, así que la lógica vive en un solo lugar.
 
-- **Arquitectura dirigida por humanos.** La privacidad y la integridad de los datos son la prioridad, diseñadas y dirigidas por humanos.
-- **Desarrollo asistido por IA.** La mayor parte del código se escribe o refactoriza con LLMs de frontera. Una persona define los patrones, la estructura y el alcance de cada cambio, revisa el resultado, y nada se integra hasta pasar el control del proyecto: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings` y la suite completa de tests.
-- **Auditable por diseño.** El código completo está abierto para inspección — verifica tú mismo que no hay telemetría oculta.
+## Cómo se construye
 
-## Comunidad y Contribución
+- **Diseño dirigido por una persona.** La privacidad y la integridad de los datos van
+  primero, y la arquitectura la decide una persona.
+- **Código asistido por IA.** La mayor parte del código se escribe o refactoriza con
+  modelos de frontera. Una persona define la estructura y el alcance de cada cambio y
+  lo revisa, y nada se integra sin pasar `cargo fmt`, `cargo clippy -D warnings`, la
+  suite completa de tests, `cargo machete` y `cargo deny`.
+- **Abierto a auditoría.** Todo el código está aquí, para que compruebes por tu
+  cuenta que nada sale de tu dispositivo.
 
-¿Encontraste un bug o tienes una idea? Usa el
-[Issue Tracker](https://github.com/yfloress/Sanctum/issues) para errores y
-sugerencias.
+## Contribuir
 
-## Aviso Legal
-
-**Sanctum está actualmente en ALPHA.** La encriptación es estándar de la industria,
-pero el software está en desarrollo activo y puede cambiar sin previo aviso.
-**Mantén siempre copias de seguridad de tus claves de recuperación.**
+Los errores y las ideas son bienvenidos en el [gestor de issues](https://github.com/yfloress/Sanctum/issues).
 
 ## Licencia
 
-Código abierto bajo la **Licencia Pública General GNU v3.0**. Consulta el archivo
-[LICENSE](LICENSE) para más detalles.
-
------
-
-<div align="center">
-<sub>Construido con ❤️, 🦀 Rust y ❄️ Nix</sub>
-</div>
+Sanctum es software libre bajo la **GNU Affero General Public License v3.0**. Ver
+[LICENSE](LICENSE).
