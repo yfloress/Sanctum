@@ -487,26 +487,31 @@
     display: grid; gap: 12px; margin-bottom: 16px;
   }
 
+  /* Secondary action. Opaque: it often sits straight on the page, where a
+     few percent of white just shows the background through as grey. */
   :global(.glass-btn) {
     padding: 8px 16px;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--glass-border-hover);
     border-radius: 10px;
-    background: var(--glass);
+    background: var(--row-solid);
     color: var(--text-primary);
     font-size: 0.85rem;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: background 0.15s, border-color 0.15s;
   }
 
   :global(.glass-btn:hover) {
-    background: var(--glass-hover);
-    border-color: var(--glass-border-hover);
-    box-shadow: var(--glass-shadow);
+    background: var(--row-solid-hover);
+    border-color: var(--accent-border);
   }
 
   :global(.glass-btn:active) {
-    background: var(--glass-active);
     transform: scale(0.98);
+  }
+
+  :global(.glass-btn:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   :global(.tab-bar) {

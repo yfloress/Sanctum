@@ -1180,7 +1180,7 @@
             </div>
             <div class="range-picker">
               {#each [30, 90, 180, 365] as d}
-                <button class:active={trendDays === d} onclick={() => changeTrendDays(d)}>{d}d</button>
+                <button class:active={trendDays === d} aria-pressed={trendDays === d} onclick={() => changeTrendDays(d)}>{d}d</button>
               {/each}
             </div>
           </div>
@@ -2122,20 +2122,23 @@
   }
   .chart-section h3 { font-size: 0.78rem; color: var(--text-tertiary); letter-spacing: 0; margin: 0; font-weight: 500; }
   .chart-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  /* Segmented control: an opaque track, the chosen range in the same violet
+     as the active tab. */
   .range-picker {
     display: flex; gap: 2px;
-    background: var(--glass-active); border: 1px solid var(--glass-border);
+    background: var(--row-solid); border: 1px solid var(--glass-border-hover);
     border-radius: var(--radius-sm); padding: 2px;
   }
   .range-picker button {
-    padding: 4px 12px; border: none; border-radius: 6px;
-    background: none; color: var(--text-tertiary); cursor: pointer;
-    font-size: 0.72rem; font-weight: 500; transition: all 0.15s;
+    padding: 5px 12px; border: 1px solid transparent; border-radius: 6px;
+    background: none; color: var(--text-secondary); cursor: pointer;
+    font-size: 0.75rem; font-weight: 550; font-variant-numeric: tabular-nums;
+    transition: background 0.15s, color 0.15s;
   }
-  .range-picker button:hover { color: var(--text-primary); }
+  .range-picker button:hover { color: var(--text-primary); background: var(--row-solid-hover); }
+  .range-picker button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .range-picker button.active {
-    background: var(--glass-elevated); color: var(--text-primary);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    background: var(--accent-bg); border-color: var(--accent-border); color: var(--text-primary);
   }
 
   /* Wallets */

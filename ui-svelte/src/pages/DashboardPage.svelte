@@ -209,7 +209,7 @@
           <h4>{i18n.t('dashboard-net-worth-trend', 'Net Worth Trend')}</h4>
           <div class="range-picker">
             {#each ['1M','3M','6M','1Y','ALL'] as r}
-              <button class:active={selectedRange === r} onclick={() => changeRange(r)}>{r}</button>
+              <button class:active={selectedRange === r} aria-pressed={selectedRange === r} onclick={() => changeRange(r)}>{r}</button>
             {/each}
           </div>
         </div>
@@ -536,30 +536,23 @@
     color: var(--text-tertiary);
     opacity: 0.6;
   }
+  /* Segmented control: an opaque track, the chosen range in the same violet
+     as the active tab. */
   .range-picker {
-    display: flex;
-    gap: 2px;
-    background: var(--glass-active);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    padding: 2px;
+    display: flex; gap: 2px;
+    background: var(--row-solid); border: 1px solid var(--glass-border-hover);
+    border-radius: var(--radius-sm); padding: 2px;
   }
   .range-picker button {
-    padding: 4px 12px;
-    border: none;
-    border-radius: 6px;
-    background: none;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    font-size: 0.72rem;
-    font-weight: 500;
-    transition: all 0.15s;
+    padding: 5px 12px; border: 1px solid transparent; border-radius: 6px;
+    background: none; color: var(--text-secondary); cursor: pointer;
+    font-size: 0.75rem; font-weight: 550; font-variant-numeric: tabular-nums;
+    transition: background 0.15s, color 0.15s;
   }
-  .range-picker button:hover { color: var(--text-primary); }
+  .range-picker button:hover { color: var(--text-primary); background: var(--row-solid-hover); }
+  .range-picker button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .range-picker button.active {
-    background: var(--glass-elevated);
-    color: var(--text-primary);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    background: var(--accent-bg); border-color: var(--accent-border); color: var(--text-primary);
   }
   .chart-empty {
     padding: 48px;
