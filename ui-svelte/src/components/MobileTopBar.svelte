@@ -174,7 +174,6 @@
     border: 1px solid var(--modal-border);
     border-radius: var(--radius-md);
     box-shadow: var(--glass-shadow-lg);
-    backdrop-filter: var(--glass-blur-heavy);
     z-index: 102;
     animation: menuIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   }

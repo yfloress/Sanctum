@@ -291,7 +291,7 @@
 {#if show}
   <div class="modal-backdrop" role="presentation" onclick={close}></div>
   <div class="modal-wrapper palette-wrapper">
-    <div class="modal palette" use:dialog={{ onclose: close }}>
+    <div class="modal palette" aria-label={i18n.t('palette-title', 'Command palette')} role="dialog" use:dialog={{ onclose: close }}>
       <input
         type="text"
         class="palette-input"

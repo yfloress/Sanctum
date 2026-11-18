@@ -14,6 +14,7 @@
      You should have received a copy of the GNU Affero General Public License
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 <script lang="ts">
+  import PrivateAmount from './PrivateAmount.svelte'
   import { invoke } from '../lib/api/ipc'
   import { errorMessage } from '../lib/errors'
   import { i18n } from '../lib/stores/i18n.svelte'
@@ -76,8 +77,8 @@
       <p>{i18n.t('crypto-transfer-match-note', 'Suggestions have equal amounts in the same asset within three days. Confirm only transfers you recognize.')}</p>
       {#each review.rows as pair (pair.outgoing_id + ':' + pair.incoming_id)}
         <div class="pair">
-          <span>{pair.sent_at} · {pair.from_wallet} · −{pair.sent} {pair.symbol}</span>
-          <span>{pair.received_at} · {pair.to_wallet} · +{pair.received} {pair.symbol}</span>
+          <span>{pair.sent_at} · {pair.from_wallet} ·  <PrivateAmount value={'−' + pair.sent} unit={pair.symbol} /></span>
+          <span>{pair.received_at} · {pair.to_wallet} ·  <PrivateAmount value={'+' + pair.received} unit={pair.symbol} /></span>
           <details><summary>{i18n.t('crypto-transfer-ids', 'Movement identifiers')}</summary>
             <div><code>{pair.outgoing_id}</code> {pair.outgoing_notes ?? ''}</div>
             <div><code>{pair.incoming_id}</code> {pair.incoming_notes ?? ''}</div>

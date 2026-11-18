@@ -950,3 +950,7 @@ crypto-transfer-refresh = Refresh
 crypto-transfer-more = Showing the first 200 suggestions. Confirm matches to see more.
 crypto-history-deposit = Deposit
 crypto-history-withdrawal = Withdrawal
+history-added = Added
+history-to-add = To add
+ticker-up = Move up
+ticker-down = Move down

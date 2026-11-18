@@ -236,7 +236,7 @@
     --nav-active-border: rgba(255, 255, 255, 0.1);
     --danger-bg: rgba(248, 113, 113, 0.08);
     --danger-border: rgba(248, 113, 113, 0.15);
-    --modal-bg: linear-gradient(145deg, rgba(26, 26, 31, 0.9) 0%, rgba(20, 20, 24, 0.85) 50%, rgba(17, 17, 21, 0.8) 100%);
+    --modal-bg: var(--card-bg-solid);
     --modal-border: rgba(255, 255, 255, 0.1);
     --modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     --accent-bg: rgba(168, 85, 247, 0.2);
@@ -307,7 +307,6 @@
     --nav-active-border: rgba(110, 86, 207, 0.22);
     --danger-bg: rgba(193, 42, 47, 0.07);
     --danger-border: rgba(193, 42, 47, 0.20);
-    --modal-bg: rgba(255, 255, 255, 0.86);
     --modal-border: rgba(255, 255, 255, 0.9);
     --modal-shadow: 0 30px 80px -24px rgba(50, 35, 100, 0.35), 0 0 0 1px rgba(33, 31, 38, 0.06);
     --accent-bg: rgba(110, 86, 207, 0.10);

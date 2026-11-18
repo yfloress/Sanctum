@@ -238,7 +238,7 @@
   function getCryptoTxLabel(tx: CryptoTransactionDto): string {
     const t = tx.transaction_type
     const s = tx.subtype
-    const detail = `${tx.amount} ${tx.symbol}`
+    const detail = `${mask(tx.amount)} ${tx.symbol}`
     const args = { detail }
     if (t === 'income' || (t === 'transfer' && s === 'deposit'))
       return i18n.tArgs('crypto-tx-received', args, `Received ${detail}`)
@@ -1006,7 +1006,7 @@
   )
 </script>
 
-<div class="page" inert={showSources || showImport} class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
+<div class="page" inert={showSources || showImport || showTickerConfig} class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction}>
   <!-- Ticker Bar -->
   <div class="ticker-bar">
     {#if showFxBadge}
@@ -1067,10 +1067,10 @@
   <!-- Tabs -->
   <div class="tab-row">
     <div class="tab-bar">
-      <button class:active={activeTab === 'portfolio'} onclick={() => activeTab = 'portfolio'}>{i18n.t('crypto-tab-portfolio', 'Portfolio')}</button>
-      <button class:active={activeTab === 'wallets'} onclick={() => activeTab = 'wallets'}>{i18n.t('crypto-tab-wallets', 'Wallets')}</button>
-      <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('crypto-tab-activity', 'Activity')}</button>
-      <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
+      <button aria-pressed={activeTab === 'portfolio'} class:active={activeTab === 'portfolio'} onclick={() => activeTab = 'portfolio'}>{i18n.t('crypto-tab-portfolio', 'Portfolio')}</button>
+      <button aria-pressed={activeTab === 'wallets'} class:active={activeTab === 'wallets'} onclick={() => activeTab = 'wallets'}>{i18n.t('crypto-tab-wallets', 'Wallets')}</button>
+      <button aria-pressed={activeTab === 'activity'} class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('crypto-tab-activity', 'Activity')}</button>
+      <button aria-pressed={activeTab === 'tax'} class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
     <div class="tab-actions">
       <button class="glass-btn" onclick={() => { showSources = true; void loadWallets() }}>{i18n.t('crypto-sources-title', 'History sources')}</button>
@@ -1802,95 +1802,101 @@
 
 <!-- Ticker Config / Coins Modal -->
 {#if showTickerConfig}
-  <div class="modal-backdrop" role="presentation" onclick={() => showTickerConfig = false}></div>
+  <div class="modal-backdrop history-backdrop" role="presentation" onclick={() => showTickerConfig = false}></div>
   <div class="modal-wrapper">
-    <div class="modal wide" use:dialog={{ onclose: () => showTickerConfig = false }}>
-      <!-- Tab bar -->
-      <div class="cfg-tabs">
-        <button class="cfg-tab" class:active={tickerConfigTab === 'ticker'} onclick={() => tickerConfigTab = 'ticker'}>{i18n.t('crypto-ticker-tab', 'Ticker')}</button>
-        <button class="cfg-tab" class:active={tickerConfigTab === 'coins'} onclick={() => tickerConfigTab = 'coins'}>{i18n.t('crypto-coins-tab', 'Coins')}</button>
-      </div>
+    <div class="modal wide history-dialog ticker-dialog" role="dialog" aria-modal="true" aria-labelledby="ticker-title" use:dialog={{ onclose: () => showTickerConfig = false }}>
+      <h3 id="ticker-title">{i18n.t('crypto-configure-ticker', 'Configure ticker')}</h3>
+      <div class="history-body">
+        <div class="cfg-tabs">
+          <button class="cfg-tab" aria-pressed={tickerConfigTab === 'ticker'} class:active={tickerConfigTab === 'ticker'} onclick={() => tickerConfigTab = 'ticker'}>{i18n.t('crypto-ticker-tab', 'Ticker')}</button>
+          <button class="cfg-tab" aria-pressed={tickerConfigTab === 'coins'} class:active={tickerConfigTab === 'coins'} onclick={() => tickerConfigTab = 'coins'}>{i18n.t('crypto-coins-tab', 'Coins')}</button>
+        </div>
 
-      {#if tickerConfigTab === 'ticker'}
-        <!-- Active tickers (ordered) -->
-        <p class="tc-section-label">{i18n.t('crypto-ticker-active', 'Active — use arrows to reorder')}</p>
-        {#if tickerConfigActive.length === 0}
-          <p class="tc-empty">{i18n.t('crypto-ticker-no-selected', 'No tickers selected yet.')}</p>
-        {:else}
-          <div class="tc-active-list">
-            {#each tickerConfigActive as coin, i}
-              <div class="tc-active-item">
-                <div class="tc-order-btns">
-                  <button class="tc-arrow" onclick={() => moveTickerUp(i)} disabled={i === 0} aria-label="Move up">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 15l7-7 7 7"/></svg>
-                  </button>
-                  <button class="tc-arrow" onclick={() => moveTickerDown(i)} disabled={i === tickerIds.length - 1} aria-label="Move down">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+        {#if tickerConfigTab === 'ticker'}
+          <!-- Active tickers (ordered) -->
+          <p class="tc-section-label">{i18n.t('crypto-ticker-active', 'Active — use arrows to reorder')}</p>
+          {#if tickerConfigActive.length === 0}
+            <p class="tc-empty">{i18n.t('crypto-ticker-no-selected', 'No tickers selected yet.')}</p>
+          {:else}
+            <div class="tc-active-list">
+              {#each tickerConfigActive as coin, i (coin.id)}
+                <div class="tc-active-item">
+                  <img src={getCryptoIconPath(coin.symbol)} alt="" class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+                  <span class="tc-sym">{coin.symbol}</span>
+                  <span class="tc-name">{coin.name}</span>
+                  <div class="tc-order-btns">
+                    <button class="tc-arrow" onclick={() => moveTickerUp(i)} disabled={i === 0} aria-label={i18n.t('ticker-up', 'Move up') + ' · ' + coin.symbol}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 15l7-7 7 7"/></svg>
+                    </button>
+                    <button class="tc-arrow" onclick={() => moveTickerDown(i)} disabled={i === tickerIds.length - 1} aria-label={i18n.t('ticker-down', 'Move down') + ' · ' + coin.symbol}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                  </div>
+                  <button class="tc-remove" onclick={() => removeTicker(coin.id)} aria-label={i18n.t('crypto-batch-remove', 'Remove') + ' · ' + coin.symbol}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
                   </button>
                 </div>
-                <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              {/each}
+            </div>
+          {/if}
+
+          <p class="tc-section-label" style="margin-top: 16px;">{i18n.t('crypto-ticker-add-coins', 'Add coins')}</p>
+          <input type="text" class="catalog-search" bind:value={tickerConfigSearch} aria-label={i18n.t('crypto-ticker-search', 'Search coins...')} placeholder={i18n.t('crypto-ticker-search', 'Search coins...')} />
+          <div class="tc-available-list">
+            {#each tickerConfigAvailable as coin (coin.id)}
+              <button class="tc-available-item" onclick={() => addTicker(coin.id)}>
+                <img src={getCryptoIconPath(coin.symbol)} alt="" class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
                 <span class="tc-sym">{coin.symbol}</span>
                 <span class="tc-name">{coin.name}</span>
-                <button class="tc-remove" onclick={() => removeTicker(coin.id)} aria-label="Remove">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              </div>
+                <svg class="tc-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            {:else}
+              <p class="tc-empty">{i18n.t('palette-no-results', 'Nothing found')}</p>
             {/each}
           </div>
-        {/if}
 
-        <p class="tc-section-label" style="margin-top: 16px;">{i18n.t('crypto-ticker-add-coins', 'Add coins')}</p>
-        <input type="text" class="catalog-search" bind:value={tickerConfigSearch} placeholder={i18n.t('crypto-ticker-search', 'Search coins...')} />
-        <div class="tc-available-list">
-          {#each tickerConfigAvailable as coin}
-            <button class="tc-available-item" onclick={() => addTicker(coin.id)}>
-              <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-              <span class="tc-sym">{coin.symbol}</span>
-              <span class="tc-name">{coin.name}</span>
-              <svg class="tc-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            </button>
-          {/each}
-        </div>
+          <div class="modal-actions">
+            <button class="secondary-btn" onclick={() => showTickerConfig = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
+            <button class="primary-btn" onclick={saveTickerConfig}>{i18n.t('crypto-ticker-save', 'Save')}</button>
+          </div>
 
-        <div class="modal-actions">
-          <button class="secondary-btn" onclick={() => showTickerConfig = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
-          <button class="primary-btn" onclick={saveTickerConfig}>{i18n.t('crypto-ticker-save', 'Save')}</button>
-        </div>
+        {:else}
+          <!-- Coins tab -->
+          <input type="text" class="catalog-search" bind:value={catalogSearch} aria-label={i18n.t('crypto-ticker-search', 'Search coins...')} placeholder={i18n.t('crypto-ticker-search', 'Search coins...')} />
+          <div class="catalog-list">
+            {#each filteredCatalog as coin (coin.id)}
+              <div class="catalog-item">
+                <img src={getCryptoIconPath(coin.symbol)} alt="" class="catalog-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+                <span class="catalog-sym">{coin.symbol}</span>
+                <span class="catalog-name">{coin.name}</span>
+                {#if coin.is_custom}
+                  <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin)} aria-label="Delete">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                {/if}
+              </div>
+            {:else}
+              <p class="tc-empty">{i18n.t('palette-no-results', 'Nothing found')}</p>
+            {/each}
+          </div>
 
-      {:else}
-        <!-- Coins tab -->
-        <input type="text" class="catalog-search" bind:value={catalogSearch} placeholder={i18n.t('crypto-ticker-search', 'Search coins...')} />
-        <div class="catalog-list">
-          {#each filteredCatalog as coin}
-            <div class="catalog-item">
-              <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="catalog-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-              <span class="catalog-sym">{coin.symbol}</span>
-              <span class="catalog-name">{coin.name}</span>
-              {#if coin.is_custom}
-                <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin)} aria-label="Delete">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              {/if}
+          <div class="custom-coin-form">
+            <span class="form-label">{i18n.t('crypto-custom-coin', 'Add Custom Coin')}</span>
+            <div class="custom-coin-row">
+              <input type="text" bind:value={customCoinId} placeholder={i18n.t('crypto-custom-id', 'ID')} />
+              <input type="text" bind:value={customCoinName} placeholder={i18n.t('crypto-custom-name', 'Name')} />
             </div>
-          {/each}
-        </div>
-
-        <div class="custom-coin-form">
-          <span class="form-label">{i18n.t('crypto-custom-coin', 'Add Custom Coin')}</span>
-          <div class="custom-coin-row">
-            <input type="text" bind:value={customCoinId} placeholder={i18n.t('crypto-custom-id', 'ID')} />
-            <input type="text" bind:value={customCoinName} placeholder={i18n.t('crypto-custom-name', 'Name')} />
+            <div class="custom-coin-row-bottom">
+              <input type="text" bind:value={customCoinSymbol} placeholder={i18n.t('crypto-custom-symbol', 'Symbol')} />
+              <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>{i18n.t('crypto-custom-add', 'Add')}</button>
+            </div>
           </div>
-          <div class="custom-coin-row-bottom">
-            <input type="text" bind:value={customCoinSymbol} placeholder={i18n.t('crypto-custom-symbol', 'Symbol')} />
-            <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>{i18n.t('crypto-custom-add', 'Add')}</button>
-          </div>
-        </div>
 
-        <div class="modal-actions">
-          <button class="secondary-btn" onclick={() => showTickerConfig = false}>Close</button>
-        </div>
-      {/if}
+          <div class="modal-actions">
+            <button class="secondary-btn" onclick={() => showTickerConfig = false}>Close</button>
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 {/if}
@@ -2198,14 +2204,7 @@
   .modal-wrapper .modal {
     pointer-events: auto;
   }
-  .modal {
-    position: relative;
-    background: linear-gradient(145deg, rgba(26, 26, 31, 0.75) 0%, rgba(20, 20, 24, 0.72) 50%, rgba(17, 17, 21, 0.7) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg);
-    padding: 28px; width: 400px; z-index: 101;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
-  }
+  .modal { width: 400px; }
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
   .modal.wide { width: 480px; }
   /* Mobile: modals become a bottom sheet. Placed AFTER the base .modal rules
@@ -2251,7 +2250,7 @@
     padding: 0;
     overflow: hidden;
     color: var(--text-primary);
-    background: var(--bg-base);
+    background: var(--modal-bg);
     border: 1px solid var(--glass-border-hover);
     box-shadow: var(--glass-shadow-lg);
     font: inherit;
@@ -2302,6 +2301,13 @@
     .history-dialog .modal-actions { padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px)); }
   }
 
+  .ticker-dialog .tc-section-label { font-size: .9rem; letter-spacing: normal; text-transform: none; }
+  .ticker-dialog .tc-name, .ticker-dialog .catalog-name { font-size: .9rem; }
+  .ticker-dialog .tc-add-icon { opacity: 1; }
+  .ticker-dialog .tc-icon, .ticker-dialog .catalog-icon { width: 22px; height: 22px; }
+  .ticker-dialog .tc-active-item { padding: .5rem .7rem; }
+  .ticker-dialog .tc-arrow, .ticker-dialog .tc-remove { min-width: 26px; min-height: 26px; }
+  .ticker-dialog .tc-available-item, .ticker-dialog .catalog-item { min-height: 2.5rem; }
   .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }
   .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
   .form-grid input {
@@ -2556,14 +2562,16 @@
   .events-count { font-size: 0.75rem; color: var(--text-tertiary); font-weight: 400; }
 
   /* Ticker config tabs */
-  .cfg-tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); }
+  .cfg-tabs {
+    display: flex; gap: .25rem; padding: .25rem; margin-bottom: 1.15rem;
+    background: var(--row-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+  }
   .cfg-tab {
-    padding: 8px 18px; background: none; border: none; border-bottom: 2px solid transparent;
-    color: var(--text-tertiary); cursor: pointer; font-size: 0.85rem; font-weight: 500;
-    transition: color 0.15s, border-color 0.15s; margin-bottom: -1px;
+    flex: 1; min-height: 2.4rem; border: 1px solid transparent; border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-secondary); font-size: .94rem; font-weight: 550; cursor: pointer;
   }
   .cfg-tab:hover { color: var(--text-primary); }
-  .cfg-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .cfg-tab.active { background: var(--accent-bg); color: var(--text-primary); border-color: var(--accent-border); }
 
   /* Ticker config modal */
   .tc-section-label { font-size: 0.78rem; color: var(--text-tertiary); letter-spacing: 0; margin: 0 0 8px; font-weight: 500; }
@@ -2575,7 +2583,7 @@
     background: var(--glass); border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm); font-size: 0.85rem;
   }
-  .tc-order-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+  .tc-order-btns { display: flex; flex-direction: row; gap: 1px; flex-shrink: 0; }
   .tc-arrow {
     background: none; border: none; cursor: pointer; padding: 1px 3px;
     color: var(--text-tertiary); display: flex; border-radius: 3px;

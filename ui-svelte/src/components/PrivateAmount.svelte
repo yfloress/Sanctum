@@ -1,0 +1,27 @@
+<!-- Sanctum — a privacy-first personal finance and crypto vault.
+     Copyright (C) 2026  yfloress
+
+     This program is free software: you can redistribute it and/or modify
+     it under the terms of the GNU Affero General Public License as
+     published by the Free Software Foundation, either version 3 of the
+     License, or (at your option) any later version.
+
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU Affero General Public License for more details.
+
+     You should have received a copy of the GNU Affero General Public License
+     along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
+
+<script lang="ts">
+  import { mask } from '../lib/currency'
+
+  let { value, unit = '' }: { value: number | string; unit?: string } = $props()
+</script>
+
+<span class="amount">{mask(value)}{unit ? ' ' + unit : ''}</span>
+
+<style>
+  .amount { font-variant-numeric: tabular-nums; }
+</style>

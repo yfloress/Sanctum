@@ -373,7 +373,7 @@
   .clear-coin:hover { color: var(--text-primary); }
   .coin-dropdown {
     max-height: 150px; overflow-y: auto; border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm); background: rgba(20, 20, 24, 0.95); margin-top: 4px;
+    border-radius: var(--radius-sm); background: var(--modal-bg); margin-top: 4px;
   }
   .coin-option {
     display: block; width: 100%; padding: 8px 12px; background: none; border: none;

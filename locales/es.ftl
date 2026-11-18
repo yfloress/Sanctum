@@ -950,3 +950,7 @@ crypto-transfer-refresh = Actualizar
 crypto-transfer-more = Se muestran las primeras 200 sugerencias. Confirma coincidencias para ver más.
 crypto-history-deposit = Depósito
 crypto-history-withdrawal = Retiro
+history-added = Añadidos
+history-to-add = Por añadir
+ticker-up = Subir
+ticker-down = Bajar

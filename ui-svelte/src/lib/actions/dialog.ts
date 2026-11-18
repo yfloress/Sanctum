@@ -37,12 +37,13 @@ interface Entry {
 }
 
 const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  'summary, a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /** Autofocus targets. Buttons excluded: never arm a destructive default. */
 const FIELDS =
   'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
 
+let nextTitleId = 0
 const stack: Entry[] = []
 
 /** True while any dialog is mounted, so global shortcuts can stay inert. */
@@ -107,7 +108,7 @@ function submitOnEnter(event: KeyboardEvent, top: Entry) {
 
   const active = document.activeElement as HTMLElement | null
   if (!active || !top.node.contains(active)) return
-  if (active.tagName === 'TEXTAREA' || active.tagName === 'BUTTON' || active.tagName === 'A') return
+  if (active.closest('summary, textarea, button, a[href], select, [contenteditable="true"]')) return
 
   event.preventDefault()
   top.onsubmit()
@@ -120,16 +121,20 @@ export function dialog(node: HTMLElement, options: DialogOptions) {
   if (stack.length === 0) window.addEventListener('keydown', onKeydown)
   stack.push(entry)
 
-  if (options.autofocus ?? true) {
-    const field = node.querySelector<HTMLElement>(FIELDS)
-    if (field) {
-      field.focus()
-    } else {
-      // No field: focus the dialog so Tab starts inside it.
-      if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1')
-      node.focus()
+  node.setAttribute('role', 'dialog')
+  node.setAttribute('aria-modal', 'true')
+  if (!node.hasAttribute('aria-label') && !node.hasAttribute('aria-labelledby')) {
+    const heading = node.querySelector('h1, h2, h3, h4')
+    if (heading) {
+      if (!heading.id) heading.id = `sanctum-dialog-heading-${++nextTitleId}`
+      node.setAttribute('aria-labelledby', heading.id)
     }
   }
+  if (!node.hasAttribute('tabindex')) node.tabIndex = -1
+  const field = (options.autofocus ?? true)
+    ? Array.from(node.querySelectorAll<HTMLElement>(FIELDS)).find(el => el.getClientRects().length > 0)
+    : undefined
+  ;(field ?? node).focus({ preventScroll: true })
 
   return {
     update(next: DialogOptions) {
