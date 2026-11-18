@@ -130,7 +130,7 @@ async fn request<T: DeserializeOwned>(
     for attempt in 0..3 {
         let clock = u64::try_from(Timestamp::now().as_millisecond()).unwrap_or_default();
         let previous = NONCE
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| {
+            .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| {
                 Some(clock.max(n + 1))
             })
             .expect("nonce always advances");
