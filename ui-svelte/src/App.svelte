@@ -303,7 +303,7 @@
     --select-bg: rgba(255, 255, 255, 0.75);
     --select-bg-hover: rgba(255, 255, 255, 0.92);
     --option-bg: #ffffff;
-    --sidebar-bg: rgba(250, 249, 252, 0.55);
+    --sidebar-bg: #faf9fc;
     --sidebar-border: rgba(33, 31, 38, 0.07);
     --nav-active-bg: rgba(255, 255, 255, 0.85);
     --nav-active-border: rgba(110, 86, 207, 0.22);

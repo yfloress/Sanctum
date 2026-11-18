@@ -61,14 +61,12 @@
   <!-- Drag region for borderless window -->
   <div class="drag-region" data-tauri-drag-region></div>
 
-  <!-- Noise texture overlay -->
-  <div class="noise"></div>
-
   <!-- Floating collapse toggle on the right edge -->
   <button
     class="edge-toggle"
     onclick={toggleCollapsed}
-    aria-label="Toggle sidebar"
+    aria-label={app.sidebarCollapsed ? i18n.t('nav-expand', 'Expand') : i18n.t('nav-collapse', 'Collapse')}
+    aria-expanded={!app.sidebarCollapsed}
     id="toggle-sidebar"
     title={app.sidebarCollapsed ? i18n.t('nav-expand', 'Expand') : i18n.t('nav-collapse', 'Collapse')}
   >
@@ -193,10 +191,12 @@
     flex-direction: column;
     width: 220px;
     height: 100vh;
-    background: linear-gradient(170deg, #13111d 0%, #0f0d18 45%, #0c0b14 100%);
-    border-right: 1px solid rgba(168, 85, 247, 0.08);
-    box-shadow: inset -1px 0 0 rgba(168, 85, 247, 0.04), 4px 0 24px rgba(0, 0, 0, 0.3);
-    transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    /* Only the width moves. Every icon keeps its x position in both states
+       (see .nav-item), and labels only fade, so nothing inside jumps or has
+       to be laid out again on each frame. */
+    transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
     flex-shrink: 0;
     position: relative;
     z-index: 10;
@@ -205,17 +205,6 @@
 
   .sidebar.collapsed {
     width: 64px;
-  }
-
-  /* ── Noise texture overlay ──────────────────────────── */
-  .noise {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.04;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.8 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    z-index: 0;
   }
 
   .sidebar-header,
@@ -285,6 +274,9 @@
     min-height: 62px;
     display: flex;
     align-items: center;
+    /* Clips the wordmark while the sidebar narrows; the sidebar itself
+       stays overflow: visible for the edge toggle. */
+    overflow: hidden;
   }
 
   .logo-container {
@@ -306,7 +298,6 @@
   .logo-icon {
     width: 28px;
     height: 28px;
-    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.3));
   }
 
   .logo-text {
@@ -316,17 +307,13 @@
     color: var(--text-primary);
     white-space: nowrap;
     opacity: 1;
-    max-width: 160px;
-    transform: translateX(0);
-    transition: opacity 0.2s ease 0.2s, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease 0.2s;
+    transition: opacity 0.18s ease 0.08s;
   }
 
   .collapsed .logo-text {
     opacity: 0;
-    max-width: 0;
-    transform: translateX(-6px);
     pointer-events: none;
-    transition: opacity 0.15s ease, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s ease;
+    transition: opacity 0.1s ease;
   }
 
   /* ── Nav ─────────────────────────────────────────────── */
@@ -347,18 +334,19 @@
     position: relative;
   }
 
-  /* Separator line between groups — visible only when collapsed */
+  /* Separator between groups, drawn where the group label was: visible only
+     when collapsed. The label keeps its height in both states so the icons
+     below it never move up or down. */
   .nav-group:not(:first-child)::before {
     content: '';
     position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 9px;
+    left: 8px;
     width: 24px;
     height: 1px;
-    background: rgba(168, 85, 247, 0.12);
+    background: var(--accent-border);
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.18s ease;
   }
 
   .collapsed .nav-group:not(:first-child)::before {
@@ -377,14 +365,13 @@
     height: 18px;
     line-height: 18px;
     display: block;
-    transition: opacity 0.2s ease 0.2s, height 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.18s ease 0.08s;
   }
 
   .collapsed .nav-group-label {
     opacity: 0;
-    height: 0;
     pointer-events: none;
-    transition: opacity 0.15s ease, height 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.1s ease;
   }
 
   .nav-item {
@@ -408,30 +395,24 @@
     white-space: nowrap;
   }
 
-  /* ── Nav label animation ─────────────────────────────── */
+  /* ── Nav label animation ─────────────────────────────────
+     Labels only fade; the narrowing item clips them. They go quickly when
+     collapsing and come back a beat late when expanding, once there is
+     room for them. The item keeps its padding in both states: collapsed it
+     is 40px wide, which centres the 20px icon in the 64px sidebar exactly,
+     so the icon stays put instead of snapping to a new place. */
   .nav-label {
     opacity: 1;
-    max-width: 160px;
-    transform: translateX(0);
-    overflow: hidden;
     white-space: nowrap;
     letter-spacing: 0.01em;
-    transition: opacity 0.2s ease 0.2s, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease 0.2s;
+    transition: opacity 0.18s ease 0.08s;
     flex-shrink: 0;
   }
 
   .collapsed .nav-label {
     opacity: 0;
-    max-width: 0;
-    transform: translateX(-6px);
     pointer-events: none;
-    transition: opacity 0.15s ease, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s ease;
-  }
-
-  .collapsed .nav-item {
-    justify-content: center;
-    padding: 0;
-    gap: 0;
+    transition: opacity 0.1s ease;
   }
 
   /* ── Icon ────────────────────────────────────────────── */
@@ -463,7 +444,7 @@
 
   /* ── Active ──────────────────────────────────────────── */
   .nav-item.active {
-    background: linear-gradient(90deg, rgba(168, 85, 247, 0.16) 0%, rgba(168, 85, 247, 0.04) 100%);
+    background: var(--accent-bg);
     color: var(--text-primary);
   }
 
@@ -483,13 +464,13 @@
     bottom: 8px;
     width: 2px;
     border-radius: 0 2px 2px 0;
-    background: linear-gradient(180deg, #d8b4fe, #a855f7);
-    box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+    background: var(--accent);
   }
 
   /* ── Footer ──────────────────────────────────────────── */
   .sidebar-footer {
-    padding: 8px;
+    /* Same side padding as the nav, so footer icons line up with it. */
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -502,14 +483,7 @@
     display: block;
     height: 1px;
     margin: 0 4px 8px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(168, 85, 247, 0.15) 30%,
-      rgba(168, 85, 247, 0.2) 50%,
-      rgba(168, 85, 247, 0.15) 70%,
-      transparent 100%
-    );
+    background: var(--sidebar-border);
   }
 
   /* ── Eye / hide-balances button ──────────────────────── */
@@ -529,23 +503,11 @@
 
   .lock-btn:hover .nav-icon-wrap {
     color: var(--danger);
-    filter: drop-shadow(0 0 5px rgba(248, 113, 113, 0.3));
   }
 
   /* ── Light mode ──────────────────────────────────────────
      Dark mode is the default above; these overrides only apply
      when the .light-mode class is present on <html>. */
-  :global(.light-mode) .sidebar {
-    background: var(--sidebar-bg);
-    backdrop-filter: var(--glass-blur-heavy);
-    border-right: 1px solid var(--sidebar-border);
-    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.7);
-  }
-
-  /* The white noise overlay reads as grain on dark; hide it on light. */
-  :global(.light-mode) .noise {
-    opacity: 0;
-  }
 
   :global(.light-mode) .edge-toggle {
     background: #ffffff;
@@ -572,7 +534,7 @@
 
   :global(.light-mode) .nav-item.active {
     background: var(--nav-active-bg);
-    box-shadow: 0 0 0 1px var(--nav-active-border) inset, 0 4px 12px -6px rgba(70, 50, 130, 0.25);
+    box-shadow: 0 0 0 1px var(--nav-active-border) inset;
   }
 
   :global(.light-mode) .nav-item.active .nav-icon-wrap {
@@ -586,6 +548,16 @@
   :global(.light-mode) .eye-btn.active,
   :global(.light-mode) .eye-btn.active .nav-icon-wrap {
     color: var(--accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .logo-text,
+    .nav-group-label,
+    .nav-label,
+    .nav-group:not(:first-child)::before {
+      transition: none;
+    }
   }
 
   /* ── Mobile: sidebar becomes a bottom navigation bar ─────
@@ -621,7 +593,6 @@
     .drag-region,
     .edge-toggle,
     .sidebar-header,
-    .noise,
     .nav-group-label,
     .sidebar-footer::before,
     .nav-label {
