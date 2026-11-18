@@ -46,7 +46,6 @@
   let error = $state('')
   let activeMapper = $state<number | null>(null)
   let mapperContent = $state('')
-  let fileInput: HTMLInputElement
   let walletName = $state('')
   let walletCategory = $state('exchange')
   let drag = $state(false)
@@ -208,14 +207,17 @@
 </script>
 
 <div class="batch" aria-busy={busy}>
-  <input type="file" accept=".csv,.tsv,.txt" multiple hidden bind:this={fileInput}
-    onchange={e => { const files = Array.from(e.currentTarget.files ?? []); e.currentTarget.value = ''; void addFiles(files) }} />
-  <button type="button" class="drop" class:drag disabled={busy} onclick={() => fileInput.click()}
-    ondragover={e => { e.preventDefault(); drag = true }}
-    ondragleave={() => drag = false}
-    ondrop={e => { e.preventDefault(); drag = false; void addFiles(Array.from(e.dataTransfer?.files ?? [])) }}>
-    {i18n.t('crypto-batch-select', 'Choose or drop history files')}
-  </button>
+  <label class="drop" class:drag class:inactive={busy}>
+    <span class="upload-icon" aria-hidden="true"></span>
+    <strong>{i18n.t('crypto-batch-select', 'Choose or drop history files')}</strong>
+    <span class="extensions">CSV · TSV · TXT</span>
+    <input type="file" accept=".csv,.tsv,.txt" multiple disabled={busy}
+      aria-label={i18n.t('crypto-batch-select', 'Choose or drop history files')}
+      ondragenter={() => drag = true}
+      ondragleave={() => drag = false}
+      ondrop={() => drag = false}
+      onchange={e => { const files = Array.from(e.currentTarget.files ?? []); e.currentTarget.value = ''; void addFiles(files) }} />
+  </label>
   {#if entries.length}
     <details>
       <summary>{i18n.t('crypto-batch-new-wallet', 'Create a destination wallet')}</summary>
@@ -308,8 +310,16 @@
 <style>
   .batch, section { display: grid; gap: 0.65rem; }
   .batch { max-height: 65vh; overflow-y: auto; }
-  .drop { padding: 1rem; border: 1px dashed var(--glass-border); border-radius: 8px; background: transparent; color: var(--text-primary); cursor: pointer; }
-  .drop.drag, .drop:focus-visible { outline: 2px solid currentColor; }
+  .drop {
+    position: relative; display: grid; gap: .35rem; justify-items: center; text-align: center;
+    padding: 1.5rem 1rem; border: 1px dashed var(--accent); border-radius: var(--radius-md, 12px);
+    background: var(--accent-glow); color: var(--text-primary);
+  }
+  .drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .drop.drag, .drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .drop.inactive { opacity: .65; }
+  .upload-icon { width: 1.65rem; height: 1.65rem; background: var(--accent); mask: url('/assets/icons/upload.svg') center / contain no-repeat; }
+  .extensions, small { color: var(--text-secondary); font-size: .875rem; }
   section { border-top: 1px solid var(--glass-border); padding: 0.75rem 0; }
   strong { overflow-wrap: anywhere; }
   .controls, label { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }

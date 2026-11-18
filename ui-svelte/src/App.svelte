@@ -136,7 +136,14 @@
   function handleScroll() {
     if (mainEl) scrollPositions[app.activePage] = mainEl.scrollTop
   }
+  function preventFileNavigation(event: DragEvent) {
+    // The file input needs the browser's default drop action to populate its FileList.
+    if (event.target instanceof HTMLInputElement && event.target.type === 'file' && !event.target.disabled) return
+    if (Array.from(event.dataTransfer?.types ?? []).includes('Files')) event.preventDefault()
+  }
 </script>
+
+<svelte:window ondragover={preventFileNavigation} ondrop={preventFileNavigation} />
 
 {#if !app.isLoggedIn}
   <LoginPage />
