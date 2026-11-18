@@ -20,6 +20,7 @@
   import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import { startShortcuts } from './lib/shortcuts'
+  import { autoSyncKraken } from './lib/api/krakenSync'
   import { startAutoSync } from './lib/autoSync'
   import Sidebar from './components/Sidebar.svelte'
   import MobileTopBar from './components/MobileTopBar.svelte'
@@ -42,12 +43,17 @@
   $effect(() => {
     if (app.isLoggedIn) {
       i18n.load()
+      let active = true
+      void autoSyncKraken().then(result => {
+        if (active && result?.inserted) app.showToast('Kraken · ' + result.inserted)
+      }).catch(() => { if (active && app.isLoggedIn) app.showToast(i18n.t('crypto-kraken-retry','Review Kraken in History sources'), true) })
       const stopSession = startSessionMonitor()
       const stopShortcuts = startShortcuts({
         openHelp: () => showShortcuts = true,
         openPalette: () => showPalette = true,
       })
       return () => {
+        active = false
         stopSession()
         stopShortcuts()
         showShortcuts = false

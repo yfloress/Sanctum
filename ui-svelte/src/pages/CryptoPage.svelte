@@ -34,6 +34,7 @@
   import CryptoWalletPanel from '../components/crypto/CryptoWalletPanel.svelte'
   import CryptoAssetPanel from '../components/crypto/CryptoAssetPanel.svelte'
   import CryptoTaxPanel from '../components/crypto/CryptoTaxPanel.svelte'
+  import CryptoSync from '../components/crypto/CryptoSync.svelte'
   import CryptoBatchImport from '../components/CryptoBatchImport.svelte'
   import type {
     PortfolioResponse, PortfolioTrendData,
@@ -254,6 +255,7 @@
 
   // Wallet form
   let showAddWallet = $state(false)
+  let showSources = $state(false)
   let showImport = $state(false)
   let importBusy = $state(false)
   let walletName = $state('')
@@ -1000,7 +1002,7 @@
   )
 </script>
 
-<div class="page" class:blurred={showAddWallet || showImport || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
+<div class="page" class:blurred={showAddWallet || showSources || showImport || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
   <!-- Ticker Bar -->
   <div class="ticker-bar">
     {#if showFxBadge}
@@ -1067,6 +1069,7 @@
       <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
     <div class="tab-actions">
+      <button class="glass-btn" onclick={() => { showSources = true; void loadWallets() }}>{i18n.t('crypto-sources-title', 'History sources')}</button>
       <button class="glass-btn" onclick={() => showImport = true}>{i18n.t('crypto-import-history', 'Import history')}</button>
       {#if activeTab === 'wallets'}
         <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
@@ -1715,6 +1718,17 @@
   onclose={() => showAssetDetail = false}
 />
 
+{#if showSources}
+  <div class="modal-backdrop" role="presentation" onclick={() => showSources = false}></div>
+  <div class="modal-wrapper">
+    <div class="modal wide history-sources" role="dialog" aria-modal="true" aria-labelledby="sources-title" use:dialog={{ onclose: () => showSources = false, autofocus: false }}>
+      <h3 id="sources-title">{i18n.t('crypto-sources-title', 'History sources')}</h3>
+      <CryptoSync wallets={walletsData?.wallets ?? []} onupdated={refreshAfterTxChange} />
+      <div class="modal-actions"><button class="secondary-btn" onclick={() => showSources = false}>{i18n.t('crypto-close','Close')}</button></div>
+    </div>
+  </div>
+{/if}
+
 <!-- Exchange and wallet history import -->
 {#if showImport}
   <div class="modal-backdrop" role="presentation" onclick={() => { if (!importBusy) showImport = false }}></div>
@@ -2178,6 +2192,21 @@
   }
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
   .modal.wide { width: 480px; }
+  .history-sources {
+    max-height: 85dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .history-sources :global(summary) {
+    cursor: pointer;
+    padding: .65rem 0;
+    font-weight: 600;
+  }
+  .history-sources :global(details) { border-bottom: 1px solid var(--border, #7776); }
+  .history-sources :global(input:not([type="checkbox"])), .history-sources :global(select) {
+    width: 100%;
+    min-width: 0;
+  }
 
   /* Mobile: modals become a bottom sheet. Placed AFTER the base .modal rules
      above so it wins the cascade by source order (CryptoPage defines its own

@@ -3565,6 +3565,7 @@ dependencies = [
 name = "sanctum"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "csv",
  "env_logger",
  "fluent-bundle",
@@ -3575,6 +3576,7 @@ dependencies = [
  "r2d2",
  "r2d2_sqlite",
  "reqwest",
+ "ring",
  "rusqlite",
  "secrecy",
  "serde",
@@ -3585,6 +3587,7 @@ dependencies = [
  "toml 1.1.8+spec-1.1.0",
  "unic-langid",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]

@@ -907,3 +907,18 @@ mapping-direction = Without a type column, positive quantities are deposits and 
 mapping-unit-price = Confirm that the price column is USD per unit.
 mapping-preview = Preview mapped transactions
 mapping-preview-count = To import: {$added}. Skipped: {$skipped}. Row errors: {$errors}.
+
+kraken-sync-result = { $count } imported, { $duplicates } duplicates
+kraken-wallet-missing = Wallet unavailable
+kraken-synced-through = Updated through
+kraken-sync-now = Update ledger
+kraken-disconnect = Disconnect
+kraken-key-help = Create a dedicated Kraken API key with only Query ledger entries enabled. Credentials are stored in your encrypted vault.
+kraken-wallet = Destination wallet
+kraken-select-wallet = Select a wallet
+kraken-sync-on-unlock = Update when I unlock this vault
+kraken-connect = Save connection
+kraken-working = Working…
+
+crypto-sources-title = History sources
+crypto-kraken-retry = Review Kraken in History sources

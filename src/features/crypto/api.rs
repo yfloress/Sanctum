@@ -309,7 +309,7 @@ async fn enforce_rate_limit() -> Result<(), String> {
 // ==================== HTTP Client ====================
 
 /// Creates a secure HTTP client with appropriate settings
-fn create_secure_client(proxy: Option<&ProxyConfig>) -> Result<Client, String> {
+pub(crate) fn create_secure_client(proxy: Option<&ProxyConfig>) -> Result<Client, String> {
     let mut builder = Client::builder()
         .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
         .connect_timeout(Duration::from_secs(10))
@@ -684,7 +684,7 @@ async fn fetch_usd_rate_from_usdt(client: &Client, target: &str) -> Result<f64, 
     parse_usdt_fiat_rate(&body, target)
 }
 
-async fn download_response_body(response: reqwest::Response) -> Result<Vec<u8>, String> {
+pub(crate) async fn download_response_body(response: reqwest::Response) -> Result<Vec<u8>, String> {
     if let Some(content_length) = response.content_length()
         && content_length as usize > MAX_RESPONSE_SIZE
     {

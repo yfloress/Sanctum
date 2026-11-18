@@ -907,3 +907,18 @@ mapping-direction = Sin columna de tipo, las cantidades positivas se importan co
 mapping-unit-price = Confirma que el precio está expresado en USD por unidad.
 mapping-preview = Previsualizar movimientos
 mapping-preview-count = Por importar: {$added}. Omitidos: {$skipped}. Errores de fila: {$errors}.
+
+kraken-sync-result = { $count } importados, { $duplicates } duplicados
+kraken-wallet-missing = Billetera no disponible
+kraken-synced-through = Actualizado hasta
+kraken-sync-now = Actualizar movimientos
+kraken-disconnect = Desconectar
+kraken-key-help = Crea una clave API de Kraken exclusiva con solo el permiso Query ledger entries. Las credenciales se guardan en tu bóveda cifrada.
+kraken-wallet = Billetera de destino
+kraken-select-wallet = Selecciona una billetera
+kraken-sync-on-unlock = Actualizar al desbloquear esta bóveda
+kraken-connect = Guardar conexión
+kraken-working = Procesando…
+
+crypto-sources-title = Fuentes de historial
+crypto-kraken-retry = Revisa Kraken en Fuentes de historial

@@ -26,6 +26,7 @@ pub mod crypto;
 pub mod dashboard;
 pub mod finance;
 pub mod ingestion;
+pub mod kraken_sync;
 pub mod search;
 pub mod settings;
 pub mod vault;

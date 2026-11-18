@@ -33,6 +33,7 @@ use super::types::{ImportFormat, ImportSummary};
 use super::validation::validate_file_size;
 
 mod crypto;
+mod kraken_sync;
 mod statement;
 mod transactions;
 
